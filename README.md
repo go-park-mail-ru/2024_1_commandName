@@ -21,6 +21,6 @@ TBD
 - [Александр Салтыков](https://github.com/johnSamilin) - *Фронтенд*
 - TDB - *UX*
 
-## Ссылка на frontenf
+## Ссылка на frontend
 
 [Frontend](https://github.com/frontend-park-mail-ru/2024_1_commandName)
