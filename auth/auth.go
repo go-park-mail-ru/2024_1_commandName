@@ -114,7 +114,7 @@ func (api *MyHandler) Registration(w http.ResponseWriter, r *http.Request) {
 		Expires: time.Now().Add(10 * time.Hour),
 	}
 	http.SetCookie(w, cookie)
-	w.Write([]byte("You are registrated"))
+	w.Write([]byte("You are registered"))
 }
 
 func (api *MyHandler) Root(w http.ResponseWriter, r *http.Request) {
@@ -125,9 +125,9 @@ func (api *MyHandler) Root(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if authorized {
-		w.Write([]byte("autrorized"))
+		w.Write([]byte("authorized"))
 	} else {
-		w.Write([]byte("not autrorized"))
+		w.Write([]byte("not authorized"))
 	}
 }
 
