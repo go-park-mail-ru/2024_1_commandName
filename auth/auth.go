@@ -2,11 +2,13 @@ package auth
 
 import (
 	"ProjectMessenger/models"
+	"errors"
 	"math/rand"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
+	_ "github.com/swaggo/http-swagger"
 )
 
 var (
@@ -30,27 +32,42 @@ func NewMyHandler() *MyHandler {
 	return &MyHandler{
 		sessions: make(map[string]uint, 10),
 		users: map[string]*models.Person{
-			"rvasily": {1, "rvasily", "vasily@mail.ru", "Vasily", "Romanov", "Developer", "", time.Now(), time.Now(), "avatarPath", "love"},
-			//"aChernikov": {2, "aChernikov", "Artem557"},
+			"admin": {1, "admin", "admin@mail.ru", "Ivan", "Ivanov", "Developer", "", time.Now(), time.Now(), "avatarPath", "admin"},
 		},
 	}
-
 }
 
-// http://127.0.0.1:8080/login?login=rvasily&password=love
-// http://127.0.0.1:8080/login?username=rvasily&password=love
-// http://127.0.0.1:8080/register?username=Artem&password=Artem557&email=List.kedra.79
-
+// Login logs user in
+//
+// @Summary logs user in
+// @ID login
+// @Accept json
+// @Produce json
+// @Param username formData string true "Username"
+// @Param password formData string true "Password"
+// @Success 200 {object}  models.Response
+// @Failure 405 {object}  models.ErrorResponse "Use POST"
+// @Failure 400 {object}  models.ErrorResponse "Username or password wrong"
+// @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
-
-	user, ok := api.users[r.FormValue("username")]
-	if !ok {
-		http.Error(w, `no user`, 404)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
+		return
+	}
+	username := r.FormValue("username")
+	if username == "" {
+		models.WriteStatusJson(w, 400, models.Error{Error: "username is not present in request"})
+		return
+	}
+	user, userFound := api.users[r.FormValue("username")]
+	if !userFound {
+		models.WriteStatusJson(w, 400, models.Error{Error: "user not found"})
 		return
 	}
 
 	if user.Password != r.FormValue("password") {
-		http.Error(w, `bad pass`, 400)
+		models.WriteStatusJson(w, 400, models.Error{Error: "wrong password"})
 		return
 	}
 
@@ -59,25 +76,28 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	api.sessions[SID] = user.ID
 
 	cookie := &http.Cookie{
-		Name:    "session_id",
-		Value:   SID,
-		Expires: time.Now().Add(10 * time.Hour),
+		Name:     "session_id",
+		Value:    SID,
+		Expires:  time.Now().Add(10 * time.Hour),
+		HttpOnly: true,
 	}
 	http.SetCookie(w, cookie)
-	w.Write([]byte(SID))
-
+	models.WriteStatusJson(w, 200, nil)
 }
 
+// Logout logs user щге
+//
+// @Summary logs user out
+// @ID logout
+// @Produce json
+// @Success 200 {object}  models.Response
+// @Failure 401 {object}  models.ErrorResponse "no session to logout"
+// @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
-
+	w.Header().Set("Content-Type", "application/json")
 	session, err := r.Cookie("session_id")
-	if err == http.ErrNoCookie {
-		http.Error(w, `no sess`, 401)
-		return
-	}
-
-	if _, ok := api.sessions[session.Value]; !ok {
-		http.Error(w, `no sess`, 401)
+	if _, ok := api.sessions[session.Value]; !ok || errors.Is(err, http.ErrNoCookie) {
+		models.WriteStatusJson(w, 401, models.Error{Error: "no session to logout"})
 		return
 	}
 
@@ -85,17 +105,40 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
+	models.WriteStatusJson(w, 200, nil)
 }
 
-func (api *MyHandler) Registration(w http.ResponseWriter, r *http.Request) {
-	username := r.FormValue("username")
-	_, ok := api.users[username]
-	if ok {
-		http.Error(w, `User with this username already exist. Choose another`, 404)
+// Register registers user
+//
+// @Summary registers user
+// @ID register
+// @Accept json
+// @Produce json
+// @Param username formData string true "Username"
+// @Param password formData string true "Password"
+// @Param email formData string true "Email"
+// @Success 200 {object}  models.Response
+// @Failure 405 {object}  models.ErrorResponse "Use POST"
+// @Failure 400 {object}  models.ErrorResponse "Username exists or field required field empty"
+// @Router /register [post]
+func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		return
 	}
+	username := r.FormValue("username")
 	pass := r.FormValue("password")
 	email := r.FormValue("email")
+	if username == "" || pass == "" || email == "" {
+		models.WriteStatusJson(w, 400, models.Error{Error: "required field is empty"})
+		return
+	}
+	_, userFound := api.users[username]
+	if userFound {
+		models.WriteStatusJson(w, 400, models.Error{Error: "user already exists"})
+		return
+	}
 	ID := uint(len(api.users) + 1)
 	newUser := &models.Person{
 		ID:       ID,
@@ -114,10 +157,11 @@ func (api *MyHandler) Registration(w http.ResponseWriter, r *http.Request) {
 		Expires: time.Now().Add(10 * time.Hour),
 	}
 	http.SetCookie(w, cookie)
-	w.Write([]byte("You are registered"))
+	models.WriteStatusJson(w, 200, nil)
 }
 
 func (api *MyHandler) Root(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
@@ -125,11 +169,15 @@ func (api *MyHandler) Root(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if authorized {
-		w.Write([]byte("authorized"))
+		models.WriteStatusJson(w, 200, nil)
 	} else {
-		w.Write([]byte("not authorized"))
+		models.WriteStatusJson(w, 401, models.Error{Error: "User not authorized"})
 	}
 }
+
+// @Title Messenger authorization API
+// @Version 1.0
+// @BasePath /
 
 func Start() {
 	r := mux.NewRouter()
@@ -138,7 +186,7 @@ func Start() {
 	r.HandleFunc("/", api.Root)
 	r.HandleFunc("/login", api.Login)
 	r.HandleFunc("/logout", api.Logout)
-	r.HandleFunc("/register", api.Registration)
+	r.HandleFunc("/register", api.Register)
 
 	http.ListenAndServe(":8080", r)
 }
