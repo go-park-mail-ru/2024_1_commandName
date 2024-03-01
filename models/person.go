@@ -15,5 +15,5 @@ type Person struct {
 	CreateDate   time.Time `json:"create_date"`
 	LastSeenDate time.Time `json:"last_seen_date"`
 	Avatar       string    `json:"avatar"`
-	Password     string    `json:"password"`
+	PasswordSalt string    `json:"password_salt"`
 }

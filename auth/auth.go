@@ -2,25 +2,40 @@ package auth
 
 import (
 	"ProjectMessenger/models"
+	"crypto/sha512"
+	"encoding/hex"
 	"errors"
+	"github.com/gorilla/mux"
 	"math/rand"
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
 	_ "github.com/swaggo/http-swagger"
 )
 
 var (
-	letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	letterDigitRunes = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 )
 
-func RandStringRunes(n int) string {
+func randStringRunes(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		b[i] = letterDigitRunes[rand.Intn(len(letterDigitRunes))]
 	}
 	return string(b)
+}
+
+func generateHashAndSalt(password string) (hash string, salt string) {
+	salt = randStringRunes(8)
+	hasher := sha512.New()
+	hasher.Write([]byte(password + salt))
+	return hex.EncodeToString(hasher.Sum(nil)), salt
+}
+
+func generateHash(password string, salt string) (hash string) {
+	hasher := sha512.New()
+	hasher.Write([]byte(password + salt))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 type MyHandler struct {
@@ -29,10 +44,13 @@ type MyHandler struct {
 }
 
 func NewMyHandler() *MyHandler {
+	adminHash, adminSalt := generateHashAndSalt("admin")
 	return &MyHandler{
 		sessions: make(map[string]uint, 10),
 		users: map[string]*models.Person{
-			"admin": {1, "admin", "admin@mail.ru", "Ivan", "Ivanov", "Developer", "", time.Now(), time.Now(), "avatarPath", "admin"},
+			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Ivanov",
+				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, PasswordHash: adminHash},
 		},
 	}
 }
@@ -41,7 +59,7 @@ func NewMyHandler() *MyHandler {
 //
 // @Summary logs user in
 // @ID login
-// @Accept json
+// @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Param username formData string true "Username"
 // @Param password formData string true "Password"
@@ -66,12 +84,15 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if user.Password != r.FormValue("password") {
+	inputPassword := r.FormValue("password")
+	inputHash := generateHash(inputPassword, user.PasswordSalt)
+
+	if user.PasswordHash != inputHash {
 		models.WriteStatusJson(w, 400, models.Error{Error: "wrong password"})
 		return
 	}
 
-	SID := RandStringRunes(32)
+	SID := randStringRunes(32)
 
 	api.sessions[SID] = user.ID
 
@@ -85,24 +106,28 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	models.WriteStatusJson(w, 200, nil)
 }
 
-// Logout logs user щге
+// Logout logs user out
 //
 // @Summary logs user out
 // @ID logout
 // @Produce json
 // @Success 200 {object}  models.Response
-// @Failure 401 {object}  models.ErrorResponse "no session to logout"
+// @Failure 400 {object}  models.ErrorResponse "no session to logout"
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
 	session, err := r.Cookie("session_id")
-	if _, ok := api.sessions[session.Value]; !ok || errors.Is(err, http.ErrNoCookie) {
-		models.WriteStatusJson(w, 401, models.Error{Error: "no session to logout"})
+	if errors.Is(err, http.ErrNoCookie) {
+		models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
+		return
+	}
+	if _, ok := api.sessions[session.Value]; !ok {
+		models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
 		return
 	}
 
 	delete(api.sessions, session.Value)
-
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
 	models.WriteStatusJson(w, 200, nil)
@@ -112,7 +137,7 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 //
 // @Summary registers user
 // @ID register
-// @Accept json
+// @Accept application/x-www-form-urlencoded
 // @Produce json
 // @Param username formData string true "Username"
 // @Param password formData string true "Password"
@@ -128,9 +153,9 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := r.FormValue("username")
-	pass := r.FormValue("password")
+	password := r.FormValue("password")
 	email := r.FormValue("email")
-	if username == "" || pass == "" || email == "" {
+	if username == "" || password == "" || email == "" {
 		models.WriteStatusJson(w, 400, models.Error{Error: "required field is empty"})
 		return
 	}
@@ -140,14 +165,16 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ID := uint(len(api.users) + 1)
+	passwordHash, passwordSalt := generateHashAndSalt(password)
 	newUser := &models.Person{
-		ID:       ID,
-		Password: pass,
-		Username: username,
-		Email:    email,
+		ID:           ID,
+		PasswordHash: passwordHash,
+		PasswordSalt: passwordSalt,
+		Username:     username,
+		Email:        email,
 	}
 	api.users[newUser.Username] = newUser
-	SID := RandStringRunes(32)
+	SID := randStringRunes(32)
 
 	api.sessions[SID] = newUser.ID
 
