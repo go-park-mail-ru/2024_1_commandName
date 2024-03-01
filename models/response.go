@@ -21,18 +21,25 @@ type Error struct {
 
 func WriteStatusJson(w http.ResponseWriter, status int, body any) error {
 	w.WriteHeader(status)
-	_, err := w.Write(MarshalStatusJson(status, body))
+	jsonByte, err := MarshalStatusJson(status, body)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(jsonByte)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func MarshalStatusJson(status int, body any) []byte {
+func MarshalStatusJson(status int, body any) ([]byte, error) {
 	response := Response{
 		Status: status,
 		Body:   body,
 	}
-	marshal, _ := json.Marshal(response)
-	return marshal
+	marshal, err := json.Marshal(response)
+	if err != nil {
+		return nil, err
+	}
+	return marshal, nil
 }
