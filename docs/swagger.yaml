@@ -107,4 +107,7 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: registers user
+schemes:
+- http
+- https
 swagger: "2.0"

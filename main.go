@@ -9,8 +9,9 @@ import (
 
 // @Title Messenger authorization API
 // @Version 1.0
+// @schemes http https
 // @host localhost:8080
-// @BasePath /
+// @BasePath  /
 func main() {
 	auth.Start()
 	users := make([]models.User, 0)
