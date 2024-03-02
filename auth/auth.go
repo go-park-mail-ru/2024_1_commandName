@@ -80,8 +80,15 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	username := r.FormValue("username")
-	if username == "" {
+
+	decoder := json.NewDecoder(r.Body)
+	var jsonUser models.Person
+	err := decoder.Decode(&jsonUser)
+	if err != nil {
+		http.Error(w, "wrong json structure", 400)
+		return
+	}
+	if jsonUser.Username == "" {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "username is not present in request"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
@@ -89,7 +96,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	user, userFound := api.users[r.FormValue("username")]
+	user, userFound := api.users[jsonUser.Username]
 	if !userFound {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "user not found"})
 		if err != nil {
@@ -99,7 +106,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	inputPassword := r.FormValue("password")
+	inputPassword := jsonUser.Password
 	inputHash := generateHash(inputPassword, user.PasswordSalt)
 
 	if user.Password != inputHash {
@@ -122,7 +129,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	}
 	http.SetCookie(w, cookie)
-	err := models.WriteStatusJson(w, 200, nil)
+	err = models.WriteStatusJson(w, 200, nil)
 	if err != nil {
 		http.Error(w, "internal server error", 500)
 		return
@@ -268,10 +275,6 @@ func (api *MyHandler) Root(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-// @Title Messenger authorization API
-// @Version 1.0
-// @BasePath /
 
 func Start() {
 	r := mux.NewRouter()
