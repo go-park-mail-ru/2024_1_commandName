@@ -20,12 +20,12 @@ type Error struct {
 }
 
 func WriteStatusJson(w http.ResponseWriter, status int, body any) error {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	jsonByte, err := MarshalStatusJson(status, body)
 	if err != nil {
 		return err
 	}
-	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(jsonByte)
 	if err != nil {
 		return err
