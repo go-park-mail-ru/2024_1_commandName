@@ -15,6 +15,29 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/checkAuth": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "checks that user is authenticated",
+                "operationId": "checkAuth",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "consumes": [
@@ -27,12 +50,12 @@ const docTemplate = `{
                 "operationId": "login",
                 "parameters": [
                     {
-                        "description": "Email field is not mandatory for login",
+                        "description": "Person",
                         "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/models.Person"
                         }
                     }
                 ],
@@ -44,13 +67,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Username or password wrong",
+                        "description": "wrong json structure | user not found | wrong password",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "405": {
-                        "description": "Use POST",
+                        "description": "use POST",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -93,12 +116,12 @@ const docTemplate = `{
                 "operationId": "register",
                 "parameters": [
                     {
-                        "description": "User",
+                        "description": "Person",
                         "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/models.Person"
                         }
                     }
                 ],
@@ -110,13 +133,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Username exists or field required field empty",
+                        "description": "user already exists | required field empty | wrong json structure",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "405": {
-                        "description": "Use POST",
+                        "description": "use POST",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -147,6 +170,17 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Person": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "models.Response": {
             "type": "object",
             "properties": {
@@ -154,20 +188,6 @@ const docTemplate = `{
                 "status": {
                     "type": "integer",
                     "example": 200
-                }
-            }
-        },
-        "models.User": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
                 }
             }
         }
@@ -179,7 +199,7 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{"http", "https"},
+	Schemes:          []string{"http"},
 	Title:            "Messenger authorization API",
 	Description:      "",
 	InfoInstanceName: "swagger",

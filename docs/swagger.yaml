@@ -14,6 +14,13 @@ definitions:
         example: 400
         type: integer
     type: object
+  models.Person:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
   models.Response:
     properties:
       body: {}
@@ -21,33 +28,39 @@ definitions:
         example: 200
         type: integer
     type: object
-  models.User:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      username:
-        type: string
-    type: object
 host: localhost:8080
 info:
   contact: {}
   title: Messenger authorization API
   version: "1.0"
 paths:
+  /checkAuth:
+    get:
+      operationId: checkAuth
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response'
+        "401":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: checks that user is authenticated
   /login:
     post:
       consumes:
       - application/json
       operationId: login
       parameters:
-      - description: Email field is not mandatory for login
+      - description: Person
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.User'
+          $ref: '#/definitions/models.Person'
       produces:
       - application/json
       responses:
@@ -56,11 +69,11 @@ paths:
           schema:
             $ref: '#/definitions/models.Response'
         "400":
-          description: Username or password wrong
+          description: wrong json structure | user not found | wrong password
           schema:
             $ref: '#/definitions/models.ErrorResponse'
         "405":
-          description: Use POST
+          description: use POST
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: logs user in
@@ -85,12 +98,12 @@ paths:
       - application/json
       operationId: register
       parameters:
-      - description: User
+      - description: Person
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.User'
+          $ref: '#/definitions/models.Person'
       produces:
       - application/json
       responses:
@@ -99,15 +112,14 @@ paths:
           schema:
             $ref: '#/definitions/models.Response'
         "400":
-          description: Username exists or field required field empty
+          description: user already exists | required field empty | wrong json structure
           schema:
             $ref: '#/definitions/models.ErrorResponse'
         "405":
-          description: Use POST
+          description: use POST
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: registers user
 schemes:
 - http
-- https
 swagger: "2.0"

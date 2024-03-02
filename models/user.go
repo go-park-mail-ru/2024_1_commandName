@@ -4,10 +4,10 @@ import (
 	"time"
 )
 
-type User struct {
+type Person struct {
 	ID           uint      `json:"id" swaggerignore:"true"`
 	Username     string    `json:"username"`
-	Email        string    `json:"email"`
+	Email        string    `json:"email" swaggerignore:"true"`
 	Name         string    `json:"name" swaggerignore:"true"`
 	Surname      string    `json:"surname" swaggerignore:"true"`
 	About        string    `json:"about" swaggerignore:"true"`

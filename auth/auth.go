@@ -22,7 +22,7 @@ var (
 
 type MyHandler struct {
 	sessions map[string]uint
-	users    map[string]*models.User
+	users    map[string]*models.Person
 }
 
 func randStringRunes(n int) string {
@@ -50,7 +50,7 @@ func NewMyHandler() *MyHandler {
 	adminHash, adminSalt := generateHashAndSalt("admin")
 	return &MyHandler{
 		sessions: make(map[string]uint, 10),
-		users: map[string]*models.User{
+		users: map[string]*models.Person{
 			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Ivanov",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
@@ -64,13 +64,12 @@ func NewMyHandler() *MyHandler {
 // @ID login
 // @Accept application/json
 // @Produce application/json
-// @Param user body  models.User true "Email field is not mandatory for login"
+// @Param user body  models.Person true "Person"
 // @Success 200 {object}  models.Response
-// @Failure 405 {object}  models.ErrorResponse "Use POST"
-// @Failure 400 {object}  models.ErrorResponse "Username or password wrong"
+// @Failure 405 {object}  models.ErrorResponse "use POST"
+// @Failure 400 {object}  models.ErrorResponse "wrong json structure | user not found | wrong password"
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		if err != nil {
@@ -79,16 +78,25 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	ct := r.Header.Get("Content-Type")
+	if ct != "" {
+		mediaType := strings.ToLower(strings.TrimSpace(strings.Split(ct, ";")[0]))
+		if mediaType != "application/json" {
+			msg := "Content-Type header is not application/json"
+			http.Error(w, msg, http.StatusUnsupportedMediaType)
+			return
+		}
+	}
 
 	decoder := json.NewDecoder(r.Body)
-	var jsonUser models.User
+	var jsonUser models.Person
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
 		http.Error(w, "wrong json structure", 400)
 		return
 	}
 	if jsonUser.Username == "" {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "username is not present in request"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -107,7 +115,6 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	inputPassword := jsonUser.Password
 	inputHash := generateHash(inputPassword, user.PasswordSalt)
-
 	if user.Password != inputHash {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong password"})
 		if err != nil {
@@ -118,9 +125,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SID := randStringRunes(32)
-
 	api.sessions[SID] = user.ID
-
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    SID,
@@ -144,8 +149,6 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object}  models.ErrorResponse "no session to logout"
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
@@ -180,13 +183,12 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @ID register
 // @Accept json
 // @Produce json
-// @Param user body  models.User true "User"
+// @Param user body  models.Person true "Person"
 // @Success 200 {object}  models.Response
-// @Failure 405 {object}  models.ErrorResponse "Use POST"
-// @Failure 400 {object}  models.ErrorResponse "Username exists or field required field empty"
+// @Failure 405 {object}  models.ErrorResponse "use POST"
+// @Failure 400 {object}  models.ErrorResponse "user already exists | required field empty | wrong json structure"
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		if err != nil {
@@ -204,17 +206,18 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
 	decoder := json.NewDecoder(r.Body)
-	var jsonUser models.User
+	var jsonUser models.Person
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "Wrong json structure"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
 		}
 	}
-	if jsonUser.Username == "" || jsonUser.Password == "" || jsonUser.Email == "" {
+	if jsonUser.Username == "" || jsonUser.Password == "" {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "required field is empty"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
@@ -254,8 +257,15 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *MyHandler) Root(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+// CheckAuth checks that user is authenticated
+//
+// @Summary checks that user is authenticated
+// @ID checkAuth
+// @Produce json
+// @Success 200 {object}  models.Response
+// @Failure 401 {object}  models.ErrorResponse "Person not authorized"
+// @Router /checkAuth [get]
+func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
@@ -265,7 +275,7 @@ func (api *MyHandler) Root(w http.ResponseWriter, r *http.Request) {
 	if authorized {
 		err = models.WriteStatusJson(w, 200, nil)
 	} else {
-		err = models.WriteStatusJson(w, 401, models.Error{Error: "User not authorized"})
+		err = models.WriteStatusJson(w, 401, models.Error{Error: "Person not authorized"})
 	}
 	if err != nil {
 		http.Error(w, "internal server error", 500)
@@ -277,7 +287,7 @@ func Start() {
 	r := mux.NewRouter()
 
 	api := NewMyHandler()
-	r.HandleFunc("/", api.Root)
+	r.HandleFunc("/checkAuth", api.CheckAuth)
 	r.HandleFunc("/login", api.Login)
 	r.HandleFunc("/logout", api.Logout)
 	r.HandleFunc("/register", api.Register)
