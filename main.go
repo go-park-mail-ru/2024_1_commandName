@@ -7,6 +7,9 @@ import (
 	"fmt"
 )
 
+// @Title Messenger authorization API
+// @Version 1.0
+// @BasePath /
 func main() {
 	auth.Start()
 	users := make([]models.Person, 0)
