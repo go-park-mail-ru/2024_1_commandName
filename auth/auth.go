@@ -22,7 +22,7 @@ var (
 
 type MyHandler struct {
 	sessions map[string]uint
-	users    map[string]*models.Person
+	users    map[string]*models.User
 }
 
 func randStringRunes(n int) string {
@@ -50,7 +50,7 @@ func NewMyHandler() *MyHandler {
 	adminHash, adminSalt := generateHashAndSalt("admin")
 	return &MyHandler{
 		sessions: make(map[string]uint, 10),
-		users: map[string]*models.Person{
+		users: map[string]*models.User{
 			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Ivanov",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
@@ -62,10 +62,9 @@ func NewMyHandler() *MyHandler {
 //
 // @Summary logs user in
 // @ID login
-// @Accept application/x-www-form-urlencoded
-// @Produce json
-// @Param username formData string true "Username"
-// @Param password formData string true "Password"
+// @Accept application/json
+// @Produce application/json
+// @Param user body  models.User true "Email field is not mandatory for login"
 // @Success 200 {object}  models.Response
 // @Failure 405 {object}  models.ErrorResponse "Use POST"
 // @Failure 400 {object}  models.ErrorResponse "Username or password wrong"
@@ -82,7 +81,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var jsonUser models.Person
+	var jsonUser models.User
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
 		http.Error(w, "wrong json structure", 400)
@@ -179,11 +178,9 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 //
 // @Summary registers user
 // @ID register
-// @Accept application/x-www-form-urlencoded
+// @Accept json
 // @Produce json
-// @Param username formData string true "Username"
-// @Param password formData string true "Password"
-// @Param email formData string true "Email"
+// @Param user body  models.User true "User"
 // @Success 200 {object}  models.Response
 // @Failure 405 {object}  models.ErrorResponse "Use POST"
 // @Failure 400 {object}  models.ErrorResponse "Username exists or field required field empty"
@@ -208,7 +205,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	decoder := json.NewDecoder(r.Body)
-	var jsonUser models.Person
+	var jsonUser models.User
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "Wrong json structure"})

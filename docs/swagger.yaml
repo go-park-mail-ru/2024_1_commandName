@@ -3,7 +3,7 @@ definitions:
   models.Error:
     properties:
       error:
-        example: user not found
+        example: error description
         type: string
     type: object
   models.ErrorResponse:
@@ -21,6 +21,16 @@ definitions:
         example: 200
         type: integer
     type: object
+  models.User:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
 info:
   contact: {}
   title: Messenger authorization API
@@ -29,19 +39,15 @@ paths:
   /login:
     post:
       consumes:
-      - application/x-www-form-urlencoded
+      - application/json
       operationId: login
       parameters:
-      - description: Username
-        in: formData
-        name: username
+      - description: Email field is not mandatory for login
+        in: body
+        name: user
         required: true
-        type: string
-      - description: Password
-        in: formData
-        name: password
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/models.User'
       produces:
       - application/json
       responses:
@@ -76,24 +82,15 @@ paths:
   /register:
     post:
       consumes:
-      - application/x-www-form-urlencoded
+      - application/json
       operationId: register
       parameters:
-      - description: Username
-        in: formData
-        name: username
+      - description: User
+        in: body
+        name: user
         required: true
-        type: string
-      - description: Password
-        in: formData
-        name: password
-        required: true
-        type: string
-      - description: Email
-        in: formData
-        name: email
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/models.User'
       produces:
       - application/json
       responses:
