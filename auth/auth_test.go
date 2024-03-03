@@ -17,83 +17,180 @@ type Request struct {
 	problem string
 }
 
-func TestRegisterLoginLogout(t *testing.T) {
-	var user1 = map[string]interface{}{
-		"username": "admin",
-		"password": "123",
-		"email":    "admin@mail.ru",
-	}
+type testCase struct {
+	name    string
+	request Request
+}
 
-	var user2 = map[string]interface{}{
+func TestRegisterLoginLogout(t *testing.T) {
+	api := NewMyHandler()
+	api.ClearUserData()
+
+	var emptyUsernameUser = map[string]interface{}{
 		"username": "",
 		"password": "123",
 		"email":    "admin@mail.ru",
 	}
 
-	var user3 = map[string]interface{}{
-		"username": "admin3",
-		"password": "12345",
-		"email":    "admin3@mail.ru",
-	}
-	fmt.Println(user3)
-
-	api := NewMyHandler()
-	api.ClearUserData()
-	testRequests := make([]Request, 0)
-
-	bodyUser1, err := json.Marshal(user1)
-	if err != nil {
-		log.Fatal(err)
-		return
+	var validUser = map[string]interface{}{
+		"username": "admin",
+		"password": "123",
+		"email":    "admin@mail.ru",
 	}
 
-	bodyUser2, err := json.Marshal(user2)
-	if err != nil {
-		log.Fatal(err)
-		return
+	var unvalidUserPassword = map[string]interface{}{
+		"username": "admin",
+		"password": "1234",
+		"email":    "admin@mail.ru",
 	}
 
-	bodyUser3, err := json.Marshal(user2)
-	if err != nil {
-		log.Fatal(err)
-		return
+	var invalidJsonUser = map[string]interface{}{
+		"username": "",
+		"password": "123",
+		"email":    "admin@mail.ru",
 	}
 
-	testRequests = append(testRequests, Request{method: "POST", url: "/register", payLoad: bodyUser1})
-	testRequests = append(testRequests, Request{method: "POST", url: "/login", payLoad: bodyUser1})
-	testRequests = append(testRequests, Request{method: "POST", url: "/logout", payLoad: nil})
-	testRequests = append(testRequests, Request{method: "POST", url: "/register", payLoad: bodyUser2, problem: "raw_user"})
-	testRequests = append(testRequests, Request{method: "GET", url: "/register", payLoad: bodyUser2, problem: "method_get"})
-	testRequests = append(testRequests, Request{method: "POST", url: "/register", payLoad: bodyUser3, problem: "not_json"})
+	var userNotFound = map[string]interface{}{
+		"username": "Somebody",
+		"password": "password",
+		"email":    "myEMAIL@mail.ru",
+	}
+
+	const (
+		ProblemRawUser       = "raw_user"
+		ProblemMethodGet     = "method_get"
+		ProblemNotJSON       = "not_json"
+		ProblemUserNotFound  = "user_not_found"
+		ProblemWrongPassword = "wrong_passord"
+		ProblemUserExists    = "user_already_exists"
+	)
+
+	testCases := []testCase{
+		{
+			name: "VaildUserRegistration",
+			request: Request{
+				method:  "POST",
+				url:     "/register",
+				payLoad: converToJSON(validUser),
+			},
+		},
+		{
+			name: "VaildUserLogin",
+			request: Request{
+				method:  "POST",
+				url:     "/login",
+				payLoad: converToJSON(validUser),
+			},
+		},
+		{
+			name: "EmptyUsernameRegistration",
+			request: Request{
+				method:  "POST",
+				url:     "/register",
+				payLoad: converToJSON(emptyUsernameUser),
+				problem: ProblemRawUser,
+			},
+		},
+		{
+			name: "MethodGet",
+			request: Request{
+				method:  "GET",
+				url:     "/register",
+				payLoad: converToJSON(validUser),
+				problem: ProblemMethodGet,
+			},
+		},
+		{
+			name: "notJSON",
+			request: Request{
+				method:  "POST",
+				url:     "/register",
+				payLoad: converToJSON(invalidJsonUser),
+				problem: ProblemNotJSON,
+			},
+		},
+		{
+			name: "UserNotFound",
+			request: Request{
+				method:  "POST",
+				url:     "/login",
+				payLoad: converToJSON(userNotFound),
+				problem: ProblemUserNotFound,
+			},
+		},
+		{
+			name: "WrongPassword",
+			request: Request{
+				method:  "POST",
+				url:     "/login",
+				payLoad: converToJSON(unvalidUserPassword),
+				problem: ProblemWrongPassword,
+			},
+		},
+		{
+			name: "UserAlreadyExists",
+			request: Request{
+				method:  "POST",
+				url:     "/register",
+				payLoad: converToJSON(validUser),
+				problem: ProblemUserExists,
+			},
+		},
+		{
+			name: "checkAuth",
+			request: Request{
+				method:  "POST",
+				url:     "/checkAuth",
+				payLoad: converToJSON(validUser),
+				problem: ProblemUserExists,
+			},
+		},
+		{
+			name: "Logout",
+			request: Request{
+				method:  "POST",
+				url:     "/logout",
+				payLoad: nil,
+			},
+		},
+	}
+
 	sessionID := ""
-	for i := range testRequests {
-		t.Run("SuccessfulRegInOut", func(t *testing.T) {
-			req, err := http.NewRequest(testRequests[i].method, testRequests[i].url, bytes.NewReader(testRequests[i].payLoad))
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(tc.request.method, tc.request.url, bytes.NewReader(tc.request.payLoad))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if testRequests[i].problem == "not_json" {
+			if tc.request.problem == ProblemNotJSON {
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			}
 
 			handler := http.HandlerFunc(api.Login)
 			rr := httptest.NewRecorder()
-			if testRequests[i].url == "/login" {
+			if tc.request.url == "/login" {
 				handler = http.HandlerFunc(api.Login)
-			} else if testRequests[i].url == "/register" {
+			} else if tc.request.url == "/register" {
 				handler = http.HandlerFunc(api.Register)
-			} else if testRequests[i].url == "/logout" {
+			} else if tc.request.url == "/logout" {
 				cookie := &http.Cookie{
 					Name:  "session_id",
 					Value: sessionID,
 				}
 				req.AddCookie(cookie)
 				handler = http.HandlerFunc(api.Logout)
+			} else if tc.request.url == "/checkAuth" {
+				cookie := &http.Cookie{
+					Name:  "session_id",
+					Value: sessionID,
+				}
+				req.AddCookie(cookie)
+				handler = http.HandlerFunc(api.CheckAuth)
 			}
 			handler.ServeHTTP(rr, req)
 
 			status := rr.Code
-			if testRequests[i].url == "/register" {
+			if tc.request.url == "/register" {
 				cookies := rr.Result().Cookies()
 				for _, cookie := range cookies {
 					if cookie.Name == "session_id" {
@@ -102,24 +199,52 @@ func TestRegisterLoginLogout(t *testing.T) {
 					}
 				}
 			}
-
-			text := rr.Body.String()
-
+			responseBodyText := rr.Body.String()
 			if status != http.StatusOK {
-				if testRequests[i].problem == "raw_user" && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"required field is empty\"}}" {
+				if tc.request.problem == ProblemRawUser && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"required field is empty\"}}" {
+					fmt.Println(tc.name, ": ------------- STATUS: OK")
 					t.Skip("Expected error for raw user data")
 					return
 				}
-				if testRequests[i].problem == "method_get" && rr.Body.String() == "{\"status\":405,\"body\":{\"error\":\"use POST\"}}" {
+				if tc.request.problem == ProblemMethodGet && rr.Body.String() == "{\"status\":405,\"body\":{\"error\":\"use POST\"}}" {
+					fmt.Println(tc.name, ": ------------- STATUS: OK")
 					t.Skip("Expected error for another request method")
 					return
 				}
-				if testRequests[i].problem == "not_json" && rr.Body.String() == "Content-Type header is not application/json\n" {
+				if tc.request.problem == ProblemNotJSON && rr.Body.String() == "Content-Type header is not application/json\n" {
+					fmt.Println(tc.name, ": ------------- STATUS: OK")
 					t.Skip("Expected error for not JSON type")
 					return
 				}
-				t.Errorf("Login handler returned wrong status code: got %v want %v. Body: %v", status, http.StatusOK, text)
+				if tc.request.problem == ProblemUserNotFound && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"user not found\"}}" {
+					fmt.Println(tc.name, ": ------------- STATUS: OK")
+					t.Skip("Expected error for not JSON type")
+					return
+				}
+				if tc.request.problem == ProblemWrongPassword && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"wrong password\"}}" {
+					fmt.Println(tc.name, ": ------------- STATUS: OK")
+					t.Skip("Expected error for not JSON type")
+					return
+				}
+				if tc.request.problem == ProblemUserExists && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"user already exists\"}}" {
+					fmt.Println(tc.name, ": ------------- STATUS: OK")
+					t.Skip("Expected error for not JSON type")
+
+					return
+				}
+				t.Errorf("Login handler returned wrong status code: got %v want %v. Body: %v", status, http.StatusOK, responseBodyText)
+			} else {
+				fmt.Println(tc.name, ": ------------- STATUS: OK")
 			}
 		})
 	}
+
+}
+
+func converToJSON(userData map[string]interface{}) []byte {
+	body, err := json.Marshal(userData)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return body
 }
