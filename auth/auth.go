@@ -283,14 +283,7 @@ func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Start() {
-	r := mux.NewRouter()
-
-	api := NewMyHandler()
-	r.HandleFunc("/checkAuth", api.CheckAuth)
-	r.HandleFunc("/login", api.Login)
-	r.HandleFunc("/logout", api.Logout)
-	r.HandleFunc("/register", api.Register)
-
-	log.Fatal(http.ListenAndServe(":8080", r))
+func (api *MyHandler) ClearUserData() {
+	api.users = make(map[string]*models.Person)
+	api.sessions = make(map[string]uint)
 }
