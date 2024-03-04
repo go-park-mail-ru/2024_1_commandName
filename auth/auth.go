@@ -71,9 +71,10 @@ func NewMyHandler() *MyHandler {
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	header.Add("Access-Control-Allow-Credentials", "true")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -160,9 +161,14 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
@@ -205,9 +211,14 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
@@ -287,9 +298,15 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	header.Add("Access-Control-Allow-Credentials", "true")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
 	authorized := false
 	session, err := r.Cookie("session_id")
