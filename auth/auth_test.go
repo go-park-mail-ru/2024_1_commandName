@@ -61,7 +61,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 		ProblemMethodGet     = "method_get"
 		ProblemNotJSON       = "not_json"
 		ProblemUserNotFound  = "user_not_found"
-		ProblemWrongPassword = "wrong_passord"
+		ProblemWrongPassword = "wrong_password"
 		ProblemUserExists    = "user_already_exists"
 	)
 
@@ -71,7 +71,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 			},
 		},
 		{
@@ -79,7 +79,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 			},
 		},
 		{
@@ -87,7 +87,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(emptyUsernameUser),
+				payLoad: convertToJSON(emptyUsernameUser),
 				problem: ProblemRawUser,
 			},
 		},
@@ -96,7 +96,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "GET",
 				url:     "/register",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 				problem: ProblemMethodGet,
 			},
 		},
@@ -105,7 +105,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(invalidJsonUser),
+				payLoad: convertToJSON(invalidJsonUser),
 				problem: ProblemNotJSON,
 			},
 		},
@@ -114,7 +114,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: converToJSON(userNotFound),
+				payLoad: convertToJSON(userNotFound),
 				problem: ProblemUserNotFound,
 			},
 		},
@@ -123,7 +123,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: converToJSON(unvalidUserPassword),
+				payLoad: convertToJSON(unvalidUserPassword),
 				problem: ProblemWrongPassword,
 			},
 		},
@@ -132,7 +132,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 				problem: ProblemUserExists,
 			},
 		},
@@ -141,7 +141,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/checkAuth",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 				problem: ProblemUserExists,
 			},
 		},
@@ -218,46 +218,38 @@ func TestRegisterLoginLogout(t *testing.T) {
 			responseBodyText := rr.Body.String()
 			if status != http.StatusOK {
 				if tc.request.problem == ProblemRawUser && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"required field is empty\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for raw user data")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemMethodGet && rr.Body.String() == "{\"status\":405,\"body\":{\"error\":\"use POST\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for another request method")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemNotJSON && rr.Body.String() == "Content-Type header is not application/json\n" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemUserNotFound && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"user not found\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemWrongPassword && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"wrong password\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemUserExists && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"user already exists\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
-
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				t.Errorf("Login handler returned wrong status code: got %v want %v. Body: %v", status, http.StatusOK, responseBodyText)
 			} else {
-				fmt.Println(tc.name, ": ------------- STATUS: OK")
+				fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 			}
 		})
 	}
-
 }
 
-func converToJSON(userData map[string]interface{}) []byte {
+func convertToJSON(userData map[string]interface{}) []byte {
 	body, err := json.Marshal(userData)
 	if err != nil {
 		log.Fatal(err)
