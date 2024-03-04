@@ -1,15 +1,14 @@
 package main
 
 import (
-	"ProjectMessenger/auth"
-	"github.com/gorilla/mux"
+	"fmt"
 	"log"
 	"net/http"
-)
 
-import (
+	"github.com/gorilla/mux"
+	
+	"ProjectMessenger/auth"
 	"ProjectMessenger/models"
-	"fmt"
 )
 
 func main() {
