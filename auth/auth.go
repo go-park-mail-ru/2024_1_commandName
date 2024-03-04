@@ -22,6 +22,8 @@ var (
 type MyHandler struct {
 	sessions map[string]uint
 	users    map[string]*models.Person
+	chats    map[int]*models.Chat
+	chatUser []*models.ChatUser
 }
 
 type Messenger struct {
@@ -58,6 +60,8 @@ func NewMyHandler() *MyHandler {
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
 		},
+		chats:    make(map[int]*models.Chat),
+		chatUser: make([]*models.ChatUser, 0),
 	}
 }
 
@@ -248,8 +252,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	api.sessions[sessionID] = jsonUser.ID
 
 	if len(api.users) > 3 {
-		messenger := NewMessenger()
-		messenger.fillDB(api.users)
+		api.fillDB()
 	}
 
 	cookie := &http.Cookie{
@@ -257,7 +260,6 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Value:   sessionID,
 		Expires: time.Now().Add(10 * time.Hour),
 	}
-	//Messenger.fillDB(api.users)
 	http.SetCookie(w, cookie)
 	err = models.WriteStatusJson(w, 200, nil)
 	if err != nil {
@@ -297,66 +299,62 @@ func (api *MyHandler) ClearUserData() {
 	api.sessions = make(map[string]uint)
 }
 
-func (m *Messenger) fillDB(users map[string]*models.Person) {
-	m.chats = make(map[int]*models.Chat)
-	for username, person := range users {
+func (api *MyHandler) fillDB() {
+	for username, person := range api.users {
 		fmt.Printf("Username: %s, ID: %d\n", username, person.ID)
 	}
-	if len(users) > 3 {
-		messagesChat1 := make([]*models.Message, 0)
-		messagesChat1 = append(messagesChat1,
-			&models.Message{ID: 1, ChatID: 1, UserID: users["admin1"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
-			&models.Message{ID: 2, ChatID: 1, UserID: users["admin2"].ID, Message: "Балдёж балдёж", Edited: false},
-		)
-		chat1 := models.Chat{Name: "noName", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1}
-		m.chats[chat1.ID] = &chat1
+	messagesChat1 := make([]*models.Message, 0)
+	messagesChat1 = append(messagesChat1,
+		&models.Message{ID: 1, ChatID: 1, UserID: api.users["admin"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
+		&models.Message{ID: 2, ChatID: 1, UserID: api.users["admin1"].ID, Message: "Балдёж балдёж", Edited: false},
+	)
+	chat1 := models.Chat{Name: "noName", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1}
+	api.chats[chat1.ID] = &chat1
 
-		messagesChat2 := make([]*models.Message, 0)
-		messagesChat2 = append(messagesChat2,
-			&models.Message{ID: 1, ChatID: 2, UserID: users["admin3"].ID, Message: "Пойдём в столовку?", Edited: false},
-			&models.Message{ID: 2, ChatID: 2, UserID: users["admin"].ID, Message: "Уже бегу", Edited: false},
-		)
-		chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
-		m.chats[chat2.ID] = &chat2
-		fmt.Println("MESSAGES Chat 1:")
-		for _, message := range messagesChat1 {
+	messagesChat2 := make([]*models.Message, 0)
+	messagesChat2 = append(messagesChat2,
+		&models.Message{ID: 1, ChatID: 2, UserID: api.users["admin2"].ID, Message: "Пойдём в столовку?", Edited: false},
+		&models.Message{ID: 2, ChatID: 2, UserID: api.users["admin3"].ID, Message: "Уже бегу", Edited: false},
+	)
+	chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
+	api.chats[chat2.ID] = &chat2
 
-			creatorUsername := users[findUser(message.UserID, users)]
-			fmt.Printf("Message ID: %d\n", message.ID)
-			fmt.Printf("Creator: %s (ID: %d)\n", creatorUsername, message.UserID)
-			fmt.Printf("Message: %s\n", message.Message)
-			fmt.Println("---------------------")
-		}
+	fmt.Println("Add test data...")
 
-		fmt.Println("MESSAGES Chat 2:")
-		for _, message := range messagesChat2 {
-			creatorUsername := users[findUser(message.UserID, users)]
-			fmt.Printf("Message ID: %d\n", message.ID)
-			fmt.Printf("Creator: %s (ID: %d)\n", creatorUsername, message.UserID)
-			fmt.Printf("Message: %s\n", message.Message)
-			fmt.Println("---------------------")
-		}
-	}
-	fmt.Println("CHATS:", m.chats)
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 1})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 2})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 3})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 4})
 
+	api.getChatsByID(1)
 }
 
-func (m *Messenger) getChats() {
-	chats := m.chats
-
+func (api *MyHandler) getChats(w http.ResponseWriter, r *http.Request) {
+///////////////////////////////////
 }
 
-func NewMessenger() *Messenger {
-	return &Messenger{
-		chats: map[int]*models.Chat{},
-	}
-}
-
-func findUser(ID uint, users map[string]*models.Person) string {
-	for _, user := range users {
-		if user.ID == ID {
-			return user.Username
+func (api *MyHandler) getChatsByID(userID uint) {
+	userChats := make([]*models.Chat, 0)
+	for _, cUser := range api.chatUser {
+		if cUser.UserID == userID {
+			chat, ok := api.chats[cUser.ChatID]
+			if ok {
+				userChats = append(userChats, chat)
+				//////////////////////////
+			}
 		}
 	}
-	return ""
+	var chats []*models.Chat
+	for _, chat := range userChats {
+		chats = append(chats, chat)
+	}
+	
+	jsonResponse, err := json.Marshal(chats)
+	if err != nil {
+		fmt.Println("Ошибка при создании JSON:", err)
+		return
+	}
+	
+	fmt.Println(string(jsonResponse))
 }
+
