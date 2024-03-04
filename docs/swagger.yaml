@@ -87,26 +87,12 @@ definitions:
         example: 200
         type: integer
     type: object
+host: localhost:8080
 info:
   contact: {}
   title: Messenger authorization API
   version: "1.0"
 paths:
-  /GetChats:
-    get:
-      operationId: GetChats
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.Response-models_Chats'
-        "400":
-          description: Person not authorized
-          schema:
-            $ref: '#/definitions/models.Response-models_Error'
-      summary: gets chats previews for user
   /checkAuth:
     get:
       operationId: checkAuth
@@ -122,6 +108,21 @@ paths:
           schema:
             $ref: '#/definitions/models.Response-models_Error'
       summary: checks that user is authenticated
+  /getChats:
+    get:
+      operationId: GetChats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response-models_Chats'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+      summary: gets chats previews for user
   /login:
     post:
       consumes:
@@ -193,4 +194,6 @@ paths:
           schema:
             $ref: '#/definitions/models.Response-models_Error'
       summary: registers user
+schemes:
+- http
 swagger: "2.0"

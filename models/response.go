@@ -11,11 +11,6 @@ type Response[T any] struct {
 	Body   T   `json:"body,omitempty"`
 }
 
-type ErrorResponse struct {
-	Status int   `json:"status" example:"400"`
-	Body   Error `json:"body,omitempty"`
-}
-
 type Error struct {
 	Error string `json:"error" example:"error description"`
 }

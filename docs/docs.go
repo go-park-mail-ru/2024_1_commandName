@@ -15,29 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/GetChats": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "gets chats previews for user",
-                "operationId": "GetChats",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response-models_Chats"
-                        }
-                    },
-                    "400": {
-                        "description": "Person not authorized",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
-                        }
-                    }
-                }
-            }
-        },
         "/checkAuth": {
             "get": {
                 "produces": [
@@ -53,6 +30,29 @@ const docTemplate = `{
                         }
                     },
                     "401": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getChats": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "gets chats previews for user",
+                "operationId": "GetChats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Chats"
+                        }
+                    },
+                    "400": {
                         "description": "Person not authorized",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
@@ -311,9 +311,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "",
+	Host:             "localhost:8080",
 	BasePath:         "/",
-	Schemes:          []string{},
+	Schemes:          []string{"http"},
 	Title:            "Messenger authorization API",
 	Description:      "",
 	InfoInstanceName: "swagger",

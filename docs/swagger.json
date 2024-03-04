@@ -1,35 +1,16 @@
 {
+    "schemes": [
+        "http"
+    ],
     "swagger": "2.0",
     "info": {
         "title": "Messenger authorization API",
         "contact": {},
         "version": "1.0"
     },
+    "host": "localhost:8080",
     "basePath": "/",
     "paths": {
-        "/GetChats": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "gets chats previews for user",
-                "operationId": "GetChats",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response-models_Chats"
-                        }
-                    },
-                    "400": {
-                        "description": "Person not authorized",
-                        "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
-                        }
-                    }
-                }
-            }
-        },
         "/checkAuth": {
             "get": {
                 "produces": [
@@ -45,6 +26,29 @@
                         }
                     },
                     "401": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getChats": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "gets chats previews for user",
+                "operationId": "GetChats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Chats"
+                        }
+                    },
+                    "400": {
                         "description": "Person not authorized",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"

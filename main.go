@@ -24,7 +24,9 @@ func main() {
 // Router
 // @Title Messenger authorization API
 // @Version 1.0
-// @BasePath /
+// @schemes http
+// @host localhost:8080
+// @BasePath  /
 func Router() {
 	r := mux.NewRouter()
 

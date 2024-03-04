@@ -377,7 +377,7 @@ func (api *MyHandler) fillDB() {
 // @Produce json
 // @Success 200 {object}  models.Response[models.Chats]
 // @Failure 400 {object}  models.Response[models.Error] "Person not authorized"
-// @Router /GetChats [get]
+// @Router /getChats [get]
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
 		setDebugHeaders(w, r)
