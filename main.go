@@ -6,10 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	
+
 	"ProjectMessenger/auth"
 	"ProjectMessenger/models"
 )
+
+var DEBUG = false
 
 func main() {
 	Router()
@@ -25,7 +27,7 @@ func main() {
 func Router() {
 	r := mux.NewRouter()
 
-	api := auth.NewMyHandler()
+	api := auth.NewMyHandler(DEBUG)
 	r.HandleFunc("/checkAuth", api.CheckAuth)
 	r.HandleFunc("/login", api.Login)
 	r.HandleFunc("/logout", api.Logout)

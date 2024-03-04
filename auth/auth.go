@@ -24,6 +24,7 @@ type MyHandler struct {
 	users    map[string]*models.Person
 	chats    map[int]*models.Chat
 	chatUser []*models.ChatUser
+	isDebug  bool
 }
 
 func randStringRunes(n int) string {
@@ -47,7 +48,18 @@ func generateHash(password string, salt string) (hash string) {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func NewMyHandler() *MyHandler {
+func setDebugHeaders(w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+}
+
+func NewMyHandler(isDebug bool) *MyHandler {
 	adminHash, adminSalt := generateHashAndSalt("admin")
 	return &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
@@ -70,6 +82,7 @@ func NewMyHandler() *MyHandler {
 		},
 		chats:    make(map[int]*models.Chat),
 		chatUser: make([]*models.ChatUser, 0),
+		isDebug:  isDebug,
 	}
 }
 
@@ -85,6 +98,10 @@ func NewMyHandler() *MyHandler {
 // @Failure 400 {object}  models.ErrorResponse "wrong json structure | user not found | wrong password"
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if api.isDebug {
+		setDebugHeaders(w, r)
+	}
+
 	session, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
 		if _, ok := api.sessions[session.Value]; ok {
@@ -175,6 +192,10 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object}  models.ErrorResponse "no session to logout"
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	if api.isDebug {
+		setDebugHeaders(w, r)
+	}
+
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
@@ -215,6 +236,10 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object}  models.ErrorResponse "user already exists | required field empty | wrong json structure"
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
+	if api.isDebug {
+		setDebugHeaders(w, r)
+	}
+
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		if err != nil {
@@ -292,6 +317,10 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object}  models.ErrorResponse "Person not authorized"
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
+	if api.isDebug {
+		setDebugHeaders(w, r)
+	}
+
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
@@ -340,6 +369,10 @@ func (api *MyHandler) fillDB() {
 }
 
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+	if api.isDebug {
+		setDebugHeaders(w, r)
+	}
+
 	api.fillDB()
 	session, err := r.Cookie("session_id")
 	if err != nil {
