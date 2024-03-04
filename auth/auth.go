@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -300,13 +301,10 @@ func (api *MyHandler) ClearUserData() {
 }
 
 func (api *MyHandler) fillDB() {
-	for username, person := range api.users {
-		fmt.Printf("Username: %s, ID: %d\n", username, person.ID)
-	}
 	messagesChat1 := make([]*models.Message, 0)
 	messagesChat1 = append(messagesChat1,
 		&models.Message{ID: 1, ChatID: 1, UserID: api.users["admin"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
-		&models.Message{ID: 2, ChatID: 1, UserID: api.users["admin1"].ID, Message: "Балдёж балдёж", Edited: false},
+		//&models.Message{ID: 2, ChatID: 1, UserID: api.users["admin1"].ID, Message: "Балдёж балдёж", Edited: false},
 	)
 	chat1 := models.Chat{Name: "noName", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1}
 	api.chats[chat1.ID] = &chat1
@@ -314,33 +312,43 @@ func (api *MyHandler) fillDB() {
 	messagesChat2 := make([]*models.Message, 0)
 	messagesChat2 = append(messagesChat2,
 		&models.Message{ID: 1, ChatID: 2, UserID: api.users["admin2"].ID, Message: "Пойдём в столовку?", Edited: false},
-		&models.Message{ID: 2, ChatID: 2, UserID: api.users["admin3"].ID, Message: "Уже бегу", Edited: false},
+		//&models.Message{ID: 2, ChatID: 2, UserID: api.users["admin3"].ID, Message: "Уже бегу", Edited: false},
 	)
 	chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
 	api.chats[chat2.ID] = &chat2
 
 	fmt.Println("Add test data...")
-
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 1})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 2})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 3})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 4})
-
-	api.getChatsByID(1)
 }
 
-func (api *MyHandler) getChats(w http.ResponseWriter, r *http.Request) {
-	///////////////////////////////////
+func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+	session, err := r.Cookie("session_id")
+	if err != nil {
+		log.Fatal(err)
+	}
+	user := api.sessions[session.Value]
+	chats, err := api.getChatsByID(user.ID)
+	if err != nil {
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	err = models.WriteStatusJson(w, 200, chats)
 }
 
-func (api *MyHandler) getChatsByID(userID uint) {
+func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
 	userChats := make([]*models.Chat, 0)
 	for _, cUser := range api.chatUser {
 		if cUser.UserID == userID {
 			chat, ok := api.chats[cUser.ChatID]
 			if ok {
 				userChats = append(userChats, chat)
-				//////////////////////////
 			}
 		}
 	}
@@ -348,12 +356,5 @@ func (api *MyHandler) getChatsByID(userID uint) {
 	for _, chat := range userChats {
 		chats = append(chats, chat)
 	}
-
-	jsonResponse, err := json.Marshal(chats)
-	if err != nil {
-		fmt.Println("Ошибка при создании JSON:", err)
-		return
-	}
-
-	fmt.Println(string(jsonResponse))
+	return chats, nil
 }
