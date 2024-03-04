@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"ProjectMessenger/models"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -14,6 +13,8 @@ import (
 	"time"
 
 	_ "github.com/swaggo/http-swagger"
+
+	"ProjectMessenger/models"
 )
 
 var (
@@ -338,7 +339,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	err = models.WriteStatusJson(w, 200, chats)
 	if err != nil {
 		log.Fatal(err)
-		return 
+		return
 	}
 }
 
