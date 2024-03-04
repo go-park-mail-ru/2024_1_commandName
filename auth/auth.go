@@ -1,19 +1,18 @@
 package auth
 
 import (
-	"ProjectMessenger/models"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/gorilla/mux"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
 
 	_ "github.com/swaggo/http-swagger"
+
+	"ProjectMessenger/models"
 )
 
 var (
@@ -21,8 +20,10 @@ var (
 )
 
 type MyHandler struct {
-	sessions map[string]uint
+	sessions map[string]*models.Person
 	users    map[string]*models.Person
+	chats    map[int]*models.Chat
+	chatUser []*models.ChatUser
 }
 
 func randStringRunes(n int) string {
@@ -49,12 +50,26 @@ func generateHash(password string, salt string) (hash string) {
 func NewMyHandler() *MyHandler {
 	adminHash, adminSalt := generateHashAndSalt("admin")
 	return &MyHandler{
-		sessions: make(map[string]uint, 10),
+		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
-			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Ivanov",
+			"admin": {ID: 1, Username: "ivan_naum", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
+				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
+				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"ArtemZhuk": {ID: 3, Username: "artm_zhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
+				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"AlexanderVolohov": {ID: 4, Username: "ofem1m", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
+				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"mentor": {ID: 4, Username: "Mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
 		},
+		chats:    make(map[int]*models.Chat),
+		chatUser: make([]*models.ChatUser, 0),
 	}
 }
 
@@ -125,7 +140,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SID := randStringRunes(32)
-	api.sessions[SID] = user.ID
+	api.sessions[SID] = user
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    SID,
@@ -242,7 +257,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	api.users[jsonUser.Username] = &jsonUser
 	sessionID := randStringRunes(32)
 
-	api.sessions[sessionID] = jsonUser.ID
+	api.sessions[sessionID] = &jsonUser
 
 	cookie := &http.Cookie{
 		Name:    "session_id",
@@ -283,14 +298,93 @@ func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Start() {
-	r := mux.NewRouter()
+func (api *MyHandler) ClearUserData() {
+	api.users = make(map[string]*models.Person)
+	api.sessions = make(map[string]*models.Person)
+}
 
-	api := NewMyHandler()
-	r.HandleFunc("/checkAuth", api.CheckAuth)
-	r.HandleFunc("/login", api.Login)
-	r.HandleFunc("/logout", api.Logout)
-	r.HandleFunc("/register", api.Register)
+func (api *MyHandler) fillDB() {
+	messagesChat1 := make([]*models.Message, 0)
+	messagesChat1 = append(messagesChat1,
+		&models.Message{ID: 1, ChatID: 1, UserID: api.users["mentor"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
+		//&models.Message{ID: 2, ChatID: 1, UserID: api.users["admin1"].ID, Message: "Балдёж балдёж", Edited: false},
+	)
+	chat1 := models.Chat{Name: "noName", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1}
+	api.chats[chat1.ID] = &chat1
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	messagesChat2 := make([]*models.Message, 0)
+	messagesChat2 = append(messagesChat2,
+		&models.Message{ID: 1, ChatID: 2, UserID: api.users["ArtemkaChernikov"].ID, Message: "Пойдём в столовку?", Edited: false},
+		//&models.Message{ID: 2, ChatID: 2, UserID: api.users["admin3"].ID, Message: "Уже бегу", Edited: false},
+	)
+	chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
+	api.chats[chat2.ID] = &chat2
+	
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 1})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 5})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 2})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 3})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 4})
+
+}
+
+func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+	api.fillDB()
+	session, err := r.Cookie("session_id")
+	if err != nil {
+		errResp := models.Error{Error: err.Error()}
+		err := models.WriteStatusJson(w, 500, errResp)
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
+		return
+	}
+	user := api.sessions[session.Value]
+	if user == nil {
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "Not login"})
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
+		return
+	}
+	chats, err := api.getChatsByID(user.ID)
+	if err != nil {
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	err = models.WriteStatusJson(w, 200, chats)
+	if err != nil {
+		errResp := models.Error{Error: err.Error()}
+		err := models.WriteStatusJson(w, 500, errResp)
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
+		return
+	}
+}
+
+func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
+	userChats := make(map[int]*models.Chat)
+	for _, cUser := range api.chatUser {
+		if cUser.UserID == userID {
+			chat, ok := api.chats[cUser.ChatID]
+			if ok {
+				userChats[cUser.ChatID] = chat
+			}
+		}
+	}
+
+	var chats []*models.Chat
+	for _, chat := range userChats {
+		chats = append(chats, chat)
+	}
+	return chats, nil
 }
