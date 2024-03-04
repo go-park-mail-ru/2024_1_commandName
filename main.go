@@ -21,7 +21,8 @@ func main() {
 	fmt.Println(users, chats)
 }
 
-// Router @Title Messenger authorization API
+// Router
+// @Title Messenger authorization API
 // @Version 1.0
 // @BasePath /
 func Router() {

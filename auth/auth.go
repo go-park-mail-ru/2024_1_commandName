@@ -95,9 +95,9 @@ func NewMyHandler(isDebug bool) *MyHandler {
 // @Accept application/json
 // @Produce application/json
 // @Param user body  models.Person true "Person"
-// @Success 200 {object}  models.Response
-// @Failure 405 {object}  models.ErrorResponse "use POST"
-// @Failure 400 {object}  models.ErrorResponse "wrong json structure | user not found | wrong password"
+// @Success 200 {object}  models.Response[int]
+// @Failure 405 {object}  models.Response[models.Error] "use POST"
+// @Failure 400 {object}  models.Response[models.Error] "wrong json structure | user not found | wrong password"
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -190,8 +190,8 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Summary logs user out
 // @ID logout
 // @Produce json
-// @Success 200 {object}  models.Response
-// @Failure 400 {object}  models.ErrorResponse "no session to logout"
+// @Success 200 {object}  models.Response[int]
+// @Failure 400 {object}  models.Response[models.Error] "no session to logout"
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -233,9 +233,9 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param user body  models.Person true "Person"
-// @Success 200 {object}  models.Response
-// @Failure 405 {object}  models.ErrorResponse "use POST"
-// @Failure 400 {object}  models.ErrorResponse "user already exists | required field empty | wrong json structure"
+// @Success 200 {object}  models.Response[int]
+// @Failure 405 {object}  models.Response[models.Error] "use POST"
+// @Failure 400 {object}  models.Response[models.Error] "user already exists | required field empty | wrong json structure"
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -315,8 +315,8 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Summary checks that user is authenticated
 // @ID checkAuth
 // @Produce json
-// @Success 200 {object}  models.Response
-// @Failure 401 {object}  models.ErrorResponse "Person not authorized"
+// @Success 200 {object}  models.Response[int]
+// @Failure 401 {object}  models.Response[models.Error] "Person not authorized"
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -370,6 +370,14 @@ func (api *MyHandler) fillDB() {
 
 }
 
+// GetChats gets chats previews for user
+//
+// @Summary gets chats previews for user
+// @ID GetChats
+// @Produce json
+// @Success 200 {object}  models.Response[models.Chats]
+// @Failure 400 {object}  models.Response[models.Error] "Person not authorized"
+// @Router /GetChats [get]
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
 		setDebugHeaders(w, r)
@@ -394,10 +402,10 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	chats := api.getChatsByID(user.ID)
-	err = models.WriteChatJson(w, 200, chats)
+	err = models.WriteStatusJson(w, 200, models.Chats{Chats: chats})
 	if err != nil {
 		errResp := models.Error{Error: err.Error()}
-		err := models.WriteChatJson(w, 500, errResp)
+		err := models.WriteStatusJson(w, 500, errResp)
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
