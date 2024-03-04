@@ -5,18 +5,18 @@ import (
 	"net/http"
 )
 
-type Response struct {
+// Response[T]
+type Response[T any] struct {
 	Status int `json:"status" example:"200"`
-	Body   any `validate:"optional" json:"body,omitempty"`
-}
-
-type ErrorResponse struct {
-	Status int   `json:"status" example:"400"`
-	Body   Error `json:"body,omitempty"`
+	Body   T   `json:"body,omitempty"`
 }
 
 type Error struct {
 	Error string `json:"error" example:"error description"`
+}
+
+type Chats struct {
+	Chats []*Chat `json:"chats"`
 }
 
 func WriteStatusJson(w http.ResponseWriter, status int, body any) error {
@@ -34,7 +34,7 @@ func WriteStatusJson(w http.ResponseWriter, status int, body any) error {
 }
 
 func MarshalStatusJson(status int, body any) ([]byte, error) {
-	response := Response{
+	response := Response[any]{
 		Status: status,
 		Body:   body,
 	}

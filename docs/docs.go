@@ -26,13 +26,36 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response"
+                            "$ref": "#/definitions/models.Response-int"
                         }
                     },
                     "401": {
                         "description": "Person not authorized",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getChats": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "gets chats previews for user",
+                "operationId": "GetChats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Chats"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
                         }
                     }
                 }
@@ -63,19 +86,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response"
+                            "$ref": "#/definitions/models.Response-int"
                         }
                     },
                     "400": {
                         "description": "wrong json structure | user not found | wrong password",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/models.Response-models_Error"
                         }
                     },
                     "405": {
                         "description": "use POST",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/models.Response-models_Error"
                         }
                     }
                 }
@@ -92,13 +115,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response"
+                            "$ref": "#/definitions/models.Response-int"
                         }
                     },
                     "400": {
                         "description": "no session to logout",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/models.Response-models_Error"
                         }
                     }
                 }
@@ -129,19 +152,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response"
+                            "$ref": "#/definitions/models.Response-int"
                         }
                     },
                     "400": {
                         "description": "user already exists | required field empty | wrong json structure",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/models.Response-models_Error"
                         }
                     },
                     "405": {
                         "description": "use POST",
                         "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
+                            "$ref": "#/definitions/models.Response-models_Error"
                         }
                     }
                 }
@@ -149,6 +172,63 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.Chat": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "creator": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Message"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ChatUser"
+                    }
+                }
+            }
+        },
+        "models.ChatUser": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Chats": {
+            "type": "object",
+            "properties": {
+                "chats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Chat"
+                    }
+                }
+            }
+        },
         "models.Error": {
             "type": "object",
             "properties": {
@@ -158,15 +238,23 @@ const docTemplate = `{
                 }
             }
         },
-        "models.ErrorResponse": {
+        "models.Message": {
             "type": "object",
             "properties": {
-                "body": {
-                    "$ref": "#/definitions/models.Error"
+                "chat_id": {
+                    "type": "integer"
                 },
-                "status": {
-                    "type": "integer",
-                    "example": 400
+                "edited": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "message_text": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -181,10 +269,36 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Response": {
+        "models.Response-int": {
             "type": "object",
             "properties": {
-                "body": {},
+                "body": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "models.Response-models_Chats": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/models.Chats"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "models.Response-models_Error": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/models.Error"
+                },
                 "status": {
                     "type": "integer",
                     "example": 200
