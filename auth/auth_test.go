@@ -23,7 +23,7 @@ type testCase struct {
 }
 
 func TestRegisterLoginLogout(t *testing.T) {
-	api := NewMyHandler()
+	api := NewMyHandler(true)
 	api.ClearUserData()
 
 	var emptyUsernameUser = map[string]interface{}{
@@ -71,7 +71,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: convertToJSON(validUser),
+				payLoad: converToJSON(validUser),
 			},
 		},
 		{
@@ -79,7 +79,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: convertToJSON(validUser),
+				payLoad: converToJSON(validUser),
 			},
 		},
 		{
@@ -87,7 +87,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: convertToJSON(emptyUsernameUser),
+				payLoad: converToJSON(emptyUsernameUser),
 				problem: ProblemRawUser,
 			},
 		},
@@ -96,7 +96,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "GET",
 				url:     "/register",
-				payLoad: convertToJSON(validUser),
+				payLoad: converToJSON(validUser),
 				problem: ProblemMethodGet,
 			},
 		},
@@ -105,7 +105,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: convertToJSON(invalidJsonUser),
+				payLoad: converToJSON(invalidJsonUser),
 				problem: ProblemNotJSON,
 			},
 		},
@@ -114,7 +114,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: convertToJSON(userNotFound),
+				payLoad: converToJSON(userNotFound),
 				problem: ProblemUserNotFound,
 			},
 		},
@@ -123,7 +123,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: convertToJSON(unvalidUserPassword),
+				payLoad: converToJSON(unvalidUserPassword),
 				problem: ProblemWrongPassword,
 			},
 		},
@@ -132,7 +132,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: convertToJSON(validUser),
+				payLoad: converToJSON(validUser),
 				problem: ProblemUserExists,
 			},
 		},
@@ -141,8 +141,16 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/checkAuth",
-				payLoad: convertToJSON(validUser),
+				payLoad: converToJSON(validUser),
 				problem: ProblemUserExists,
+			},
+		},
+		{
+			name: "getChats",
+			request: Request{
+				method:  "POST",
+				url:     "/getChats",
+				payLoad: nil,
 			},
 		},
 		{
@@ -186,6 +194,13 @@ func TestRegisterLoginLogout(t *testing.T) {
 				}
 				req.AddCookie(cookie)
 				handler = http.HandlerFunc(api.CheckAuth)
+			} else if tc.request.url == "/getChats" {
+				cookie := &http.Cookie{
+					Name:  "session_id",
+					Value: sessionID,
+				}
+				req.AddCookie(cookie)
+				handler = http.HandlerFunc(api.GetChats)
 			}
 			handler.ServeHTTP(rr, req)
 
@@ -199,6 +214,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 					}
 				}
 			}
+
 			responseBodyText := rr.Body.String()
 			if status != http.StatusOK {
 				if tc.request.problem == ProblemRawUser && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"required field is empty\"}}" {
@@ -241,7 +257,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 
 }
 
-func convertToJSON(userData map[string]interface{}) []byte {
+func converToJSON(userData map[string]interface{}) []byte {
 	body, err := json.Marshal(userData)
 	if err != nil {
 		log.Fatal(err)
