@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -324,7 +323,13 @@ func (api *MyHandler) fillDB() {
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if err != nil {
-		log.Fatal(err)
+		errResp := models.Error{Error: err.Error()}
+		err := models.WriteStatusJson(w, 500, errResp)
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
+		return
 	}
 	user := api.sessions[session.Value]
 	chats, err := api.getChatsByID(user.ID)
@@ -338,7 +343,12 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	err = models.WriteStatusJson(w, 200, chats)
 	if err != nil {
-		log.Fatal(err)
+		errResp := models.Error{Error: err.Error()}
+		err := models.WriteStatusJson(w, 500, errResp)
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
 		return
 	}
 }
