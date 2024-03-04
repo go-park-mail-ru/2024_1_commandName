@@ -393,14 +393,6 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	chats := api.getChatsByID(user.ID)
-	if err != nil {
-		err = models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
-		if err != nil {
-			http.Error(w, "internal server error", 500)
-			return
-		}
-		return
-	}
 	err = models.WriteStatusJson(w, 200, chats)
 	if err != nil {
 		errResp := models.Error{Error: err.Error()}
