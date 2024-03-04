@@ -53,7 +53,19 @@ func NewMyHandler() *MyHandler {
 	return &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
-			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Ivanov",
+			"admin": {ID: 1, Username: "ivan_naum", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
+				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
+				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"ArtemZhuk": {ID: 3, Username: "artm_zhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
+				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"AlexanderVolohov": {ID: 4, Username: "ofem1m", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
+				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+				PasswordSalt: adminSalt, Password: adminHash},
+			"mentor": {ID: 4, Username: "Mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
 		},
@@ -248,10 +260,6 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	api.sessions[sessionID] = &jsonUser
 
-	if len(api.users) > 3 {
-		api.fillDB()
-	}
-
 	cookie := &http.Cookie{
 		Name:    "session_id",
 		Value:   sessionID,
@@ -299,7 +307,7 @@ func (api *MyHandler) ClearUserData() {
 func (api *MyHandler) fillDB() {
 	messagesChat1 := make([]*models.Message, 0)
 	messagesChat1 = append(messagesChat1,
-		&models.Message{ID: 1, ChatID: 1, UserID: api.users["admin"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
+		&models.Message{ID: 1, ChatID: 1, UserID: api.users["mentor"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
 		//&models.Message{ID: 2, ChatID: 1, UserID: api.users["admin1"].ID, Message: "Балдёж балдёж", Edited: false},
 	)
 	chat1 := models.Chat{Name: "noName", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1}
@@ -307,7 +315,7 @@ func (api *MyHandler) fillDB() {
 
 	messagesChat2 := make([]*models.Message, 0)
 	messagesChat2 = append(messagesChat2,
-		&models.Message{ID: 1, ChatID: 2, UserID: api.users["admin2"].ID, Message: "Пойдём в столовку?", Edited: false},
+		&models.Message{ID: 1, ChatID: 2, UserID: api.users["ArtemkaChernikov"].ID, Message: "Пойдём в столовку?", Edited: false},
 		//&models.Message{ID: 2, ChatID: 2, UserID: api.users["admin3"].ID, Message: "Уже бегу", Edited: false},
 	)
 	chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
@@ -315,12 +323,15 @@ func (api *MyHandler) fillDB() {
 
 	fmt.Println("Add test data...")
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 1})
+	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 5})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 2})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 3})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 4})
+
 }
 
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+	api.fillDB()
 	session, err := r.Cookie("session_id")
 	if err != nil {
 		errResp := models.Error{Error: err.Error()}
@@ -332,6 +343,15 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := api.sessions[session.Value]
+	if user == nil {
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "Not login"})
+		if err != nil {
+			http.Error(w, "internal server error", 500)
+			return
+		}
+		return
+	}
+	fmt.Println(user)
 	chats, err := api.getChatsByID(user.ID)
 	if err != nil {
 		err = models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
@@ -339,6 +359,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal server error", 500)
 			return
 		}
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	err = models.WriteStatusJson(w, 200, chats)
@@ -354,16 +375,19 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
-	userChats := make([]*models.Chat, 0)
+	userChats := make(map[int]*models.Chat)
 	for _, cUser := range api.chatUser {
 		if cUser.UserID == userID {
 			chat, ok := api.chats[cUser.ChatID]
 			if ok {
-				userChats = append(userChats, chat)
+				userChats[cUser.ChatID] = chat
 			}
 		}
 	}
+	
 	var chats []*models.Chat
-	chats = append(chats, userChats...)
+	for _, chat := range userChats {
+		chats = append(chats, chat)
+	}
 	return chats, nil
 }
