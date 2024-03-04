@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -320,8 +319,7 @@ func (api *MyHandler) fillDB() {
 	)
 	chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
 	api.chats[chat2.ID] = &chat2
-
-	fmt.Println("Add test data...")
+	
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 1})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 5})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 2})
@@ -351,7 +349,6 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	fmt.Println(user)
 	chats, err := api.getChatsByID(user.ID)
 	if err != nil {
 		err = models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
@@ -384,7 +381,7 @@ func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
 			}
 		}
 	}
-	
+
 	var chats []*models.Chat
 	for _, chat := range userChats {
 		chats = append(chats, chat)
