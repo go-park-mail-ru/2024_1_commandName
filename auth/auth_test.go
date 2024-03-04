@@ -23,7 +23,7 @@ type testCase struct {
 }
 
 func TestRegisterLoginLogout(t *testing.T) {
-	api := NewMyHandler()
+	api := NewMyHandler(true)
 	api.ClearUserData()
 
 	var emptyUsernameUser = map[string]interface{}{
@@ -61,7 +61,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 		ProblemMethodGet     = "method_get"
 		ProblemNotJSON       = "not_json"
 		ProblemUserNotFound  = "user_not_found"
-		ProblemWrongPassword = "wrong_passord"
+		ProblemWrongPassword = "wrong_password"
 		ProblemUserExists    = "user_already_exists"
 	)
 
@@ -146,6 +146,14 @@ func TestRegisterLoginLogout(t *testing.T) {
 			},
 		},
 		{
+			name: "getChats",
+			request: Request{
+				method:  "POST",
+				url:     "/getChats",
+				payLoad: nil,
+			},
+		},
+		{
 			name: "Logout",
 			request: Request{
 				method:  "POST",
@@ -186,6 +194,13 @@ func TestRegisterLoginLogout(t *testing.T) {
 				}
 				req.AddCookie(cookie)
 				handler = http.HandlerFunc(api.CheckAuth)
+			} else if tc.request.url == "/getChats" {
+				cookie := &http.Cookie{
+					Name:  "session_id",
+					Value: sessionID,
+				}
+				req.AddCookie(cookie)
+				handler = http.HandlerFunc(api.GetChats)
 			}
 			handler.ServeHTTP(rr, req)
 
@@ -199,46 +214,39 @@ func TestRegisterLoginLogout(t *testing.T) {
 					}
 				}
 			}
+
 			responseBodyText := rr.Body.String()
 			if status != http.StatusOK {
 				if tc.request.problem == ProblemRawUser && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"required field is empty\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for raw user data")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemMethodGet && rr.Body.String() == "{\"status\":405,\"body\":{\"error\":\"use POST\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for another request method")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemNotJSON && rr.Body.String() == "Content-Type header is not application/json\n" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemUserNotFound && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"user not found\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemWrongPassword && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"wrong password\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				if tc.request.problem == ProblemUserExists && rr.Body.String() == "{\"status\":400,\"body\":{\"error\":\"user already exists\"}}" {
-					fmt.Println(tc.name, ": ------------- STATUS: OK")
-					t.Skip("Expected error for not JSON type")
-
+					fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 					return
 				}
 				t.Errorf("Login handler returned wrong status code: got %v want %v. Body: %v", status, http.StatusOK, responseBodyText)
 			} else {
-				fmt.Println(tc.name, ": ------------- STATUS: OK")
+				fmt.Println(tc.name, ": ------------- TESTCASE STATUS: OK")
 			}
 		})
 	}
-
 }
 
 func convertToJSON(userData map[string]interface{}) []byte {
