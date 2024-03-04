@@ -64,7 +64,7 @@ func NewMyHandler(isDebug bool) *MyHandler {
 	return &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
-			"admin": {ID: 1, Username: "ivan_naum", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
+			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
 				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
 			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
@@ -375,9 +375,8 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 
 	api.fillDB()
 	session, err := r.Cookie("session_id")
-	if err != nil {
-		errResp := models.Error{Error: err.Error()}
-		err := models.WriteStatusJson(w, 500, errResp)
+	if errors.Is(err, http.ErrNoCookie) {
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -386,14 +385,14 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	}
 	user := api.sessions[session.Value]
 	if user == nil {
-		err = models.WriteStatusJson(w, 400, models.Error{Error: "Not login"})
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
 		}
 		return
 	}
-	chats, err := api.getChatsByID(user.ID)
+	chats := api.getChatsByID(user.ID)
 	if err != nil {
 		err = models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
 		if err != nil {
@@ -402,7 +401,6 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	err = models.WriteStatusJson(w, 200, chats)
 	if err != nil {
 		errResp := models.Error{Error: err.Error()}
@@ -415,7 +413,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
+func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 	userChats := make(map[int]*models.Chat)
 	for _, cUser := range api.chatUser {
 		if cUser.UserID == userID {
@@ -430,5 +428,5 @@ func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
 	for _, chat := range userChats {
 		chats = append(chats, chat)
 	}
-	return chats, nil
+	return chats
 }
