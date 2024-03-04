@@ -85,6 +85,17 @@ func NewMyHandler() *MyHandler {
 // @Failure 400 {object}  models.ErrorResponse "wrong json structure | user not found | wrong password"
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
+	session, err := r.Cookie("session_id")
+	if !errors.Is(err, http.ErrNoCookie) {
+		if _, ok := api.sessions[session.Value]; ok {
+			err := models.WriteStatusJson(w, 400, models.Error{Error: "session already exists"})
+			if err != nil {
+				http.Error(w, "internal server error", 500)
+				return
+			}
+			return
+		}
+	}
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		if err != nil {
@@ -105,7 +116,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	var jsonUser models.Person
-	err := decoder.Decode(&jsonUser)
+	err = decoder.Decode(&jsonUser)
 	if err != nil {
 		http.Error(w, "wrong json structure", 400)
 		return
@@ -319,7 +330,7 @@ func (api *MyHandler) fillDB() {
 	)
 	chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
 	api.chats[chat2.ID] = &chat2
-	
+
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 1})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 5})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 2})
