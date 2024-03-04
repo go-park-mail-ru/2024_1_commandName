@@ -71,7 +71,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 			},
 		},
 		{
@@ -79,7 +79,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 			},
 		},
 		{
@@ -87,7 +87,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(emptyUsernameUser),
+				payLoad: convertToJSON(emptyUsernameUser),
 				problem: ProblemRawUser,
 			},
 		},
@@ -96,7 +96,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "GET",
 				url:     "/register",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 				problem: ProblemMethodGet,
 			},
 		},
@@ -105,7 +105,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(invalidJsonUser),
+				payLoad: convertToJSON(invalidJsonUser),
 				problem: ProblemNotJSON,
 			},
 		},
@@ -114,7 +114,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: converToJSON(userNotFound),
+				payLoad: convertToJSON(userNotFound),
 				problem: ProblemUserNotFound,
 			},
 		},
@@ -123,7 +123,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/login",
-				payLoad: converToJSON(unvalidUserPassword),
+				payLoad: convertToJSON(unvalidUserPassword),
 				problem: ProblemWrongPassword,
 			},
 		},
@@ -132,7 +132,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/register",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 				problem: ProblemUserExists,
 			},
 		},
@@ -141,7 +141,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 			request: Request{
 				method:  "POST",
 				url:     "/checkAuth",
-				payLoad: converToJSON(validUser),
+				payLoad: convertToJSON(validUser),
 				problem: ProblemUserExists,
 			},
 		},
@@ -249,7 +249,7 @@ func TestRegisterLoginLogout(t *testing.T) {
 	}
 }
 
-func converToJSON(userData map[string]interface{}) []byte {
+func convertToJSON(userData map[string]interface{}) []byte {
 	body, err := json.Marshal(userData)
 	if err != nil {
 		log.Fatal(err)
