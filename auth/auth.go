@@ -20,7 +20,7 @@ var (
 )
 
 type MyHandler struct {
-	sessions map[string]uint
+	sessions map[string]*models.Person
 	users    map[string]*models.Person
 	chats    map[int]*models.Chat
 	chatUser []*models.ChatUser
@@ -54,7 +54,7 @@ func generateHash(password string, salt string) (hash string) {
 func NewMyHandler() *MyHandler {
 	adminHash, adminSalt := generateHashAndSalt("admin")
 	return &MyHandler{
-		sessions: make(map[string]uint, 10),
+		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
 			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Ivanov",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
@@ -132,7 +132,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SID := randStringRunes(32)
-	api.sessions[SID] = user.ID
+	api.sessions[SID] = user
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    SID,
@@ -249,7 +249,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	api.users[jsonUser.Username] = &jsonUser
 	sessionID := randStringRunes(32)
 
-	api.sessions[sessionID] = jsonUser.ID
+	api.sessions[sessionID] = &jsonUser
 
 	if len(api.users) > 3 {
 		api.fillDB()
@@ -296,7 +296,7 @@ func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 
 func (api *MyHandler) ClearUserData() {
 	api.users = make(map[string]*models.Person)
-	api.sessions = make(map[string]uint)
+	api.sessions = make(map[string]*models.Person)
 }
 
 func (api *MyHandler) fillDB() {
@@ -330,7 +330,7 @@ func (api *MyHandler) fillDB() {
 }
 
 func (api *MyHandler) getChats(w http.ResponseWriter, r *http.Request) {
-///////////////////////////////////
+	///////////////////////////////////
 }
 
 func (api *MyHandler) getChatsByID(userID uint) {
@@ -348,13 +348,12 @@ func (api *MyHandler) getChatsByID(userID uint) {
 	for _, chat := range userChats {
 		chats = append(chats, chat)
 	}
-	
+
 	jsonResponse, err := json.Marshal(chats)
 	if err != nil {
 		fmt.Println("Ошибка при создании JSON:", err)
 		return
 	}
-	
+
 	fmt.Println(string(jsonResponse))
 }
-
