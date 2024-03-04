@@ -3,6 +3,7 @@ package main
 import (
 	"ProjectMessenger/auth"
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 )
 
@@ -19,7 +20,7 @@ func main() {
 	fmt.Println(users, chats)
 }
 
-// @Title Messenger authorization API
+// Router @Title Messenger authorization API
 // @Version 1.0
 // @BasePath /
 func Router() {
@@ -31,5 +32,9 @@ func Router() {
 	r.HandleFunc("/logout", api.Logout)
 	r.HandleFunc("/register", api.Register)
 	r.HandleFunc("/getChats", api.GetChats)
-	http.ListenAndServe(":8080", r)
+	err := http.ListenAndServe(":8080", r)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
 }
