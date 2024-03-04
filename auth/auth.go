@@ -85,6 +85,17 @@ func NewMyHandler() *MyHandler {
 // @Failure 400 {object}  models.ErrorResponse "wrong json structure | user not found | wrong password"
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
+	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	header.Add("Access-Control-Allow-Credentials", "true")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	session, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
 		if _, ok := api.sessions[session.Value]; ok {
@@ -175,6 +186,17 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object}  models.ErrorResponse "no session to logout"
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
+	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	header.Add("Access-Control-Allow-Credentials", "true")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
@@ -215,6 +237,17 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object}  models.ErrorResponse "user already exists | required field empty | wrong json structure"
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
+	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	header.Add("Access-Control-Allow-Credentials", "true")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		if err != nil {
@@ -292,6 +325,17 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {object}  models.ErrorResponse "Person not authorized"
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
+	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	header.Add("Access-Control-Allow-Credentials", "true")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
