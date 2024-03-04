@@ -61,7 +61,7 @@ func setDebugHeaders(w http.ResponseWriter, r *http.Request) {
 
 func NewMyHandler(isDebug bool) *MyHandler {
 	adminHash, adminSalt := generateHashAndSalt("admin")
-	return &MyHandler{
+	handler := &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
 			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
@@ -84,6 +84,8 @@ func NewMyHandler(isDebug bool) *MyHandler {
 		chatUser: make([]*models.ChatUser, 0),
 		isDebug:  isDebug,
 	}
+	handler.fillDB()
+	return handler
 }
 
 // Login logs user in
@@ -373,7 +375,6 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		setDebugHeaders(w, r)
 	}
 
-	api.fillDB()
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
