@@ -27,10 +27,6 @@ type MyHandler struct {
 	chatUser []*models.ChatUser
 }
 
-type Messenger struct {
-	chats map[int]*models.Chat
-}
-
 func randStringRunes(n int) string {
 	b := make([]rune, n)
 	for i := range b {
@@ -340,6 +336,10 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	err = models.WriteStatusJson(w, 200, chats)
+	if err != nil {
+		log.Fatal(err)
+		return 
+	}
 }
 
 func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
@@ -353,8 +353,6 @@ func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
 		}
 	}
 	var chats []*models.Chat
-	for _, chat := range userChats {
-		chats = append(chats, chat)
-	}
+	chats = append(chats, userChats...)
 	return chats, nil
 }
