@@ -44,32 +44,3 @@ func MarshalStatusJson(status int, body any) ([]byte, error) {
 	}
 	return marshal, nil
 }
-
-func WriteChatJson(w http.ResponseWriter, status int, body any) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	jsonByte, err := MarshalChatJson(status, body)
-	if err != nil {
-		return err
-	}
-	_, err = w.Write(jsonByte)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func MarshalChatJson(status int, body any) ([]byte, error) {
-	chats, _ := body.([]*Chat)
-	response := Response{
-		Status: status,
-		Body: map[string][]*Chat{
-			"chats": chats,
-		},
-	}
-	marshal, err := json.Marshal(response)
-	if err != nil {
-		return nil, err
-	}
-	return marshal, nil
-}
