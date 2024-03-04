@@ -15,14 +15,13 @@ func main() {
 	Router()
 	users := make([]models.Person, 0)
 	chats := make([]models.Chat, 0)
+
 	fmt.Println(users, chats)
 }
 
 // @Title Messenger authorization API
 // @Version 1.0
-// @schemes http
-// @host localhost:8080
-// @BasePath  /
+// @BasePath /
 func Router() {
 	r := mux.NewRouter()
 
@@ -31,6 +30,6 @@ func Router() {
 	r.HandleFunc("/login", api.Login)
 	r.HandleFunc("/logout", api.Logout)
 	r.HandleFunc("/register", api.Register)
-
+	r.HandleFunc("/getChats", api.GetChats)
 	http.ListenAndServe(":8080", r)
 }
