@@ -24,6 +24,7 @@ type MyHandler struct {
 	users    map[string]*models.Person
 	chats    map[int]*models.Chat
 	chatUser []*models.ChatUser
+	isDebug  bool
 }
 
 func randStringRunes(n int) string {
@@ -47,12 +48,23 @@ func generateHash(password string, salt string) (hash string) {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func NewMyHandler() *MyHandler {
+func setDebugHeaders(w http.ResponseWriter, r *http.Request) {
+	header := w.Header()
+	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
+	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+}
+
+func NewMyHandler(isDebug bool) *MyHandler {
 	adminHash, adminSalt := generateHashAndSalt("admin")
-	return &MyHandler{
+	handler := &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
-			"admin": {ID: 1, Username: "ivan_naum", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
+			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
 				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
 			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
@@ -70,7 +82,10 @@ func NewMyHandler() *MyHandler {
 		},
 		chats:    make(map[int]*models.Chat),
 		chatUser: make([]*models.ChatUser, 0),
+		isDebug:  isDebug,
 	}
+	handler.fillDB()
+	return handler
 }
 
 // Login logs user in
@@ -80,20 +95,13 @@ func NewMyHandler() *MyHandler {
 // @Accept application/json
 // @Produce application/json
 // @Param user body  models.Person true "Person"
-// @Success 200 {object}  models.Response
-// @Failure 405 {object}  models.ErrorResponse "use POST"
-// @Failure 400 {object}  models.ErrorResponse "wrong json structure | user not found | wrong password"
+// @Success 200 {object}  models.Response[int]
+// @Failure 405 {object}  models.Response[models.Error] "use POST"
+// @Failure 400 {object}  models.Response[models.Error] "wrong json structure | user not found | wrong password"
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
-	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
-	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
-	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-	header.Add("Access-Control-Allow-Credentials", "true")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
+	if api.isDebug {
+		setDebugHeaders(w, r)
 	}
 
 	session, err := r.Cookie("session_id")
@@ -182,19 +190,12 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Summary logs user out
 // @ID logout
 // @Produce json
-// @Success 200 {object}  models.Response
-// @Failure 400 {object}  models.ErrorResponse "no session to logout"
+// @Success 200 {object}  models.Response[int]
+// @Failure 400 {object}  models.Response[models.Error] "no session to logout"
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
-	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
-	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-	header.Add("Access-Control-Allow-Credentials", "true")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
+	if api.isDebug {
+		setDebugHeaders(w, r)
 	}
 
 	session, err := r.Cookie("session_id")
@@ -232,20 +233,13 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param user body  models.Person true "Person"
-// @Success 200 {object}  models.Response
-// @Failure 405 {object}  models.ErrorResponse "use POST"
-// @Failure 400 {object}  models.ErrorResponse "user already exists | required field empty | wrong json structure"
+// @Success 200 {object}  models.Response[int]
+// @Failure 405 {object}  models.Response[models.Error] "use POST"
+// @Failure 400 {object}  models.Response[models.Error] "user already exists | required field empty | wrong json structure"
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
-	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
-	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
-	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-	header.Add("Access-Control-Allow-Credentials", "true")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
+	if api.isDebug {
+		setDebugHeaders(w, r)
 	}
 
 	if r.Method != http.MethodPost {
@@ -321,19 +315,12 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Summary checks that user is authenticated
 // @ID checkAuth
 // @Produce json
-// @Success 200 {object}  models.Response
-// @Failure 401 {object}  models.ErrorResponse "Person not authorized"
+// @Success 200 {object}  models.Response[int]
+// @Failure 401 {object}  models.Response[models.Error] "Person not authorized"
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
-	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
-	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
-	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-	header.Add("Access-Control-Allow-Credentials", "true")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
+	if api.isDebug {
+		setDebugHeaders(w, r)
 	}
 
 	authorized := false
@@ -383,12 +370,22 @@ func (api *MyHandler) fillDB() {
 
 }
 
+// GetChats gets chats previews for user
+//
+// @Summary gets chats previews for user
+// @ID GetChats
+// @Produce json
+// @Success 200 {object}  models.Response[models.Chats]
+// @Failure 400 {object}  models.Response[models.Error] "Person not authorized"
+// @Router /getChats [get]
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
-	api.fillDB()
+	if api.isDebug {
+		setDebugHeaders(w, r)
+	}
+
 	session, err := r.Cookie("session_id")
-	if err != nil {
-		errResp := models.Error{Error: err.Error()}
-		err := models.WriteStatusJson(w, 500, errResp)
+	if errors.Is(err, http.ErrNoCookie) {
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -397,24 +394,15 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	}
 	user := api.sessions[session.Value]
 	if user == nil {
-		err = models.WriteStatusJson(w, 400, models.Error{Error: "Not login"})
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
 		}
 		return
 	}
-	chats, err := api.getChatsByID(user.ID)
-	if err != nil {
-		err = models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
-		if err != nil {
-			http.Error(w, "internal server error", 500)
-			return
-		}
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	err = models.WriteStatusJson(w, 200, chats)
+	chats := api.getChatsByID(user.ID)
+	err = models.WriteStatusJson(w, 200, models.Chats{Chats: chats})
 	if err != nil {
 		errResp := models.Error{Error: err.Error()}
 		err := models.WriteStatusJson(w, 500, errResp)
@@ -426,7 +414,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
+func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 	userChats := make(map[int]*models.Chat)
 	for _, cUser := range api.chatUser {
 		if cUser.UserID == userID {
@@ -441,5 +429,5 @@ func (api *MyHandler) getChatsByID(userID uint) ([]*models.Chat, error) {
 	for _, chat := range userChats {
 		chats = append(chats, chat)
 	}
-	return chats, nil
+	return chats
 }
