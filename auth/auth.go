@@ -64,7 +64,7 @@ func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool)
 }
 
 func NewMyHandler(isDebug bool) *MyHandler {
-	adminHash, adminSalt := generateHashAndSalt("admin")
+	adminHash, adminSalt := generateHashAndSalt("Admin123.")
 	handler := &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
@@ -74,13 +74,13 @@ func NewMyHandler(isDebug bool) *MyHandler {
 			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
 				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
-			"ArtemZhuk": {ID: 3, Username: "artm_zhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
+			"ArtemZhuk": {ID: 3, Username: "ArtemZhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
 				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
-			"AlexanderVolohov": {ID: 4, Username: "ofem1m", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
+			"AlexanderVolohov": {ID: 4, Username: "AlexanderVolohov", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
 				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
-			"mentor": {ID: 4, Username: "Mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
+			"mentor": {ID: 4, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
 		},
