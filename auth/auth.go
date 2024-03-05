@@ -68,28 +68,29 @@ func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool)
 }
 
 func NewMyHandler(isDebug bool) *MyHandler {
-	adminHash, adminSalt := generateHashAndSalt("Admin123.")
+	usersHash, usersSalt := generateHashAndSalt("Admin123.")
+	testUserHash, testUserSalt := generateHashAndSalt("Demouser123!")
 	handler := &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
 			"IvanNaumov": {ID: 1, Username: "IvanNaumov", Email: "ivan@mail.ru", Name: "Ivan", Surname: "Naumov",
 				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
+				PasswordSalt: usersSalt, Password: usersHash},
 			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
 				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
+				PasswordSalt: usersSalt, Password: usersHash},
 			"ArtemZhuk": {ID: 3, Username: "ArtemZhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
 				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
+				PasswordSalt: usersSalt, Password: usersHash},
 			"AlexanderVolohov": {ID: 4, Username: "AlexanderVolohov", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
 				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
+				PasswordSalt: usersSalt, Password: usersHash},
 			"mentor": {ID: 5, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
+				PasswordSalt: usersSalt, Password: usersHash},
 			"testUser": {ID: 6, Username: "TestUser", Email: "test@mail.ru", Name: "Test", Surname: "User",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
+				PasswordSalt: testUserSalt, Password: testUserHash},
 		},
 		chats:    make(map[int]*models.Chat),
 		chatUser: make([]*models.ChatUser, 0),
@@ -413,7 +414,7 @@ func (api *MyHandler) fillDB() {
 
 	messagesChat4 := make([]*models.Message, 0)
 	messagesChat4 = append(messagesChat4,
-		&models.Message{ID: 1, ChatID: 4, UserID: api.users["IvanNaumov"].ID, Message: "Ты когда тесты и авторизацию допилишь, собака сутулая?", Edited: false},
+		&models.Message{ID: 1, ChatID: 4, UserID: api.users["IvanNaumov"].ID, Message: "Ты когда тесты и авторизацию допилишь?", Edited: false},
 	)
 	chat4 := models.Chat{Name: "IvanNaumov", ID: 4, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat4, Users: api.getChatUsersByChatID(4)}
 	api.chats[chat4.ID] = &chat4
