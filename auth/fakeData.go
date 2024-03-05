@@ -17,7 +17,6 @@ func (api *MyHandler) fillDB() {
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 4, UserID: 1})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 5, UserID: 6})
 	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 5, UserID: 4})
-	/////////////////////////////////////////////////////////
 
 	messagesChat1 := make([]*models.Message, 0)
 	messagesChat1 = append(messagesChat1,
@@ -26,7 +25,6 @@ func (api *MyHandler) fillDB() {
 
 	chat1 := models.Chat{Name: "mentor", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1, Users: api.getChatUsersByChatID(1)}
 	api.chats[chat1.ID] = &chat1
-	/////////////////////////////////////////////////////////////
 
 	messagesChat2 := make([]*models.Message, 0)
 	messagesChat2 = append(messagesChat2,
@@ -34,7 +32,6 @@ func (api *MyHandler) fillDB() {
 	)
 	chat2 := models.Chat{Name: "ArtemkaChernikov", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "2", Messages: messagesChat2, Users: api.getChatUsersByChatID(2)}
 	api.chats[chat2.ID] = &chat2
-	////////////////////////////////////////////////////////////
 
 	messagesChat3 := make([]*models.Message, 0)
 	messagesChat3 = append(messagesChat3,
@@ -42,7 +39,6 @@ func (api *MyHandler) fillDB() {
 	)
 	chat3 := models.Chat{Name: "ArtemZhuk", ID: 3, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat3, Users: api.getChatUsersByChatID(3)}
 	api.chats[chat3.ID] = &chat3
-	////////////////////////////////////////////////////////////
 
 	messagesChat4 := make([]*models.Message, 0)
 	messagesChat4 = append(messagesChat4,
@@ -50,7 +46,6 @@ func (api *MyHandler) fillDB() {
 	)
 	chat4 := models.Chat{Name: "IvanNaumov", ID: 4, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat4, Users: api.getChatUsersByChatID(4)}
 	api.chats[chat4.ID] = &chat4
-	//////////////////////////////////////////////////////////////
 
 	messagesChat5 := make([]*models.Message, 0)
 	messagesChat5 = append(messagesChat5,
@@ -58,8 +53,6 @@ func (api *MyHandler) fillDB() {
 	)
 	chat5 := models.Chat{Name: "AlexanderVolohov", ID: 5, Type: "person", Description: "", AvatarPath: "", CreatorID: "5", Messages: messagesChat5, Users: api.getChatUsersByChatID(5)}
 	api.chats[chat5.ID] = &chat5
-	///////////////////////////////////////////////////////////////
-
 }
 
 func (api *MyHandler) fillUsers() map[string]*models.Person {
