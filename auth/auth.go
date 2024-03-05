@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/swaggo/http-swagger"
@@ -24,6 +25,9 @@ type MyHandler struct {
 	users    map[string]*models.Person
 	chats    map[int]*models.Chat
 	chatUser []*models.ChatUser
+	sessMU   sync.RWMutex
+	usersMU  sync.RWMutex
+	chatsMU  sync.RWMutex
 	isDebug  bool
 }
 
@@ -48,19 +52,23 @@ func generateHash(password string, salt string) (hash string) {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func setDebugHeaders(w http.ResponseWriter, r *http.Request) {
+func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool) {
 	header := w.Header()
-	header.Add("Access-Control-Allow-Origin", "*")
+	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	header.Add("Access-Control-Allow-Credentials", "true")
+  
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
-		return
+		needToReturn = true
 	}
+
+	return needToReturn
 }
 
 func NewMyHandler(isDebug bool) *MyHandler {
-	adminHash, adminSalt := generateHashAndSalt("admin")
+	adminHash, adminSalt := generateHashAndSalt("Admin123.")
 	handler := &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
 		users: map[string]*models.Person{
@@ -70,19 +78,22 @@ func NewMyHandler(isDebug bool) *MyHandler {
 			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
 				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
-			"ArtemZhuk": {ID: 3, Username: "artm_zhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
+			"ArtemZhuk": {ID: 3, Username: "ArtemZhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
 				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
-			"AlexanderVolohov": {ID: 4, Username: "ofem1m", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
+			"AlexanderVolohov": {ID: 4, Username: "AlexanderVolohov", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
 				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
-			"mentor": {ID: 4, Username: "Mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
+			"mentor": {ID: 4, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
 				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 				PasswordSalt: adminSalt, Password: adminHash},
 		},
 		chats:    make(map[int]*models.Chat),
 		chatUser: make([]*models.ChatUser, 0),
 		isDebug:  isDebug,
+		sessMU:   sync.RWMutex{},
+		chatsMU:  sync.RWMutex{},
+		usersMU:  sync.RWMutex{},
 	}
 	handler.fillDB()
 	return handler
@@ -101,7 +112,9 @@ func NewMyHandler(isDebug bool) *MyHandler {
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	session, err := r.Cookie("session_id")
@@ -150,7 +163,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	user, userFound := api.users[jsonUser.Username]
 	if !userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "user not found"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь не найден"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -161,7 +174,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	inputPassword := jsonUser.Password
 	inputHash := generateHash(inputPassword, user.PasswordSalt)
 	if user.Password != inputHash {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong password"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Неверный пароль"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -195,7 +208,9 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	session, err := r.Cookie("session_id")
@@ -215,8 +230,9 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	api.sessMU.Lock()
 	delete(api.sessions, session.Value)
+	api.sessMU.Unlock()
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
 	err = models.WriteStatusJson(w, 200, nil)
@@ -239,7 +255,9 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	if r.Method != http.MethodPost {
@@ -278,13 +296,16 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	api.usersMU.Lock()
 	_, userFound := api.users[jsonUser.Username]
 	if userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "user already exists"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь с таким именем уже существет"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
+			api.usersMU.Unlock()
 			return
 		}
+		api.usersMU.Unlock()
 		return
 	}
 	jsonUser.ID = uint(len(api.users) + 1)
@@ -293,9 +314,11 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	jsonUser.PasswordSalt = passwordSalt
 
 	api.users[jsonUser.Username] = &jsonUser
+	api.usersMU.Unlock()
 	sessionID := randStringRunes(32)
-
+	api.sessMU.Lock()
 	api.sessions[sessionID] = &jsonUser
+	api.sessMU.Unlock()
 
 	cookie := &http.Cookie{
 		Name:    "session_id",
@@ -320,7 +343,9 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	authorized := false
@@ -380,7 +405,9 @@ func (api *MyHandler) fillDB() {
 // @Router /getChats [get]
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	session, err := r.Cookie("session_id")
@@ -416,6 +443,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 
 func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 	userChats := make(map[int]*models.Chat)
+	api.chatsMU.Lock()
 	for _, cUser := range api.chatUser {
 		if cUser.UserID == userID {
 			chat, ok := api.chats[cUser.ChatID]
@@ -424,6 +452,7 @@ func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 			}
 		}
 	}
+	api.chatsMU.Unlock()
 
 	var chats []*models.Chat
 	for _, chat := range userChats {

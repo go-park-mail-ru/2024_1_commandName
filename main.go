@@ -11,7 +11,7 @@ import (
 	"ProjectMessenger/models"
 )
 
-var DEBUG = false
+var DEBUG = true
 
 func main() {
 	Router()
