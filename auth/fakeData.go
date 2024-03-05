@@ -74,7 +74,7 @@ func (api *MyHandler) fillUsers() map[string]*models.Person {
 		"mentor": {ID: 5, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
 			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 			PasswordSalt: usersSalt, Password: usersHash},
-		"testUser": {ID: 6, Username: "TestUser", Email: "test@mail.ru", Name: "Test", Surname: "User",
+		"testUser": {ID: 6, Username: "testUser", Email: "test@mail.ru", Name: "Test", Surname: "User",
 			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 	}
