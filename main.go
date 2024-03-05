@@ -38,6 +38,7 @@ func Router() {
 	r.HandleFunc("/getChats", api.GetChats)
 	err := http.ListenAndServe(":8080", r)
 	if err != nil {
+		fmt.Println("err")
 		log.Fatal(err)
 		return
 	}

@@ -58,7 +58,7 @@ func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool)
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	header.Add("Access-Control-Allow-Credentials", "true")
-  
+
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		needToReturn = true
@@ -68,26 +68,8 @@ func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool)
 }
 
 func NewMyHandler(isDebug bool) *MyHandler {
-	adminHash, adminSalt := generateHashAndSalt("Admin123.")
 	handler := &MyHandler{
 		sessions: make(map[string]*models.Person, 10),
-		users: map[string]*models.Person{
-			"admin": {ID: 1, Username: "admin", Email: "admin@mail.ru", Name: "Ivan", Surname: "Naumov",
-				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
-			"ArtemkaChernikov": {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
-				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
-			"ArtemZhuk": {ID: 3, Username: "ArtemZhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
-				About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
-			"AlexanderVolohov": {ID: 4, Username: "AlexanderVolohov", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
-				About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
-			"mentor": {ID: 4, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
-				About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
-				PasswordSalt: adminSalt, Password: adminHash},
-		},
 		chats:    make(map[int]*models.Chat),
 		chatUser: make([]*models.ChatUser, 0),
 		isDebug:  isDebug,
@@ -95,6 +77,7 @@ func NewMyHandler(isDebug bool) *MyHandler {
 		chatsMU:  sync.RWMutex{},
 		usersMU:  sync.RWMutex{},
 	}
+	handler.users = handler.fillUsers()
 	handler.fillDB()
 	return handler
 }
@@ -370,31 +353,6 @@ func (api *MyHandler) ClearUserData() {
 	api.sessions = make(map[string]*models.Person)
 }
 
-func (api *MyHandler) fillDB() {
-	messagesChat1 := make([]*models.Message, 0)
-	messagesChat1 = append(messagesChat1,
-		&models.Message{ID: 1, ChatID: 1, UserID: api.users["mentor"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
-		//&models.Message{ID: 2, ChatID: 1, UserID: api.users["admin1"].ID, Message: "Балдёж балдёж", Edited: false},
-	)
-	chat1 := models.Chat{Name: "noName", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1}
-	api.chats[chat1.ID] = &chat1
-
-	messagesChat2 := make([]*models.Message, 0)
-	messagesChat2 = append(messagesChat2,
-		&models.Message{ID: 1, ChatID: 2, UserID: api.users["ArtemkaChernikov"].ID, Message: "Пойдём в столовку?", Edited: false},
-		//&models.Message{ID: 2, ChatID: 2, UserID: api.users["admin3"].ID, Message: "Уже бегу", Edited: false},
-	)
-	chat2 := models.Chat{Name: "noName", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat2}
-	api.chats[chat2.ID] = &chat2
-
-	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 1})
-	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 5})
-	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 1, UserID: 2})
-	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 3})
-	api.chatUser = append(api.chatUser, &models.ChatUser{ChatID: 2, UserID: 4})
-
-}
-
 // GetChats gets chats previews for user
 //
 // @Summary gets chats previews for user
@@ -459,4 +417,14 @@ func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 		chats = append(chats, chat)
 	}
 	return chats
+}
+
+func (api *MyHandler) getChatUsersByChatID(chatID int) []*models.ChatUser {
+	usersOfChat := make([]*models.ChatUser, 0)
+	for i := range api.chatUser {
+		if api.chatUser[i].ChatID == chatID {
+			usersOfChat = append(usersOfChat, api.chatUser[i])
+		}
+	}
+	return usersOfChat
 }
