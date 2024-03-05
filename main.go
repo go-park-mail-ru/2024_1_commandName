@@ -36,7 +36,7 @@ func Router() {
 	r.HandleFunc("/logout", api.Logout)
 	r.HandleFunc("/register", api.Register)
 	r.HandleFunc("/getChats", api.GetChats)
-	err := http.ListenAndServe(":8082", r)
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		fmt.Println("err")
 		log.Fatal(err)
