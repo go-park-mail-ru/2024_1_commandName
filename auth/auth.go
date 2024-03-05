@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/swaggo/http-swagger"
@@ -24,6 +25,9 @@ type MyHandler struct {
 	users    map[string]*models.Person
 	chats    map[int]*models.Chat
 	chatUser []*models.ChatUser
+	sessMU   sync.RWMutex
+	usersMU  sync.RWMutex
+	chatsMU  sync.RWMutex
 	isDebug  bool
 }
 
@@ -54,7 +58,7 @@ func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool)
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	header.Add("Access-Control-Allow-Credentials", "true")
-
+  
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		needToReturn = true
@@ -87,6 +91,9 @@ func NewMyHandler(isDebug bool) *MyHandler {
 		chats:    make(map[int]*models.Chat),
 		chatUser: make([]*models.ChatUser, 0),
 		isDebug:  isDebug,
+		sessMU:   sync.RWMutex{},
+		chatsMU:  sync.RWMutex{},
+		usersMU:  sync.RWMutex{},
 	}
 	handler.fillDB()
 	return handler
@@ -223,8 +230,9 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	api.sessMU.Lock()
 	delete(api.sessions, session.Value)
+	api.sessMU.Unlock()
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
 	err = models.WriteStatusJson(w, 200, nil)
@@ -288,13 +296,16 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	api.usersMU.Lock()
 	_, userFound := api.users[jsonUser.Username]
 	if userFound {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь с таким именем уже существет"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
+			api.usersMU.Unlock()
 			return
 		}
+		api.usersMU.Unlock()
 		return
 	}
 	jsonUser.ID = uint(len(api.users) + 1)
@@ -303,9 +314,11 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	jsonUser.PasswordSalt = passwordSalt
 
 	api.users[jsonUser.Username] = &jsonUser
+	api.usersMU.Unlock()
 	sessionID := randStringRunes(32)
-
+	api.sessMU.Lock()
 	api.sessions[sessionID] = &jsonUser
+	api.sessMU.Unlock()
 
 	cookie := &http.Cookie{
 		Name:    "session_id",
@@ -430,6 +443,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 
 func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 	userChats := make(map[int]*models.Chat)
+	api.chatsMU.Lock()
 	for _, cUser := range api.chatUser {
 		if cUser.UserID == userID {
 			chat, ok := api.chats[cUser.ChatID]
@@ -438,6 +452,7 @@ func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 			}
 		}
 	}
+	api.chatsMU.Unlock()
 
 	var chats []*models.Chat
 	for _, chat := range userChats {
