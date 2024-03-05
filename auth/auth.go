@@ -156,7 +156,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	user, userFound := api.users[jsonUser.Username]
 	if !userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "user not found"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь не найден"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -167,7 +167,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	inputPassword := jsonUser.Password
 	inputHash := generateHash(inputPassword, user.PasswordSalt)
 	if user.Password != inputHash {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong password"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Неверный пароль"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -290,7 +290,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	_, userFound := api.users[jsonUser.Username]
 	if userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "user already exists"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь с таким именем уже существет"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
