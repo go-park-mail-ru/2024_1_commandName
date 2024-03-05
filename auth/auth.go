@@ -52,16 +52,19 @@ func generateHash(password string, salt string) (hash string) {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func setDebugHeaders(w http.ResponseWriter, r *http.Request) {
+func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool) {
 	header := w.Header()
 	header.Add("Access-Control-Allow-Origin", "http://localhost:3000")
 	header.Add("Access-Control-Allow-Methods", "DELETE, POST, GET, OPTIONS")
 	header.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
 	header.Add("Access-Control-Allow-Credentials", "true")
+  
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
-		return
+		needToReturn = true
 	}
+
+	return needToReturn
 }
 
 func NewMyHandler(isDebug bool) *MyHandler {
@@ -109,7 +112,9 @@ func NewMyHandler(isDebug bool) *MyHandler {
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	session, err := r.Cookie("session_id")
@@ -158,7 +163,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	user, userFound := api.users[jsonUser.Username]
 	if !userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "user not found"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь не найден"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -169,7 +174,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	inputPassword := jsonUser.Password
 	inputHash := generateHash(inputPassword, user.PasswordSalt)
 	if user.Password != inputHash {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong password"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Неверный пароль"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -203,7 +208,9 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	session, err := r.Cookie("session_id")
@@ -248,7 +255,9 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	if r.Method != http.MethodPost {
@@ -290,7 +299,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	api.usersMU.Lock()
 	_, userFound := api.users[jsonUser.Username]
 	if userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "user already exists"})
+		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь с таким именем уже существет"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			api.usersMU.Unlock()
@@ -334,7 +343,9 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	authorized := false
@@ -394,7 +405,9 @@ func (api *MyHandler) fillDB() {
 // @Router /getChats [get]
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
-		setDebugHeaders(w, r)
+		if setDebugHeaders(w, r) {
+			return
+		}
 	}
 
 	session, err := r.Cookie("session_id")
