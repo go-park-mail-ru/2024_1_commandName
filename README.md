@@ -7,7 +7,7 @@
 
 ## API
 
-TBD
+[Swagger](docs/swagger.yaml)
 
 ## Авторы
 
@@ -19,7 +19,7 @@ TBD
 ## Менторы
 - [Лукьянов Кирилл](https://github.com/Antihoman) - *Бекенд*
 - [Александр Салтыков](https://github.com/johnSamilin) - *Фронтенд*
-- TDB - *UX*
+- [Галина Мартынова](https://t.me/g_martynovaa) - *UX*
 
 ## Ссылка на frontend
 
