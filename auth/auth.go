@@ -172,6 +172,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Value:    SID,
 		Expires:  time.Now().Add(10 * time.Hour),
 		HttpOnly: true,
+		Secure:   true,
 	}
 	http.SetCookie(w, cookie)
 	err = models.WriteStatusJson(w, 200, nil)
