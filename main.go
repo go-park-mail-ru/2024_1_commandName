@@ -2,22 +2,44 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
+
+	"ProjectMessenger/auth"
+	"ProjectMessenger/models"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	_, err := fmt.Fprintln(w, "<h1>CommandName messenger</h1>")
-	if err != nil {
-		return
-	}
-}
+var DEBUG = true
 
 func main() {
-	http.HandleFunc("/", handler)
+	Router()
+	users := make([]models.Person, 0)
+	chats := make([]models.Chat, 0)
 
-	fmt.Println("starting server at :8080")
-	err := http.ListenAndServe(":8080", nil)
+	fmt.Println(users, chats)
+}
+
+// Router
+// @Title Messenger authorization API
+// @Version 1.0
+// @schemes http
+// @host localhost:8080
+// @BasePath  /
+func Router() {
+	r := mux.NewRouter()
+
+	api := auth.NewMyHandler(DEBUG)
+	r.HandleFunc("/checkAuth", api.CheckAuth)
+	r.HandleFunc("/login", api.Login)
+	r.HandleFunc("/logout", api.Logout)
+	r.HandleFunc("/register", api.Register)
+	r.HandleFunc("/getChats", api.GetChats)
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
+		fmt.Println("err")
+		log.Fatal(err)
 		return
 	}
 }

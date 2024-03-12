@@ -1,0 +1,199 @@
+basePath: /
+definitions:
+  models.Chat:
+    properties:
+      avatar:
+        type: string
+      creator:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/models.Message'
+        type: array
+      name:
+        type: string
+      type:
+        type: string
+      users:
+        items:
+          $ref: '#/definitions/models.ChatUser'
+        type: array
+    type: object
+  models.ChatUser:
+    properties:
+      chat_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  models.Chats:
+    properties:
+      chats:
+        items:
+          $ref: '#/definitions/models.Chat'
+        type: array
+    type: object
+  models.Error:
+    properties:
+      error:
+        example: error description
+        type: string
+    type: object
+  models.Message:
+    properties:
+      chat_id:
+        type: integer
+      edited:
+        type: boolean
+      id:
+        type: integer
+      message_text:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.Person:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  models.Response-int:
+    properties:
+      body:
+        type: integer
+      status:
+        example: 200
+        type: integer
+    type: object
+  models.Response-models_Chats:
+    properties:
+      body:
+        $ref: '#/definitions/models.Chats'
+      status:
+        example: 200
+        type: integer
+    type: object
+  models.Response-models_Error:
+    properties:
+      body:
+        $ref: '#/definitions/models.Error'
+      status:
+        example: 200
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: Messenger authorization API
+  version: "1.0"
+paths:
+  /checkAuth:
+    get:
+      operationId: checkAuth
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response-int'
+        "401":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+      summary: checks that user is authenticated
+  /getChats:
+    get:
+      operationId: GetChats
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response-models_Chats'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+      summary: gets chats previews for user
+  /login:
+    post:
+      consumes:
+      - application/json
+      operationId: login
+      parameters:
+      - description: Person
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.Person'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response-int'
+        "400":
+          description: wrong json structure | user not found | wrong password
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+      summary: logs user in
+  /logout:
+    get:
+      operationId: logout
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response-int'
+        "400":
+          description: no session to logout
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+      summary: logs user out
+  /register:
+    post:
+      consumes:
+      - application/json
+      operationId: register
+      parameters:
+      - description: Person
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.Person'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Response-int'
+        "400":
+          description: user already exists | required field empty | wrong json structure
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+      summary: registers user
+schemes:
+- http
+swagger: "2.0"
