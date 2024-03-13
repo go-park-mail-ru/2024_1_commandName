@@ -92,6 +92,7 @@ func NewMyHandler(isDebug bool) *MyHandler {
 // @Success 200 {object}  models.Response[int]
 // @Failure 405 {object}  models.Response[models.Error] "use POST"
 // @Failure 400 {object}  models.Response[models.Error] "wrong json structure | user not found | wrong password"
+// @Failure 500 {object}  models.Response[models.Error] "Internal server error"
 // @Router /login [post]
 func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -105,7 +106,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		if _, ok := api.sessions[session.Value]; ok {
 			err := models.WriteStatusJson(w, 400, models.Error{Error: "session already exists"})
 			if err != nil {
-				http.Error(w, "internal server error", 500)
+				models.WriteInternalErrorJson(w)
 				return
 			}
 			return
@@ -114,7 +115,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -139,7 +140,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if jsonUser.Username == "" {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -148,7 +149,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if !userFound {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь не найден"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -159,7 +160,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if user.Password != inputHash {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "Неверный пароль"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -177,7 +178,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 	err = models.WriteStatusJson(w, 200, nil)
 	if err != nil {
-		http.Error(w, "internal server error", 500)
+		models.WriteInternalErrorJson(w)
 		return
 	}
 }
@@ -189,6 +190,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Success 200 {object}  models.Response[int]
 // @Failure 400 {object}  models.Response[models.Error] "no session to logout"
+// @Failure 500 {object}  models.Response[models.Error] "Internal server error"
 // @Router /logout [get]
 func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -201,7 +203,7 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, http.ErrNoCookie) {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -209,7 +211,7 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if _, ok := api.sessions[session.Value]; !ok {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -221,7 +223,7 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, session)
 	err = models.WriteStatusJson(w, 200, nil)
 	if err != nil {
-		http.Error(w, "internal server error", 500)
+		models.WriteInternalErrorJson(w)
 		return
 	}
 }
@@ -236,6 +238,7 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object}  models.Response[int]
 // @Failure 405 {object}  models.Response[models.Error] "use POST"
 // @Failure 400 {object}  models.Response[models.Error] "user already exists | required field empty | wrong json structure"
+// @Failure 500 {object}  models.Response[models.Error] "Internal server error"
 // @Router /register [post]
 func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -247,7 +250,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		err := models.WriteStatusJson(w, 405, models.Error{Error: "use POST"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -268,14 +271,14 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "wrong json structure"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 	}
 	if jsonUser.Username == "" || jsonUser.Password == "" {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "required field is empty"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -285,7 +288,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if userFound {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь с таким именем уже существет"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			api.usersMU.Unlock()
 			return
 		}
@@ -312,7 +315,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 	err = models.WriteStatusJson(w, 200, nil)
 	if err != nil {
-		http.Error(w, "internal server error", 500)
+		models.WriteInternalErrorJson(w)
 		return
 	}
 }
@@ -324,6 +327,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Success 200 {object}  models.Response[int]
 // @Failure 401 {object}  models.Response[models.Error] "Person not authorized"
+// @Failure 500 {object}  models.Response[models.Error] "Internal server error"
 // @Router /checkAuth [get]
 func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -344,7 +348,7 @@ func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 		err = models.WriteStatusJson(w, 401, models.Error{Error: "Person not authorized"})
 	}
 	if err != nil {
-		http.Error(w, "internal server error", 500)
+		models.WriteInternalErrorJson(w)
 		return
 	}
 }
@@ -361,6 +365,7 @@ func (api *MyHandler) ClearUserData() {
 // @Produce json
 // @Success 200 {object}  models.Response[models.Chats]
 // @Failure 400 {object}  models.Response[models.Error] "Person not authorized"
+// @Failure 500 {object}  models.Response[models.Error] "Internal server error"
 // @Router /getChats [get]
 func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
@@ -373,7 +378,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, http.ErrNoCookie) {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -382,7 +387,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		err = models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -393,7 +398,7 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		errResp := models.Error{Error: err.Error()}
 		err := models.WriteStatusJson(w, 500, errResp)
 		if err != nil {
-			http.Error(w, "internal server error", 500)
+			models.WriteInternalErrorJson(w)
 			return
 		}
 		return

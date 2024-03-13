@@ -34,6 +34,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
                     }
                 }
             }
@@ -54,6 +60,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
@@ -100,6 +112,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
                     }
                 }
             }
@@ -120,6 +138,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "no session to logout",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
@@ -163,6 +187,12 @@ const docTemplate = `{
                     },
                     "405": {
                         "description": "use POST",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
