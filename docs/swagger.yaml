@@ -107,6 +107,10 @@ paths:
           description: Person not authorized
           schema:
             $ref: '#/definitions/models.Response-models_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
       summary: checks that user is authenticated
   /getChats:
     get:
@@ -120,6 +124,10 @@ paths:
             $ref: '#/definitions/models.Response-models_Chats'
         "400":
           description: Person not authorized
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/models.Response-models_Error'
       summary: gets chats previews for user
@@ -150,6 +158,10 @@ paths:
           description: use POST
           schema:
             $ref: '#/definitions/models.Response-models_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
       summary: logs user in
   /logout:
     get:
@@ -163,6 +175,10 @@ paths:
             $ref: '#/definitions/models.Response-int'
         "400":
           description: no session to logout
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/models.Response-models_Error'
       summary: logs user out
@@ -191,6 +207,10 @@ paths:
             $ref: '#/definitions/models.Response-models_Error'
         "405":
           description: use POST
+          schema:
+            $ref: '#/definitions/models.Response-models_Error'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/models.Response-models_Error'
       summary: registers user

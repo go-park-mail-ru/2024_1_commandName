@@ -2,8 +2,11 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
+
+const INTERNALERRORJSON = "{\"status\": 500,\"body\":{\"error\": \"Internal server error\"}}"
 
 // Response[T]
 type Response[T any] struct {
@@ -42,4 +45,11 @@ func MarshalStatusJson(status int, body any) ([]byte, error) {
 		return nil, err
 	}
 	return marshal, nil
+}
+
+func WriteInternalErrorJson(w http.ResponseWriter) {
+	// implementation similar to http.Error, only difference is the Content-type
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, _ = fmt.Fprintln(w, INTERNALERRORJSON)
 }

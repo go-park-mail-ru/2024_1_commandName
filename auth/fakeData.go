@@ -23,7 +23,7 @@ func (api *MyHandler) fillDB() {
 		&models.Message{ID: 1, ChatID: 1, UserID: api.users["mentor"].ID, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
 	)
 
-	chat1 := models.Chat{Name: "mentor", ID: 1, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1, Users: api.getChatUsersByChatID(1)}
+	chat1 := models.Chat{Name: "mentors", ID: 1, Type: "group", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1, Users: api.getChatUsersByChatID(1)}
 	api.chats[chat1.ID] = &chat1
 
 	messagesChat2 := make([]*models.Message, 0)
@@ -35,9 +35,9 @@ func (api *MyHandler) fillDB() {
 
 	messagesChat3 := make([]*models.Message, 0)
 	messagesChat3 = append(messagesChat3,
-		&models.Message{ID: 1, ChatID: 3, UserID: api.users["ArtemZhuk"].ID, Message: "Ты пр уже создал? А то пора уже с мейном мерджить", Edited: false},
+		&models.Message{ID: 1, ChatID: 3, UserID: api.users["ArtemZhuk"].ID, Message: "В бауманке открывают новые общаги, а Измайлово под снос", Edited: false},
 	)
-	chat3 := models.Chat{Name: "ArtemZhuk", ID: 3, Type: "person", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat3, Users: api.getChatUsersByChatID(3)}
+	chat3 := models.Chat{Name: "Bauman News", ID: 3, Type: "channel", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat3, Users: api.getChatUsersByChatID(3)}
 	api.chats[chat3.ID] = &chat3
 
 	messagesChat4 := make([]*models.Message, 0)

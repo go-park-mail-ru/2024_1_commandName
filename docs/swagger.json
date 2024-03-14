@@ -30,6 +30,12 @@
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
                     }
                 }
             }
@@ -50,6 +56,12 @@
                     },
                     "400": {
                         "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
@@ -96,6 +108,12 @@
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
                     }
                 }
             }
@@ -116,6 +134,12 @@
                     },
                     "400": {
                         "description": "no session to logout",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
@@ -159,6 +183,12 @@
                     },
                     "405": {
                         "description": "use POST",
+                        "schema": {
+                            "$ref": "#/definitions/models.Response-models_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/models.Response-models_Error"
                         }
