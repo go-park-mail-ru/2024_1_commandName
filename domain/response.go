@@ -1,4 +1,4 @@
-package models
+package domain
 
 import (
 	"encoding/json"
@@ -19,7 +19,7 @@ type Error struct {
 }
 
 type Chats struct {
-	Chats []*Chat `json:"chats"`
+	Chats []Chat `json:"chats"`
 }
 
 func WriteStatusJson(w http.ResponseWriter, status int, body any) error {

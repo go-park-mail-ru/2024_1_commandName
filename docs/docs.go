@@ -26,19 +26,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-int"
+                            "$ref": "#/definitions/domain.Response-int"
                         }
                     },
                     "401": {
                         "description": "Person not authorized",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     }
                 }
@@ -55,19 +55,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Chats"
+                            "$ref": "#/definitions/domain.Response-models_Chats"
                         }
                     },
                     "400": {
                         "description": "Person not authorized",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     }
                 }
@@ -90,7 +90,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Person"
+                            "$ref": "#/definitions/domain.Person"
                         }
                     }
                 ],
@@ -98,25 +98,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-int"
+                            "$ref": "#/definitions/domain.Response-int"
                         }
                     },
                     "400": {
                         "description": "wrong json structure | user not found | wrong password",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     },
                     "405": {
                         "description": "use POST",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     }
                 }
@@ -133,19 +133,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-int"
+                            "$ref": "#/definitions/domain.Response-int"
                         }
                     },
                     "400": {
                         "description": "no session to logout",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     }
                 }
@@ -168,7 +168,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Person"
+                            "$ref": "#/definitions/domain.Person"
                         }
                     }
                 ],
@@ -176,25 +176,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-int"
+                            "$ref": "#/definitions/domain.Response-int"
                         }
                     },
                     "400": {
                         "description": "user already exists | required field empty | wrong json structure",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     },
                     "405": {
                         "description": "use POST",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/models.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-models_Error"
                         }
                     }
                 }
@@ -202,7 +202,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "models.Chat": {
+        "domain.Chat": {
             "type": "object",
             "properties": {
                 "avatar": {
@@ -220,7 +220,7 @@ const docTemplate = `{
                 "messages": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.Message"
+                        "$ref": "#/definitions/domain.Message"
                     }
                 },
                 "name": {
@@ -232,12 +232,12 @@ const docTemplate = `{
                 "users": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.ChatUser"
+                        "$ref": "#/definitions/domain.ChatUser"
                     }
                 }
             }
         },
-        "models.ChatUser": {
+        "domain.ChatUser": {
             "type": "object",
             "properties": {
                 "chat_id": {
@@ -248,18 +248,18 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Chats": {
+        "domain.Chats": {
             "type": "object",
             "properties": {
                 "chats": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.Chat"
+                        "$ref": "#/definitions/domain.Chat"
                     }
                 }
             }
         },
-        "models.Error": {
+        "domain.Error": {
             "type": "object",
             "properties": {
                 "error": {
@@ -268,7 +268,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Message": {
+        "domain.Message": {
             "type": "object",
             "properties": {
                 "chat_id": {
@@ -288,7 +288,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Person": {
+        "domain.Person": {
             "type": "object",
             "properties": {
                 "password": {
@@ -299,7 +299,7 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Response-int": {
+        "domain.Response-int": {
             "type": "object",
             "properties": {
                 "body": {
@@ -311,11 +311,11 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Response-models_Chats": {
+        "domain.Response-models_Chats": {
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/models.Chats"
+                    "$ref": "#/definitions/domain.Chats"
                 },
                 "status": {
                     "type": "integer",
@@ -323,11 +323,11 @@ const docTemplate = `{
                 }
             }
         },
-        "models.Response-models_Error": {
+        "domain.Response-models_Error": {
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/models.Error"
+                    "$ref": "#/definitions/domain.Error"
                 },
                 "status": {
                     "type": "integer",

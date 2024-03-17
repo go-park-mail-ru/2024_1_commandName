@@ -1,4 +1,4 @@
-package models
+package domain
 
 type ChatUser struct {
 	ChatID int  `json:"chat_id"`
