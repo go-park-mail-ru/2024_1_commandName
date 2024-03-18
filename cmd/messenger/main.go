@@ -1,11 +1,11 @@
 package main
 
 import (
-	"ProjectMessenger/internal/auth/usecase"
 	"fmt"
 	"log"
 	"net/http"
 
+	"ProjectMessenger/internal/auth/delivery"
 	"ProjectMessenger/internal/middleware"
 )
 
@@ -22,7 +22,7 @@ func main() {
 // @host localhost:8080
 // @BasePath  /
 func Router() {
-	authHandler := usecase.NewAuthHandler()
+	authHandler := delivery.NewAuthHandler()
 
 	// middleware
 	if DEBUG {

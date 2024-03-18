@@ -1,4 +1,4 @@
-package delivery
+package misc
 
 import (
 	"ProjectMessenger/domain"
@@ -9,17 +9,18 @@ import (
 
 const INTERNALERRORJSON = "{\"status\": 500,\"body\":{\"error\": \"Internal server error\"}}"
 
-func WriteStatusJson(w http.ResponseWriter, status int, body any) error {
+func WriteStatusJson(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	jsonByte, err := MarshalStatusJson(status, body)
 	if err != nil {
-		return err
+		WriteInternalErrorJson(w)
+		return
 	}
 	_, err = w.Write(jsonByte)
 	if err != nil {
-		return err
+		WriteInternalErrorJson(w)
+		return
 	}
-	return nil
 }
 
 func MarshalStatusJson(status int, body any) ([]byte, error) {

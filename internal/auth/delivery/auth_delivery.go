@@ -1,4 +1,4 @@
-package usecase
+package delivery
 
 import (
 	"encoding/json"
@@ -12,31 +12,17 @@ import (
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/auth/repository"
-	"ProjectMessenger/internal/delivery"
+	"ProjectMessenger/internal/auth/usecase"
+	chatrepo "ProjectMessenger/internal/chats/repository"
+	chatusecase "ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
-	"ProjectMessenger/internal/repository/inMemory"
 )
-
-type SessionStore interface {
-	GetUserIDbySessionID(sessionID string) (userID uint, sessionExists bool)
-	CreateSession(userID uint) (sessionID string)
-	DeleteSession(sessionID string)
-}
-
-type UserStore interface {
-	GetByUsername(username string) (user domain.Person, found bool)
-	CreateUser(user domain.Person) (userID uint, err error)
-}
-
-type ChatStore interface {
-	GetChatsByID(userID uint) []domain.Chat
-}
 
 type AuthHandler struct {
 	Rt       *mux.Router
-	Sessions SessionStore
-	Users    UserStore
-	Chats    ChatStore
+	Sessions usecase.SessionStore
+	Users    usecase.UserStore
+	Chats    chatusecase.ChatStore
 }
 
 func NewAuthHandler() *AuthHandler {
@@ -44,7 +30,7 @@ func NewAuthHandler() *AuthHandler {
 		Rt:       mux.NewRouter(),
 		Sessions: repository.NewSessionStorage(),
 		Users:    repository.NewUserStorage(),
-		Chats:    inMemory.NewChatsStorage(),
+		Chats:    chatrepo.NewChatsStorage(),
 	}
 
 	handler.Rt.HandleFunc("/checkAuth", handler.CheckAuth)
@@ -70,22 +56,14 @@ func NewAuthHandler() *AuthHandler {
 func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
-		_, sessionExists := authHandler.Sessions.GetUserIDbySessionID(session.Value)
+		sessionExists, _ := usecase.CheckAuthorized(session.Value, authHandler.Sessions)
 		if sessionExists {
-			err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "session already exists"})
-			if err != nil {
-				delivery.WriteInternalErrorJson(w)
-				return
-			}
+			misc.WriteStatusJson(w, 400, domain.Error{Error: "session already exists"})
 			return
 		}
 	}
 	if r.Method != http.MethodPost {
-		err := delivery.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
+		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
 		return
 	}
 	ct := r.Header.Get("Content-Type")
@@ -97,7 +75,6 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 	decoder := json.NewDecoder(r.Body)
 	var jsonUser domain.Person
 	err = decoder.Decode(&jsonUser)
@@ -105,36 +82,13 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "wrong json structure", 400)
 		return
 	}
-	if jsonUser.Username == "" {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
-		return
-	}
-	user, userFound := authHandler.Users.GetByUsername(jsonUser.Username)
-	if !userFound {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Пользователь не найден"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
+
+	sessionID, err := usecase.LoginUser(jsonUser, authHandler.Users, authHandler.Sessions)
+	if err != nil {
+		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 
-	inputPassword := jsonUser.Password
-	inputHash := misc.GenerateHash(inputPassword, user.PasswordSalt)
-	if user.Password != inputHash {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Неверный пароль"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
-		return
-	}
-
-	sessionID := authHandler.Sessions.CreateSession(user.ID)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -143,11 +97,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 	}
 	http.SetCookie(w, cookie)
-	err = delivery.WriteStatusJson(w, 200, nil)
-	if err != nil {
-		delivery.WriteInternalErrorJson(w)
-		return
-	}
+	misc.WriteStatusJson(w, 200, nil)
 }
 
 // Logout logs user out
@@ -162,33 +112,21 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
 		return
 	}
 
-	_, sessionExists := authHandler.Sessions.GetUserIDbySessionID(session.Value)
+	sessionExists, _ := usecase.CheckAuthorized(session.Value, authHandler.Sessions)
 	if !sessionExists {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
 		return
 	}
 
-	authHandler.Sessions.DeleteSession(session.Value)
+	usecase.LogoutUser(session.Value, authHandler.Sessions)
 
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
-	err = delivery.WriteStatusJson(w, 200, nil)
-	if err != nil {
-		delivery.WriteInternalErrorJson(w)
-		return
-	}
+	misc.WriteStatusJson(w, 200, nil)
 }
 
 // Register registers user
@@ -205,11 +143,7 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Router /register [post]
 func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		err := delivery.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
+		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
 		return
 	}
 	ct := r.Header.Get("Content-Type")
@@ -226,40 +160,14 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	var jsonUser domain.Person
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
-	}
-	if jsonUser.Username == "" || jsonUser.Password == "" {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "required field is empty"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
-		return
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
-	_, userFound := authHandler.Users.GetByUsername(jsonUser.Username)
-	if userFound {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Пользователь с таким именем уже существет"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
-		return
-	}
-	passwordHash, passwordSalt := misc.GenerateHashAndSalt(jsonUser.Password)
-	jsonUser.Password = passwordHash
-	jsonUser.PasswordSalt = passwordSalt
-
-	userID, err := authHandler.Users.CreateUser(jsonUser)
+	sessionID, err := usecase.RegisterAndLoginUser(jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
-		delivery.WriteInternalErrorJson(w)
+		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
 		return
 	}
-	sessionID := authHandler.Sessions.CreateSession(userID)
 
 	cookie := &http.Cookie{
 		Name:    "session_id",
@@ -267,11 +175,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		Expires: time.Now().Add(10 * time.Hour),
 	}
 	http.SetCookie(w, cookie)
-	err = delivery.WriteStatusJson(w, 200, nil)
-	if err != nil {
-		delivery.WriteInternalErrorJson(w)
-		return
-	}
+	misc.WriteStatusJson(w, 200, nil)
 }
 
 // CheckAuth checks that user is authenticated
@@ -287,17 +191,12 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
-		_, authorized = authHandler.Sessions.GetUserIDbySessionID(session.Value)
+		authorized, _ = usecase.CheckAuthorized(session.Value, authHandler.Sessions)
 	}
-
 	if authorized {
-		err = delivery.WriteStatusJson(w, 200, nil)
+		misc.WriteStatusJson(w, 200, nil)
 	} else {
-		err = delivery.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
-	}
-	if err != nil {
-		delivery.WriteInternalErrorJson(w)
-		return
+		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
 	}
 }
 
@@ -313,32 +212,16 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 func (authHandler *AuthHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
-		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
 		return
 	}
-	userID, authorized := authHandler.Sessions.GetUserIDbySessionID(session.Value)
+	authorized, userID := usecase.CheckAuthorized(session.Value, authHandler.Sessions)
+
 	if !authorized {
-		err = delivery.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
 		return
 	}
 
-	chats := authHandler.Chats.GetChatsByID(userID)
-	err = delivery.WriteStatusJson(w, 200, domain.Chats{Chats: chats})
-	if err != nil {
-		errResp := domain.Error{Error: err.Error()}
-		err := delivery.WriteStatusJson(w, 500, errResp)
-		if err != nil {
-			delivery.WriteInternalErrorJson(w)
-			return
-		}
-		return
-	}
+	chats := chatusecase.GetChatsForUser(userID, authHandler.Chats)
+	misc.WriteStatusJson(w, 200, domain.Chats{Chats: chats})
 }
