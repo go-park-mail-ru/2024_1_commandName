@@ -1,13 +1,13 @@
 package main
 
 import (
+	"ProjectMessenger/internal/auth/usecase"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 
-	"ProjectMessenger/internal/auth"
 	"ProjectMessenger/internal/middleware"
 )
 
@@ -27,7 +27,7 @@ func Router() {
 	r := mux.NewRouter()
 
 	//api := auth.NewMyHandler(DEBUG)
-	newApi := auth.NewAuthHandler()
+	newApi := usecase.NewAuthHandler()
 
 	r.HandleFunc("/checkAuth", newApi.CheckAuth)
 	r.HandleFunc("/login", newApi.Login)

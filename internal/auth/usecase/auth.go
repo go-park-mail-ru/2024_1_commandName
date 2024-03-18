@@ -1,6 +1,7 @@
-package auth
+package usecase
 
 import (
+	"ProjectMessenger/internal/auth/repository"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -37,8 +38,8 @@ type AuthHandler struct {
 
 func NewAuthHandler() *AuthHandler {
 	handler := AuthHandler{
-		sessions: inMemory.NewSessionStorage(),
-		users:    inMemory.NewUserStorage(),
+		sessions: repository.NewSessionStorage(),
+		users:    repository.NewUserStorage(),
 		chats:    inMemory.NewChatsStorage(),
 	}
 	return &handler

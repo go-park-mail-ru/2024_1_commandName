@@ -1,4 +1,4 @@
-package inMemory
+package repository
 
 import (
 	"time"
