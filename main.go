@@ -30,13 +30,17 @@ func main() {
 func Router() {
 	r := mux.NewRouter()
 
-	api := auth.NewMyHandler(DEBUG)
+	//api := auth.NewMyHandler(DEBUG)
+	api, err := auth.CreateChatMeHandler(DEBUG)
+	if err != nil {
+		log.Fatal(err)
+	}
 	r.HandleFunc("/checkAuth", api.CheckAuth)
 	r.HandleFunc("/login", api.Login)
 	r.HandleFunc("/logout", api.Logout)
 	r.HandleFunc("/register", api.Register)
 	r.HandleFunc("/getChats", api.GetChats)
-	err := http.ListenAndServe(":8080", r)
+	err = http.ListenAndServe(":8090", r)
 	if err != nil {
 		fmt.Println("err")
 		log.Fatal(err)

@@ -41,3 +41,8 @@ CREATE TABLE IF NOT EXISTS chat.message
     edited          BOOLEAN,
     create_datetime TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS auth.sessions
+(
+    sessionID TEXT req
+    );

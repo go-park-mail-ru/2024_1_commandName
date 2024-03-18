@@ -2,33 +2,46 @@ package auth
 
 import (
 	"crypto/sha512"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	_ "github.com/swaggo/http-swagger"
 
 	"ProjectMessenger/models"
+	_ "github.com/lib/pq"
 )
 
 var (
 	letterDigitRunes = []rune("1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 )
 
-type MyHandler struct {
-	sessions map[string]*models.Person
-	users    map[string]*models.Person
-	chats    map[int]*models.Chat
-	chatUser []*models.ChatUser
-	sessMU   sync.RWMutex
-	usersMU  sync.RWMutex
-	chatsMU  sync.RWMutex
-	isDebug  bool
+type ChatMe struct {
+	db      *sql.DB
+	isDebug bool
+}
+
+func CreateChatMeHandler(isDebug bool) (*ChatMe, error) {
+	connStrToDataBase := "user=postgres dbname=Messenger password=Artem557 host=localhost sslmode=disable"
+	db, err := sql.Open("postgres", connStrToDataBase)
+	if err != nil {
+		return nil, err
+	}
+
+	chatMe := &ChatMe{
+		db:      db,
+		isDebug: isDebug,
+	}
+	chatMe.fillDB()
+
+	return chatMe, err
+	//fillUsers()
 }
 
 func randStringRunes(n int) string {
@@ -67,21 +80,6 @@ func setDebugHeaders(w http.ResponseWriter, r *http.Request) (needToReturn bool)
 	return needToReturn
 }
 
-func NewMyHandler(isDebug bool) *MyHandler {
-	handler := &MyHandler{
-		sessions: make(map[string]*models.Person, 10),
-		chats:    make(map[int]*models.Chat),
-		chatUser: make([]*models.ChatUser, 0),
-		isDebug:  isDebug,
-		sessMU:   sync.RWMutex{},
-		chatsMU:  sync.RWMutex{},
-		usersMU:  sync.RWMutex{},
-	}
-	handler.users = handler.fillUsers()
-	handler.fillDB()
-	return handler
-}
-
 // Login logs user in
 //
 // @Summary logs user in
@@ -93,7 +91,7 @@ func NewMyHandler(isDebug bool) *MyHandler {
 // @Failure 405 {object}  models.Response[models.Error] "use POST"
 // @Failure 400 {object}  models.Response[models.Error] "wrong json structure | user not found | wrong password"
 // @Router /login [post]
-func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (api *ChatMe) Login(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
 		if setDebugHeaders(w, r) {
 			return
@@ -101,9 +99,13 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session, err := r.Cookie("session_id")
+	fmt.Println("COOKIE: ", session)
 	if !errors.Is(err, http.ErrNoCookie) {
-		if _, ok := api.sessions[session.Value]; ok {
-			err := models.WriteStatusJson(w, 400, models.Error{Error: "session already exists"})
+		ok := true
+		if ok, err = api.isSessionExistByValue(session.Value); ok {
+			//if _, ok, err = api.getSessionByCookieValue(session.Value); ok { // DONE
+			fmt.Println("err =", err)
+			err = models.WriteStatusJson(w, 400, models.Error{Error: "session already exists"})
 			if err != nil {
 				http.Error(w, "internal server error", 500)
 				return
@@ -144,9 +146,14 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	user, userFound := api.users[jsonUser.Username]
+	//user, userFound := api.users[jsonUser.Username]
+	user, userFound, err := api.getUserByUsername(jsonUser.Username)
+	if err != nil {
+		// TODO
+	}
+	fmt.Println("user = ", user, err, userFound)
 	if !userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь не найден"})
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь не найден"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
@@ -166,7 +173,11 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	SID := randStringRunes(32)
-	api.sessions[SID] = user
+	//.sessions[SID] = user // ALREADY MADE
+	err = api.setSessionBySessionID(SID, user)
+	if err != nil {
+		/// TODO
+	}
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    SID,
@@ -189,7 +200,7 @@ func (api *MyHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object}  models.Response[int]
 // @Failure 400 {object}  models.Response[models.Error] "no session to logout"
 // @Router /logout [get]
-func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
+func (api *ChatMe) Logout(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
 		if setDebugHeaders(w, r) {
 			return
@@ -197,6 +208,7 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session, err := r.Cookie("session_id")
+	fmt.Println("COOKIE: ", session)
 	if errors.Is(err, http.ErrNoCookie) {
 		err := models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
 		if err != nil {
@@ -205,17 +217,24 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if _, ok := api.sessions[session.Value]; !ok {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
+	var ok bool
+	//if _, ok := api.sessions[session.Value]; !ok {
+	if ok, err = api.isSessionExistByValue(session.Value); !ok { // DONE
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "no session to logout"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
 			return
 		}
 		return
 	}
-	api.sessMU.Lock()
-	delete(api.sessions, session.Value)
-	api.sessMU.Unlock()
+
+	//delete(api.sessions, session.Value) // ALREADY DONE
+	err = api.deleteSessionByCookieValue(session.Value)
+	if err != nil {
+		fmt.Println(err)
+		// TODO
+	}
+
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
 	err = models.WriteStatusJson(w, 200, nil)
@@ -236,7 +255,8 @@ func (api *MyHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Failure 405 {object}  models.Response[models.Error] "use POST"
 // @Failure 400 {object}  models.Response[models.Error] "user already exists | required field empty | wrong json structure"
 // @Router /register [post]
-func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (api *ChatMe) Register(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("register")
 	if api.isDebug {
 		if setDebugHeaders(w, r) {
 			return
@@ -279,29 +299,40 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	api.usersMU.Lock()
-	_, userFound := api.users[jsonUser.Username]
+	//_, userFound := api.users[jsonUser.Username]
+	_, userFound, err := api.getUserByUsername(jsonUser.Username) // DONE
+	fmt.Println("err = ", err)
 	if userFound {
-		err := models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь с таким именем уже существет"})
+		err = models.WriteStatusJson(w, 400, models.Error{Error: "Пользователь с таким именем уже существет"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
-			api.usersMU.Unlock()
 			return
 		}
-		api.usersMU.Unlock()
 		return
 	}
-	jsonUser.ID = uint(len(api.users) + 1)
+	//jsonUser.ID = uint(len(api.users) + 1) // ALREADY DONE
+	countOfUsers, err := api.getCountOfUsers()
+	if err != nil {
+		// TODO
+	}
+	jsonUser.ID = uint(countOfUsers) + 1
 	passwordHash, passwordSalt := generateHashAndSalt(jsonUser.Password)
 	jsonUser.Password = passwordHash
 	jsonUser.PasswordSalt = passwordSalt
 
-	api.users[jsonUser.Username] = &jsonUser
-	api.usersMU.Unlock()
+	err = api.setUserByUsername(jsonUser)
+	if err != nil {
+		fmt.Println("err in setUser: ", err)
+		//TODO
+	}
+	//api.users[jsonUser.Username] = &jsonUser // ALREADY DONE
 	sessionID := randStringRunes(32)
-	api.sessMU.Lock()
-	api.sessions[sessionID] = &jsonUser
-	api.sessMU.Unlock()
+	err = api.setSessionBySessionID(sessionID, jsonUser)
+	if err != nil {
+		fmt.Println("err in setSession: ", err)
+		//TODO
+	}
+	//api.sessions[sessionID] = &jsonUser // ALREADY DONE
 
 	cookie := &http.Cookie{
 		Name:    "session_id",
@@ -324,7 +355,7 @@ func (api *MyHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object}  models.Response[int]
 // @Failure 401 {object}  models.Response[models.Error] "Person not authorized"
 // @Router /checkAuth [get]
-func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
+func (api *ChatMe) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
 		if setDebugHeaders(w, r) {
 			return
@@ -334,7 +365,8 @@ func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
-		_, authorized = api.sessions[session.Value]
+		authorized, err = api.isSessionExistByValue(session.Value)
+		//_, authorized = api.sessions[session.Value] // ALREADY DONE
 	}
 
 	if authorized {
@@ -348,11 +380,6 @@ func (api *MyHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *MyHandler) ClearUserData() {
-	api.users = make(map[string]*models.Person)
-	api.sessions = make(map[string]*models.Person)
-}
-
 // GetChats gets chats previews for user
 //
 // @Summary gets chats previews for user
@@ -361,7 +388,7 @@ func (api *MyHandler) ClearUserData() {
 // @Success 200 {object}  models.Response[models.Chats]
 // @Failure 400 {object}  models.Response[models.Error] "Person not authorized"
 // @Router /getChats [get]
-func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+func (api *ChatMe) GetChats(w http.ResponseWriter, r *http.Request) {
 	if api.isDebug {
 		if setDebugHeaders(w, r) {
 			return
@@ -377,8 +404,10 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	user := api.sessions[session.Value]
-	if user == nil {
+	//user := api.sessions[session.Value] // ALREADY DONE
+	//user, authorized, err := api.getSessionByCookieValue(session.Value)
+	authorized, err := api.isSessionExistByValue(session.Value)
+	if authorized == false {
 		err = models.WriteStatusJson(w, 400, models.Error{Error: "Person not authorized"})
 		if err != nil {
 			http.Error(w, "internal server error", 500)
@@ -386,7 +415,17 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	chats := api.getChatsByID(user.ID)
+	///////
+	user, err := api.getUserByValue(session.Value)
+	if err != nil {
+		// TODO
+		fmt.Println(err)
+	}
+	chats, err := api.getChatsByID(user.ID) // TODO
+	if err != nil {
+		//TODO
+		fmt.Println(err)
+	}
 	err = models.WriteStatusJson(w, 200, models.Chats{Chats: chats})
 	if err != nil {
 		errResp := models.Error{Error: err.Error()}
@@ -399,9 +438,9 @@ func (api *MyHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
+/*
+func (api *ChatMe) getChasByID(userID uint) []*models.Chat {
 	userChats := make(map[int]*models.Chat)
-	api.chatsMU.Lock()
 	for _, cUser := range api.chatUser {
 		if cUser.UserID == userID {
 			chat, ok := api.chats[cUser.ChatID]
@@ -410,7 +449,6 @@ func (api *MyHandler) getChatsByID(userID uint) []*models.Chat {
 			}
 		}
 	}
-	api.chatsMU.Unlock()
 
 	var chats []*models.Chat
 	for _, chat := range userChats {
@@ -427,4 +465,4 @@ func (api *MyHandler) getChatUsersByChatID(chatID int) []*models.ChatUser {
 		}
 	}
 	return usersOfChat
-}
+}*/
