@@ -1,16 +1,18 @@
 package usecase
 
 import (
-	"ProjectMessenger/internal/auth/repository"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
 	_ "github.com/swaggo/http-swagger"
 
 	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/auth/repository"
+	"ProjectMessenger/internal/delivery"
 	"ProjectMessenger/internal/misc"
 	"ProjectMessenger/internal/repository/inMemory"
 )
@@ -31,17 +33,25 @@ type ChatStore interface {
 }
 
 type AuthHandler struct {
-	sessions SessionStore
-	users    UserStore
-	chats    ChatStore
+	Rt       *mux.Router
+	Sessions SessionStore
+	Users    UserStore
+	Chats    ChatStore
 }
 
 func NewAuthHandler() *AuthHandler {
 	handler := AuthHandler{
-		sessions: repository.NewSessionStorage(),
-		users:    repository.NewUserStorage(),
-		chats:    inMemory.NewChatsStorage(),
+		Rt:       mux.NewRouter(),
+		Sessions: repository.NewSessionStorage(),
+		Users:    repository.NewUserStorage(),
+		Chats:    inMemory.NewChatsStorage(),
 	}
+
+	handler.Rt.HandleFunc("/checkAuth", handler.CheckAuth)
+	handler.Rt.HandleFunc("/login", handler.Login)
+	handler.Rt.HandleFunc("/logout", handler.Logout)
+	handler.Rt.HandleFunc("/register", handler.Register)
+	handler.Rt.HandleFunc("/getChats", handler.GetChats)
 	return &handler
 }
 
@@ -60,20 +70,20 @@ func NewAuthHandler() *AuthHandler {
 func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
-		_, sessionExists := authHandler.sessions.GetUserIDbySessionID(session.Value)
+		_, sessionExists := authHandler.Sessions.GetUserIDbySessionID(session.Value)
 		if sessionExists {
-			err := domain.WriteStatusJson(w, 400, domain.Error{Error: "session already exists"})
+			err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "session already exists"})
 			if err != nil {
-				domain.WriteInternalErrorJson(w)
+				delivery.WriteInternalErrorJson(w)
 				return
 			}
 			return
 		}
 	}
 	if r.Method != http.MethodPost {
-		err := domain.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		err := delivery.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -96,18 +106,18 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if jsonUser.Username == "" {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
 	}
-	user, userFound := authHandler.users.GetByUsername(jsonUser.Username)
+	user, userFound := authHandler.Users.GetByUsername(jsonUser.Username)
 	if !userFound {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "Пользователь не найден"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Пользователь не найден"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -116,15 +126,15 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	inputPassword := jsonUser.Password
 	inputHash := misc.GenerateHash(inputPassword, user.PasswordSalt)
 	if user.Password != inputHash {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "Неверный пароль"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Неверный пароль"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
 	}
 
-	sessionID := authHandler.sessions.CreateSession(user.ID)
+	sessionID := authHandler.Sessions.CreateSession(user.ID)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -133,9 +143,9 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 	}
 	http.SetCookie(w, cookie)
-	err = domain.WriteStatusJson(w, 200, nil)
+	err = delivery.WriteStatusJson(w, 200, nil)
 	if err != nil {
-		domain.WriteInternalErrorJson(w)
+		delivery.WriteInternalErrorJson(w)
 		return
 	}
 }
@@ -152,31 +162,31 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
 	}
 
-	_, sessionExists := authHandler.sessions.GetUserIDbySessionID(session.Value)
+	_, sessionExists := authHandler.Sessions.GetUserIDbySessionID(session.Value)
 	if !sessionExists {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
 	}
 
-	authHandler.sessions.DeleteSession(session.Value)
+	authHandler.Sessions.DeleteSession(session.Value)
 
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
-	err = domain.WriteStatusJson(w, 200, nil)
+	err = delivery.WriteStatusJson(w, 200, nil)
 	if err != nil {
-		domain.WriteInternalErrorJson(w)
+		delivery.WriteInternalErrorJson(w)
 		return
 	}
 }
@@ -195,9 +205,9 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Router /register [post]
 func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		err := domain.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		err := delivery.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -216,26 +226,26 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	var jsonUser domain.Person
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 	}
 	if jsonUser.Username == "" || jsonUser.Password == "" {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "required field is empty"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "required field is empty"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
 	}
 
-	_, userFound := authHandler.users.GetByUsername(jsonUser.Username)
+	_, userFound := authHandler.Users.GetByUsername(jsonUser.Username)
 	if userFound {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "Пользователь с таким именем уже существет"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Пользователь с таким именем уже существет"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
@@ -244,12 +254,12 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	jsonUser.Password = passwordHash
 	jsonUser.PasswordSalt = passwordSalt
 
-	userID, err := authHandler.users.CreateUser(jsonUser)
+	userID, err := authHandler.Users.CreateUser(jsonUser)
 	if err != nil {
-		domain.WriteInternalErrorJson(w)
+		delivery.WriteInternalErrorJson(w)
 		return
 	}
-	sessionID := authHandler.sessions.CreateSession(userID)
+	sessionID := authHandler.Sessions.CreateSession(userID)
 
 	cookie := &http.Cookie{
 		Name:    "session_id",
@@ -257,9 +267,9 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		Expires: time.Now().Add(10 * time.Hour),
 	}
 	http.SetCookie(w, cookie)
-	err = domain.WriteStatusJson(w, 200, nil)
+	err = delivery.WriteStatusJson(w, 200, nil)
 	if err != nil {
-		domain.WriteInternalErrorJson(w)
+		delivery.WriteInternalErrorJson(w)
 		return
 	}
 }
@@ -277,23 +287,23 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
-		_, authorized = authHandler.sessions.GetUserIDbySessionID(session.Value)
+		_, authorized = authHandler.Sessions.GetUserIDbySessionID(session.Value)
 	}
 
 	if authorized {
-		err = domain.WriteStatusJson(w, 200, nil)
+		err = delivery.WriteStatusJson(w, 200, nil)
 	} else {
-		err = domain.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
+		err = delivery.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
 	}
 	if err != nil {
-		domain.WriteInternalErrorJson(w)
+		delivery.WriteInternalErrorJson(w)
 		return
 	}
 }
 
-// GetChats gets chats previews for user
+// GetChats gets Chats previews for user
 //
-// @Summary gets chats previews for user
+// @Summary gets Chats previews for user
 // @ID GetChats
 // @Produce json
 // @Success 200 {object}  domain.Response[domain.Chats]
@@ -303,30 +313,30 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 func (authHandler *AuthHandler) GetChats(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
-		err := domain.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
+		err := delivery.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
 	}
-	userID, authorized := authHandler.sessions.GetUserIDbySessionID(session.Value)
+	userID, authorized := authHandler.Sessions.GetUserIDbySessionID(session.Value)
 	if !authorized {
-		err = domain.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
+		err = delivery.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return
 	}
 
-	chats := authHandler.chats.GetChatsByID(userID)
-	err = domain.WriteStatusJson(w, 200, domain.Chats{Chats: chats})
+	chats := authHandler.Chats.GetChatsByID(userID)
+	err = delivery.WriteStatusJson(w, 200, domain.Chats{Chats: chats})
 	if err != nil {
 		errResp := domain.Error{Error: err.Error()}
-		err := domain.WriteStatusJson(w, 500, errResp)
+		err := delivery.WriteStatusJson(w, 500, errResp)
 		if err != nil {
-			domain.WriteInternalErrorJson(w)
+			delivery.WriteInternalErrorJson(w)
 			return
 		}
 		return

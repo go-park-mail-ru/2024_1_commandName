@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
-
 	"ProjectMessenger/internal/middleware"
 )
 
@@ -24,23 +22,14 @@ func main() {
 // @host localhost:8080
 // @BasePath  /
 func Router() {
-	r := mux.NewRouter()
-
-	//api := auth.NewMyHandler(DEBUG)
-	newApi := usecase.NewAuthHandler()
-
-	r.HandleFunc("/checkAuth", newApi.CheckAuth)
-	r.HandleFunc("/login", newApi.Login)
-	r.HandleFunc("/logout", newApi.Logout)
-	r.HandleFunc("/register", newApi.Register)
-	r.HandleFunc("/getChats", newApi.GetChats)
+	authHandler := usecase.NewAuthHandler()
 
 	// middleware
 	if DEBUG {
-		r.Use(middleware.CORS)
+		authHandler.Rt.Use(middleware.CORS)
 	}
 
-	err := http.ListenAndServe(":8080", r)
+	err := http.ListenAndServe(":8080", authHandler.Rt)
 	if err != nil {
 		fmt.Println("err")
 		log.Fatal(err)
