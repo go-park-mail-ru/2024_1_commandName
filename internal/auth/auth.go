@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	_ "github.com/swaggo/http-swagger"
@@ -43,17 +42,6 @@ func NewAuthHandler() *AuthHandler {
 		chats:    inMemory.NewChatsStorage(),
 	}
 	return &handler
-}
-
-type MyHandler struct {
-	sessions map[string]*domain.Person
-	users    map[string]*domain.Person
-	chats    map[int]*domain.Chat
-	chatUser []*domain.ChatUser
-	sessMU   sync.RWMutex
-	usersMU  sync.RWMutex
-	chatsMU  sync.RWMutex
-	isDebug  bool
 }
 
 // Login logs user in
