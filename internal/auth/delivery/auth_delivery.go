@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	_ "github.com/swaggo/http-swagger"
 
 	"ProjectMessenger/domain"
@@ -19,7 +18,6 @@ import (
 )
 
 type AuthHandler struct {
-	Rt       *mux.Router
 	Sessions usecase.SessionStore
 	Users    usecase.UserStore
 	Chats    chatusecase.ChatStore
@@ -27,17 +25,10 @@ type AuthHandler struct {
 
 func NewAuthHandler() *AuthHandler {
 	handler := AuthHandler{
-		Rt:       mux.NewRouter(),
 		Sessions: repository.NewSessionStorage(),
 		Users:    repository.NewUserStorage(),
 		Chats:    chatrepo.NewChatsStorage(),
 	}
-
-	handler.Rt.HandleFunc("/checkAuth", handler.CheckAuth)
-	handler.Rt.HandleFunc("/login", handler.Login)
-	handler.Rt.HandleFunc("/logout", handler.Logout)
-	handler.Rt.HandleFunc("/register", handler.Register)
-	handler.Rt.HandleFunc("/getChats", handler.GetChats)
 	return &handler
 }
 
@@ -198,30 +189,4 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 	} else {
 		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
 	}
-}
-
-// GetChats gets Chats previews for user
-//
-// @Summary gets Chats previews for user
-// @ID GetChats
-// @Produce json
-// @Success 200 {object}  domain.Response[domain.Chats]
-// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
-// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
-// @Router /getChats [get]
-func (authHandler *AuthHandler) GetChats(w http.ResponseWriter, r *http.Request) {
-	session, err := r.Cookie("session_id")
-	if errors.Is(err, http.ErrNoCookie) {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
-		return
-	}
-	authorized, userID := usecase.CheckAuthorized(session.Value, authHandler.Sessions)
-
-	if !authorized {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
-		return
-	}
-
-	chats := chatusecase.GetChatsForUser(userID, authHandler.Chats)
-	misc.WriteStatusJson(w, 200, domain.Chats{Chats: chats})
 }
