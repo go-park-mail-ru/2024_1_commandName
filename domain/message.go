@@ -1,4 +1,4 @@
-package models
+package domain
 
 type Message struct {
 	ID      int    `json:"id"`

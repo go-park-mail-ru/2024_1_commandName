@@ -1,6 +1,7 @@
-package models
+package misc
 
 import (
+	"ProjectMessenger/domain"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,35 +9,22 @@ import (
 
 const INTERNALERRORJSON = "{\"status\": 500,\"body\":{\"error\": \"Internal server error\"}}"
 
-// Response[T]
-type Response[T any] struct {
-	Status int `json:"status" example:"200"`
-	Body   T   `json:"body,omitempty"`
-}
-
-type Error struct {
-	Error string `json:"error" example:"error description"`
-}
-
-type Chats struct {
-	Chats []*Chat `json:"chats"`
-}
-
-func WriteStatusJson(w http.ResponseWriter, status int, body any) error {
+func WriteStatusJson(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	jsonByte, err := MarshalStatusJson(status, body)
 	if err != nil {
-		return err
+		WriteInternalErrorJson(w)
+		return
 	}
 	_, err = w.Write(jsonByte)
 	if err != nil {
-		return err
+		WriteInternalErrorJson(w)
+		return
 	}
-	return nil
 }
 
 func MarshalStatusJson(status int, body any) ([]byte, error) {
-	response := Response[any]{
+	response := domain.Response[any]{
 		Status: status,
 		Body:   body,
 	}
