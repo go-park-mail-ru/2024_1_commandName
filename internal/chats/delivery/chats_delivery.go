@@ -7,7 +7,7 @@ import (
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	authusecase "ProjectMessenger/internal/auth/usecase"
-	"ProjectMessenger/internal/chats/repository"
+	"ProjectMessenger/internal/chats/repository/inMemory"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
@@ -20,7 +20,7 @@ type ChatsHandler struct {
 func NewChatsHandler(authHandler *authdelivery.AuthHandler) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		Chats:       repository.NewChatsStorage(),
+		Chats:       inMemory.NewChatsStorage(),
 	}
 }
 

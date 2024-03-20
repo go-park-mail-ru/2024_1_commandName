@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"ProjectMessenger/internal/auth/repository/InMemory"
+	chatrepo "ProjectMessenger/internal/chats/repository/inMemory"
 	_ "github.com/swaggo/http-swagger"
 
 	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/auth/repository"
 	"ProjectMessenger/internal/auth/usecase"
-	chatrepo "ProjectMessenger/internal/chats/repository"
 	chatusecase "ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
@@ -25,8 +25,8 @@ type AuthHandler struct {
 
 func NewAuthHandler() *AuthHandler {
 	handler := AuthHandler{
-		Sessions: repository.NewSessionStorage(),
-		Users:    repository.NewUserStorage(),
+		Sessions: InMemory.NewSessionStorage(),
+		Users:    InMemory.NewUserStorage(),
 		Chats:    chatrepo.NewChatsStorage(),
 	}
 	return &handler
