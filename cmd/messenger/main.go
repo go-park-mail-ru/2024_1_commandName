@@ -38,6 +38,7 @@ func Router() {
 	router.HandleFunc("/register", authHandler.Register)
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
+	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
 
 	// middleware
 	if DEBUG {
