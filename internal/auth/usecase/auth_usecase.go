@@ -15,6 +15,7 @@ type SessionStore interface {
 
 type UserStore interface {
 	GetByUsername(username string) (user domain.Person, found bool)
+	GetByUserID(userID uint) (user domain.Person, found bool)
 	CreateUser(user domain.Person) (userID uint, err error)
 }
 

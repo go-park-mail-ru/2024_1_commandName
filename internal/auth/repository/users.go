@@ -12,6 +12,15 @@ type Users struct {
 	currentID uint
 }
 
+func (u *Users) GetByUserID(userID uint) (user domain.Person, found bool) {
+	for _, v := range u.users {
+		if v.ID == userID {
+			return v, true
+		}
+	}
+	return user, false
+}
+
 func (u *Users) GetByUsername(username string) (user domain.Person, found bool) {
 	user, found = u.users[username]
 	return user, found

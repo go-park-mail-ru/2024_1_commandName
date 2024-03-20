@@ -8,8 +8,10 @@ import (
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	chatsdelivery "ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/middleware"
+	profiledelivery "ProjectMessenger/internal/profile/delivery"
 
 	"github.com/gorilla/mux"
+	_ "github.com/swaggo/echo-swagger/example/docs"
 )
 
 var DEBUG = false
@@ -28,12 +30,14 @@ func Router() {
 	router := mux.NewRouter()
 	authHandler := authdelivery.NewAuthHandler()
 	chatsHandler := chatsdelivery.NewChatsHandler(authHandler)
+	profileHandler := profiledelivery.NewProfileHandler(authHandler)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
 	router.HandleFunc("/logout", authHandler.Logout)
 	router.HandleFunc("/register", authHandler.Register)
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
+	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
 
 	// middleware
 	if DEBUG {

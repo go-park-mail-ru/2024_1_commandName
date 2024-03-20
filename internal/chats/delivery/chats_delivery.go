@@ -1,12 +1,10 @@
 package delivery
 
 import (
-	"errors"
 	"net/http"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
-	authusecase "ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/chats/repository"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
@@ -34,16 +32,8 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler) *ChatsHandler {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChats [get]
 func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request) {
-	session, err := r.Cookie("session_id")
-	if errors.Is(err, http.ErrNoCookie) {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
-		return
-	}
-
-	authorized, userID := authusecase.CheckAuthorized(session.Value, chatsHandler.AuthHandler.Sessions)
-
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
 		return
 	}
 

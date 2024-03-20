@@ -190,3 +190,14 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
 	}
 }
+
+func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.Request) (authorized bool, userID uint) {
+	session, err := r.Cookie("session_id")
+	if err == nil && session != nil {
+		authorized, userID = usecase.CheckAuthorized(session.Value, authHandler.Sessions)
+	}
+	if !authorized {
+		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
+	}
+	return authorized, userID
+}
