@@ -17,6 +17,7 @@ type UserStore interface {
 	GetByUsername(username string) (user domain.Person, found bool)
 	GetByUserID(userID uint) (user domain.Person, found bool)
 	CreateUser(user domain.Person) (userID uint, err error)
+	UpdateUser(userUpdated domain.Person) (ok bool)
 }
 
 func CheckAuthorized(sessionID string, storage SessionStore) (authorized bool, userID uint) {

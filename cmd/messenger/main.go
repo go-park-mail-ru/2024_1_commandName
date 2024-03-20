@@ -20,6 +20,8 @@ func main() {
 	Router()
 }
 
+// swag init -d cmd/messenger/,domain/,internal/
+
 // Router
 // @Title Messenger authorization API
 // @Version 1.0
