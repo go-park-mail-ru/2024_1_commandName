@@ -41,10 +41,12 @@ func RegisterAndLoginUser(user domain.Person, userStorage UserStore, sessionStor
 	user.Password = passwordHash
 	user.PasswordSalt = passwordSalt
 
-	_, err = userStorage.CreateUser(user)
+	var userID uint
+	userID, err = userStorage.CreateUser(user)
 	if err != nil {
 		return "", err
 	}
+	user.ID = userID
 	sessionID = createSession(user, sessionStorage)
 
 	return sessionID, nil

@@ -1,20 +1,23 @@
 package delivery
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	"ProjectMessenger/internal/auth/repository/InMemory"
-	chatrepo "ProjectMessenger/internal/chats/repository/inMemory"
+	"ProjectMessenger/internal/auth/repository/db"
+	chatrepo "ProjectMessenger/internal/chats/repository/db"
 	_ "github.com/swaggo/http-swagger"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/auth/usecase"
 	chatusecase "ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
+	_ "github.com/lib/pq"
 )
 
 type AuthHandler struct {
@@ -24,10 +27,17 @@ type AuthHandler struct {
 }
 
 func NewAuthHandler() *AuthHandler {
+	connStrToDataBase := "user=postgres dbname=Messenger password=Artem557 host=localhost sslmode=disable"
+	dataBase, err := sql.Open("postgres", connStrToDataBase)
+	if err != nil {
+		//TODO
+		fmt.Println("connection to DatBase err:", err)
+	}
+
 	handler := AuthHandler{
-		Sessions: InMemory.NewSessionStorage(),
-		Users:    InMemory.NewUserStorage(),
-		Chats:    chatrepo.NewChatsStorage(),
+		Sessions: db.NewSessionStorage(dataBase),
+		Users:    db.NewUserStorage(dataBase),
+		Chats:    chatrepo.NewChatsStorage(dataBase),
 	}
 	return &handler
 }
