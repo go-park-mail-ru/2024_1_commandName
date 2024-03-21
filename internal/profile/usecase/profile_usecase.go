@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/misc"
 	"fmt"
 )
 import authusecase "ProjectMessenger/internal/auth/usecase"
@@ -45,6 +46,29 @@ func UpdateProfileInfo(updatedFields domain.Person, numOfUpdatedFields int, user
 	ok := userStorage.UpdateUser(userFromStorage)
 	if !ok {
 		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
+func ChangePassword(oldPassword string, newPassword string, userID uint, userStorage authusecase.UserStore) (err error) {
+	userFromStorage, found := userStorage.GetByUserID(userID)
+	if !found {
+		return fmt.Errorf("user not found")
+	}
+	fmt.Println(oldPassword, "//", newPassword, "//", userID)
+	storagePasswordHash := userFromStorage.Password
+	oldPasswordHash := misc.GenerateHash(oldPassword, userFromStorage.PasswordSalt)
+	if storagePasswordHash != oldPasswordHash {
+		return fmt.Errorf("old password is wrong")
+	}
+
+	newPasswordHash, newPasswordSalt := misc.GenerateHashAndSalt(newPassword)
+	userFromStorage.Password = newPasswordHash
+	userFromStorage.PasswordSalt = newPasswordSalt
+
+	ok := userStorage.UpdateUser(userFromStorage)
+	if !ok {
+		return fmt.Errorf("error updating password")
 	}
 	return nil
 }

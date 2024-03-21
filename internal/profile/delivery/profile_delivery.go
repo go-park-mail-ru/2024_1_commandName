@@ -20,6 +20,11 @@ type updateUserStruct[T any] struct {
 	NumOfUpdatedFields int `json:"numOfUpdatedFields"`
 }
 
+type changePasswordStruct struct {
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}
+
 func NewProfileHandler(authHandler *authdelivery.AuthHandler) *ProfileHandler {
 	return &ProfileHandler{AuthHandler: authHandler}
 }
@@ -70,7 +75,7 @@ func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) 
 // @Produce json
 // @Param userAndNumOfUpdatedFields body  updateUserStruct[docsUserForGetProfile] true "Send only the updated fields, and number of them"
 // @Success 200 {object}  domain.Response[int]
-// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 401 {object}  domain.Response[domain.Error] "Person not authorized"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /updateProfileInfo [post]
 func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +101,48 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 	}
 
 	err = usecase.UpdateProfileInfo(jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
+	if err != nil {
+		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+	misc.WriteStatusJson(w, 200, nil)
+}
+
+// ChangePassword changes profile password
+//
+// @Summary changes profile password
+// @ID ChangePassword
+// @Accept json
+// @Produce json
+// @Param Password body  changePasswordStruct true "Old and new passwords"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "passwords are empty"
+// @Failure 401 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /changePassword [post]
+func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var passwordsJson changePasswordStruct
+	err := decoder.Decode(&passwordsJson)
+	if err != nil {
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	if passwordsJson.OldPassword == "" || passwordsJson.NewPassword == "" {
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "passwords are empty"})
+		return
+	}
+
+	err = usecase.ChangePassword(passwordsJson.OldPassword, passwordsJson.NewPassword, userID, p.AuthHandler.Users)
 	if err != nil {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
 		return

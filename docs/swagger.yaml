@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  delivery.changePasswordStruct:
+    properties:
+      newPassword:
+        type: string
+      oldPassword:
+        type: string
+    type: object
   delivery.docsUserForGetProfile:
     properties:
       about:
@@ -129,6 +136,38 @@ info:
   title: Messenger authorization API
   version: "1.0"
 paths:
+  /changePassword:
+    post:
+      consumes:
+      - application/json
+      operationId: ChangePassword
+      parameters:
+      - description: Old and new passwords
+        in: body
+        name: Password
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.changePasswordStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: passwords are empty
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "401":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: changes profile password
   /checkAuth:
     get:
       operationId: checkAuth
@@ -288,7 +327,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/domain.Response-int'
-        "400":
+        "401":
           description: Person not authorized
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'

@@ -15,6 +15,55 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/changePassword": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "changes profile password",
+                "operationId": "ChangePassword",
+                "parameters": [
+                    {
+                        "description": "Old and new passwords",
+                        "name": "Password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.changePasswordStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "passwords are empty",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/checkAuth": {
             "get": {
                 "produces": [
@@ -257,7 +306,7 @@ const docTemplate = `{
                             "$ref": "#/definitions/domain.Response-int"
                         }
                     },
-                    "400": {
+                    "401": {
                         "description": "Person not authorized",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
@@ -274,6 +323,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "delivery.changePasswordStruct": {
+            "type": "object",
+            "properties": {
+                "newPassword": {
+                    "type": "string"
+                },
+                "oldPassword": {
+                    "type": "string"
+                }
+            }
+        },
         "delivery.docsUserForGetProfile": {
             "type": "object",
             "properties": {
