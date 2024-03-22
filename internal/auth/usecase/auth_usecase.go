@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"fmt"
+	"regexp"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -34,6 +35,10 @@ func RegisterAndLoginUser(user domain.Person, userStorage UserStore, sessionStor
 	if user.Username == "" || user.Password == "" {
 		return "", fmt.Errorf("required field is empty")
 	}
+	if !ValidatePassword(user.Password) {
+		return "", fmt.Errorf("Пароль не подходит по требованиям")
+	}
+
 	_, userFound := userStorage.GetByUsername(user.Username)
 	if userFound {
 		return "", fmt.Errorf("Пользователь с таким именем уже существет")
@@ -73,4 +78,24 @@ func LoginUser(user domain.Person,
 func LogoutUser(sessionID string, sessionStorage SessionStore) {
 	sessionStorage.DeleteSession(sessionID)
 	return
+}
+
+func ValidatePassword(password string) (ok bool) {
+	if len([]rune(password)) < 8 {
+		return false
+	}
+
+	uppercaseRegex := regexp.MustCompile(`[A-Z]`)
+	lowercaseRegex := regexp.MustCompile(`[a-z]`)
+	digitRegex := regexp.MustCompile(`[0-9]`)
+	specialCharsRegex := regexp.MustCompile(`[~!@#$%^&*_+()[\]{}></\\|"'.,:;-]`)
+	allowedCharsRegex := regexp.MustCompile(`^[a-zA-Z0-9~!@#$%^&*_+()[\]{}></\\|"'.,:;-]+$`)
+
+	if !uppercaseRegex.MatchString(password) || !lowercaseRegex.MatchString(password) ||
+		!digitRegex.MatchString(password) || !specialCharsRegex.MatchString(password) ||
+		!allowedCharsRegex.MatchString(password) {
+		return false
+	}
+
+	return true
 }

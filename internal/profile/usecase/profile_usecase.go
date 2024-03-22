@@ -55,7 +55,9 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 	if !found {
 		return fmt.Errorf("user not found")
 	}
-	fmt.Println(oldPassword, "//", newPassword, "//", userID)
+	if !authusecase.ValidatePassword(newPassword) {
+		return fmt.Errorf("password did not pass the regex")
+	}
 	storagePasswordHash := userFromStorage.Password
 	oldPasswordHash := misc.GenerateHash(oldPassword, userFromStorage.PasswordSalt)
 	if storagePasswordHash != oldPasswordHash {
