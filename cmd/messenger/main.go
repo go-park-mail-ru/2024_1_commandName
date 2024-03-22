@@ -47,6 +47,7 @@ func Router() {
 	if DEBUG {
 		router.Use(middleware.CORS)
 	}
+	router.Use(middleware.AccessLogMiddleware)
 
 	err := http.ListenAndServe(":8080", router)
 	if err != nil {
