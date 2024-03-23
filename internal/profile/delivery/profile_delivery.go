@@ -166,14 +166,14 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get the avatar from the request
-	avatar, _, err := r.FormFile("avatar")
+	avatar, handler, err := r.FormFile("avatar")
 	if err != nil {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: "bad avatar"})
 		return
 	}
 	defer avatar.Close()
 
-	err = usecase.ChangeAvatar(&avatar, userID, p.AuthHandler.Users)
+	err = usecase.ChangeAvatar(&avatar, handler, userID, p.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(w)

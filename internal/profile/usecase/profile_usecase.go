@@ -76,12 +76,12 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 	return nil
 }
 
-func ChangeAvatar(multipartFile *multipart.File, userID uint, userStorage authusecase.UserStore) (err error) {
+func ChangeAvatar(multipartFile *multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
 	user, found := userStorage.GetByUserID(userID)
 	if !found {
 		return fmt.Errorf("user not found")
 	}
-	path, err := userStorage.StoreAvatar(multipartFile)
+	path, err := userStorage.StoreAvatar(multipartFile, fileHandler)
 	if err != nil {
 		return err
 	}
