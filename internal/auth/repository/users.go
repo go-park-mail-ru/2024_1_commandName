@@ -50,10 +50,10 @@ func (u *Users) CreateUser(user domain.Person) (userID uint, err error) {
 func (u *Users) StoreAvatar(multipartFile *multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
 	originalName := fileHandler.Filename
 	fileNameSlice := strings.Split(originalName, ".")
-	if len(fileNameSlice) != 2 {
+	if len(fileNameSlice) < 2 {
 		return "", fmt.Errorf("bad avatar")
 	}
-	extension := fileNameSlice[1]
+	extension := fileNameSlice[len(fileNameSlice)-1]
 	fmt.Println(extension)
 
 	filename := misc.RandStringRunes(16)
