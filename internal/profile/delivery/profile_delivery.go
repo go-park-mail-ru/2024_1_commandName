@@ -138,7 +138,7 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if passwordsJson.OldPassword == "" || passwordsJson.NewPassword == "" {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "passwords are empty"})
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "Поля пустые"})
 		return
 	}
 
@@ -159,6 +159,7 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
 		return
 	}
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
 	err := r.ParseMultipartForm(32 << 20) // 32 MB is the maximum avatar size
 	if err != nil {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: "bad avatar"})
@@ -173,7 +174,7 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	defer avatar.Close()
 
-	err = usecase.ChangeAvatar(&avatar, handler, userID, p.AuthHandler.Users)
+	err = usecase.ChangeAvatar(avatar, handler, userID, p.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(w)

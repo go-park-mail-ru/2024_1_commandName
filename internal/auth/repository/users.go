@@ -47,13 +47,17 @@ func (u *Users) CreateUser(user domain.Person) (userID uint, err error) {
 	return user.ID, nil
 }
 
-func (u *Users) StoreAvatar(multipartFile *multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
+func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
 	originalName := fileHandler.Filename
 	fileNameSlice := strings.Split(originalName, ".")
 	if len(fileNameSlice) < 2 {
-		return "", fmt.Errorf("bad avatar")
+		return "", fmt.Errorf("Файл не имеет расширения")
 	}
 	extension := fileNameSlice[len(fileNameSlice)-1]
+	if extension != "png" && extension != "jpg" && extension != "jpeg" && extension != "webp" && extension != "pjpeg" {
+		return "", fmt.Errorf("Файл не является изображением")
+	}
+
 	fmt.Println(extension)
 
 	filename := misc.RandStringRunes(16)
@@ -66,7 +70,7 @@ func (u *Users) StoreAvatar(multipartFile *multipart.File, fileHandler *multipar
 	defer f.Close()
 
 	// Copy the contents of the file to the new file
-	_, err = io.Copy(f, *multipartFile)
+	_, err = io.Copy(f, multipartFile)
 	if err != nil {
 		return "", fmt.Errorf("internal error")
 	}

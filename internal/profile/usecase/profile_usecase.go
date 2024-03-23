@@ -5,6 +5,7 @@ import (
 	"ProjectMessenger/internal/misc"
 	"fmt"
 	"mime/multipart"
+	"net/http"
 )
 import authusecase "ProjectMessenger/internal/auth/usecase"
 
@@ -57,12 +58,12 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 		return fmt.Errorf("user not found")
 	}
 	if !authusecase.ValidatePassword(newPassword) {
-		return fmt.Errorf("password did not pass the regex")
+		return fmt.Errorf("Новый пароль не подходит по требованиям")
 	}
 	storagePasswordHash := userFromStorage.Password
 	oldPasswordHash := misc.GenerateHash(oldPassword, userFromStorage.PasswordSalt)
 	if storagePasswordHash != oldPasswordHash {
-		return fmt.Errorf("old password is wrong")
+		return fmt.Errorf("Старый пароль введён неверно")
 	}
 
 	newPasswordHash, newPasswordSalt := misc.GenerateHashAndSalt(newPassword)
@@ -76,11 +77,20 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 	return nil
 }
 
-func ChangeAvatar(multipartFile *multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
+func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
 	user, found := userStorage.GetByUserID(userID)
 	if !found {
-		return fmt.Errorf("user not found")
+		return fmt.Errorf("internal error")
 	}
+	buff := make([]byte, 512)
+	if _, err = multipartFile.Read(buff); err != nil {
+		return fmt.Errorf("internal error")
+	}
+	mimeType := http.DetectContentType(buff)
+	if mimeType != "image/png" && mimeType != "image/jpeg" && mimeType != "image/pjpeg" && mimeType != "image/webp" {
+		return fmt.Errorf("Файл не является изображением")
+	}
+
 	path, err := userStorage.StoreAvatar(multipartFile, fileHandler)
 	if err != nil {
 		return err

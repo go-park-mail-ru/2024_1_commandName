@@ -20,7 +20,7 @@ type UserStore interface {
 	GetByUserID(userID uint) (user domain.Person, found bool)
 	CreateUser(user domain.Person) (userID uint, err error)
 	UpdateUser(userUpdated domain.Person) (ok bool)
-	StoreAvatar(multipartFile *multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
+	StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 }
 
 func CheckAuthorized(sessionID string, storage SessionStore) (authorized bool, userID uint) {
@@ -35,7 +35,7 @@ func createSession(user domain.Person, sessionStorage SessionStore) string {
 
 func RegisterAndLoginUser(user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" || user.Password == "" {
-		return "", fmt.Errorf("required field is empty")
+		return "", fmt.Errorf("Обязательное поле не заполнено")
 	}
 	if !ValidatePassword(user.Password) {
 		return "", fmt.Errorf("Пароль не подходит по требованиям")
