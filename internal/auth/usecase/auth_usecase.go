@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"fmt"
+	"mime/multipart"
 	"regexp"
 
 	"ProjectMessenger/domain"
@@ -19,6 +20,7 @@ type UserStore interface {
 	GetByUserID(userID uint) (user domain.Person, found bool)
 	CreateUser(user domain.Person) (userID uint, err error)
 	UpdateUser(userUpdated domain.Person) (ok bool)
+	StoreAvatar(multipartFile *multipart.File) (path string, err error)
 }
 
 func CheckAuthorized(sessionID string, storage SessionStore) (authorized bool, userID uint) {

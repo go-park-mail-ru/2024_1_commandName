@@ -4,6 +4,7 @@ import (
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
 	"fmt"
+	"mime/multipart"
 )
 import authusecase "ProjectMessenger/internal/auth/usecase"
 
@@ -71,6 +72,23 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 	ok := userStorage.UpdateUser(userFromStorage)
 	if !ok {
 		return fmt.Errorf("error updating password")
+	}
+	return nil
+}
+
+func ChangeAvatar(multipartFile *multipart.File, userID uint, userStorage authusecase.UserStore) (err error) {
+	user, found := userStorage.GetByUserID(userID)
+	if !found {
+		return fmt.Errorf("user not found")
+	}
+	path, err := userStorage.StoreAvatar(multipartFile)
+	if err != nil {
+		return err
+	}
+	user.Avatar = path
+	ok := userStorage.UpdateUser(user)
+	if !ok {
+		return fmt.Errorf("internal error")
 	}
 	return nil
 }

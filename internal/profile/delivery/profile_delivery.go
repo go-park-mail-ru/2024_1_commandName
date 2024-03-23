@@ -149,3 +149,39 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	}
 	misc.WriteStatusJson(w, 200, nil)
 }
+
+func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		return
+	}
+	err := r.ParseMultipartForm(32 << 20) // 32 MB is the maximum avatar size
+	if err != nil {
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "bad avatar"})
+		return
+	}
+
+	// Get the avatar from the request
+	avatar, _, err := r.FormFile("avatar")
+	if err != nil {
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "bad avatar"})
+		return
+	}
+	defer avatar.Close()
+
+	err = usecase.ChangeAvatar(&avatar, userID, p.AuthHandler.Users)
+	if err != nil {
+		if err.Error() == "internal error" {
+			misc.WriteInternalErrorJson(w)
+		} else {
+			misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
+		}
+		return
+	}
+
+	misc.WriteStatusJson(w, 200, nil)
+}

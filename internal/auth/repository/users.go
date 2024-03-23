@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
 	"time"
 
 	"ProjectMessenger/domain"
@@ -40,6 +44,25 @@ func (u *Users) CreateUser(user domain.Person) (userID uint, err error) {
 	u.currentID++
 	u.users[user.ID] = user
 	return user.ID, nil
+}
+
+func (u *Users) StoreAvatar(multipartFile *multipart.File) (path string, err error) {
+	filename := misc.RandStringRunes(16)
+	filePath := "./uploads/" + filename
+
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return "", fmt.Errorf("internal error")
+	}
+	defer f.Close()
+
+	// Copy the contents of the file to the new file
+	_, err = io.Copy(f, *multipartFile)
+	if err != nil {
+		return "", fmt.Errorf("internal error")
+	}
+
+	return filePath, nil
 }
 
 func fillFakeUsers() map[uint]domain.Person {
