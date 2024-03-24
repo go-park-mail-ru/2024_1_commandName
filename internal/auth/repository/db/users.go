@@ -17,7 +17,7 @@ type Users struct {
 }
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
-	err := u.db.QueryRowContext(ctx, "SELECT * FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, false

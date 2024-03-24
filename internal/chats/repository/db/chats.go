@@ -17,6 +17,7 @@ type Chats struct {
 func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 	fmt.Println(userID)
 	chats := make([]domain.Chat, 0)
+	//TODO request
 	rows, err := c.db.QueryContext(ctx, "SELECT c.* FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
 	if err != nil {
 		//TODO
@@ -46,7 +47,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 
 func (c *Chats) getChatUsersByChatID(ctx context.Context, chatID int) []*domain.ChatUser {
 	chatUsers := make([]*domain.ChatUser, 0)
-	rows, err := c.db.QueryContext(ctx, "SELECT * FROM chat.chat_user WHERE chat_id = $1", chatID)
+	rows, err := c.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {
 		//TODO
 		fmt.Println("err in func getChatUsersByChatID:", err)
