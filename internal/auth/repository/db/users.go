@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -15,8 +16,8 @@ type Users struct {
 	countOfUsers uint
 }
 
-func (u *Users) GetByUsername(username string) (user domain.Person, found bool) {
-	err := u.db.QueryRow("SELECT * FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
+	err := u.db.QueryRowContext(ctx, "SELECT * FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, false
@@ -29,8 +30,8 @@ func (u *Users) GetByUsername(username string) (user domain.Person, found bool) 
 	return user, true
 }
 
-func (u *Users) CreateUser(user domain.Person) (userID uint, err error) {
-	err = u.db.QueryRow("INSERT INTO auth.person (username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
+func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint, err error) {
+	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
 		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt).Scan(&userID)
 	if err != nil {
 		return 0, err
@@ -42,7 +43,10 @@ func (u *Users) CreateUser(user domain.Person) (userID uint, err error) {
 }
 
 func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
-	/*
+	fmt.Println("In create fake users.")
+	counter := 0
+	_ = db.QueryRow("SELECT count(id) FROM auth.person").Scan(&counter)
+	if counter == 0 {
 		_, err := db.Exec("ALTER SEQUENCE auth.person_id_seq RESTART WITH 1")
 		if err != nil {
 			//TODO
@@ -73,7 +77,8 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 				//TODO
 				fmt.Println("Error in fakeData createUsers:", err)
 			}
-		}*/
+		}
+	}
 	return db
 }
 

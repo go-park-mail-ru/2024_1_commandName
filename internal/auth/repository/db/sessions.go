@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,8 +13,8 @@ type Sessions struct {
 	db *sql.DB
 }
 
-func (s *Sessions) GetUserIDbySessionID(sessionID string) (userID uint, sessionExists bool) {
-	err := s.db.QueryRow("SELECT id FROM auth.session WHERE sessionid = $1", sessionID).Scan(&userID)
+func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool) {
+	err := s.db.QueryRowContext(ctx, "SELECT id FROM auth.session WHERE sessionid = $1", sessionID).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, false
@@ -35,8 +36,8 @@ func (s *Sessions) CreateSession(userID uint) (sessionID string) {
 	return sessionID
 }
 
-func (s *Sessions) DeleteSession(sessionID string) {
-	_, err := s.db.Exec("DELETE FROM auth.session WHERE sessionID = $1", sessionID)
+func (s *Sessions) DeleteSession(ctx context.Context, sessionID string) {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM auth.session WHERE sessionID = $1", sessionID)
 	if err != nil {
 		//TODO
 		fmt.Println("err in func DeleteSession:", err)

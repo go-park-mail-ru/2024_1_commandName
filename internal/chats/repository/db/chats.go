@@ -1,6 +1,7 @@
 package inMemory
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -13,10 +14,10 @@ type Chats struct {
 	chatUser []domain.ChatUser
 }
 
-func (c *Chats) GetChatsByID(userID uint) []domain.Chat {
+func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 	fmt.Println(userID)
 	chats := make([]domain.Chat, 0)
-	rows, err := c.db.Query("SELECT c.* FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
+	rows, err := c.db.QueryContext(ctx, "SELECT c.* FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
 	if err != nil {
 		//TODO
 		fmt.Println("err in func GetChatsByID:", err)
@@ -31,7 +32,7 @@ func (c *Chats) GetChatsByID(userID uint) []domain.Chat {
 			fmt.Println("err in func GetChatsByID:", err)
 			return nil
 		}
-		chat.Messages = c.GetMessagesByChatID(chat.ID)
+		chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
 		chats = append(chats, chat)
 	}
 	if err = rows.Err(); err != nil {
@@ -43,9 +44,9 @@ func (c *Chats) GetChatsByID(userID uint) []domain.Chat {
 	return chats
 }
 
-func (c *Chats) getChatUsersByChatID(chatID int) []*domain.ChatUser {
+func (c *Chats) getChatUsersByChatID(ctx context.Context, chatID int) []*domain.ChatUser {
 	chatUsers := make([]*domain.ChatUser, 0)
-	rows, err := c.db.Query("SELECT * FROM chat.chat_user WHERE chat_id = $1", chatID)
+	rows, err := c.db.QueryContext(ctx, "SELECT * FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {
 		//TODO
 		fmt.Println("err in func getChatUsersByChatID:", err)
@@ -65,7 +66,7 @@ func (c *Chats) getChatUsersByChatID(chatID int) []*domain.ChatUser {
 	return chatUsers
 }
 
-func (c *Chats) fillFakeChats() {
+func (c *Chats) fillFakeChats(ctx context.Context) {
 	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 1, UserID: 6})
 	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 1, UserID: 5})
 	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 2, UserID: 6})
@@ -82,41 +83,40 @@ func (c *Chats) fillFakeChats() {
 		&domain.Message{ID: 1, ChatID: 1, UserID: 5, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
 	)
 
-	chat1 := domain.Chat{Name: "mentors", ID: 1, Type: "group", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1, Users: c.getChatUsersByChatID(1)}
+	chat1 := domain.Chat{Name: "mentors", ID: 1, Type: "group", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1, Users: c.getChatUsersByChatID(ctx, 1)}
 	c.chats[chat1.ID] = chat1
 
 	messagesChat2 := make([]*domain.Message, 0)
 	messagesChat2 = append(messagesChat2,
 		&domain.Message{ID: 1, ChatID: 2, UserID: 2, Message: "Пойдём в столовку?", Edited: false},
 	)
-	chat2 := domain.Chat{Name: "ArtemkaChernikov", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "2", Messages: messagesChat2, Users: c.getChatUsersByChatID(2)}
+	chat2 := domain.Chat{Name: "ArtemkaChernikov", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "2", Messages: messagesChat2, Users: c.getChatUsersByChatID(ctx, 2)}
 	c.chats[chat2.ID] = chat2
 
 	messagesChat3 := make([]*domain.Message, 0)
 	messagesChat3 = append(messagesChat3,
 		&domain.Message{ID: 1, ChatID: 3, UserID: 3, Message: "В Бауманке открывают новые общаги, а Измайлово под снос", Edited: false},
 	)
-	chat3 := domain.Chat{Name: "Bauman News", ID: 3, Type: "channel", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat3, Users: c.getChatUsersByChatID(3)}
+	chat3 := domain.Chat{Name: "Bauman News", ID: 3, Type: "channel", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat3, Users: c.getChatUsersByChatID(ctx, 3)}
 	c.chats[chat3.ID] = chat3
 
 	messagesChat4 := make([]*domain.Message, 0)
 	messagesChat4 = append(messagesChat4,
 		&domain.Message{ID: 1, ChatID: 4, UserID: 1, Message: "Ты когда базу данных уже допилишь? Docker запустился??", Edited: false},
 	)
-	chat4 := domain.Chat{Name: "IvanNaumov", ID: 4, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat4, Users: c.getChatUsersByChatID(4)}
+	chat4 := domain.Chat{Name: "IvanNaumov", ID: 4, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat4, Users: c.getChatUsersByChatID(ctx, 4)}
 	c.chats[chat4.ID] = chat4
 
 	messagesChat5 := make([]*domain.Message, 0)
 	messagesChat5 = append(messagesChat5,
 		&domain.Message{ID: 1, ChatID: 5, UserID: 4, Message: "Фронт уже готов, когда бек доделаете??", Edited: false},
 	)
-	chat5 := domain.Chat{Name: "AlexanderVolohov", ID: 5, Type: "person", Description: "", AvatarPath: "", CreatorID: "5", Messages: messagesChat5, Users: c.getChatUsersByChatID(5)}
+	chat5 := domain.Chat{Name: "AlexanderVolohov", ID: 5, Type: "person", Description: "", AvatarPath: "", CreatorID: "5", Messages: messagesChat5, Users: c.getChatUsersByChatID(ctx, 5)}
 	c.chats[chat5.ID] = chat5
 }
 
 func addFakeChatUsers(db *sql.DB) {
 	_, err := db.Exec("DELETE FROM chat.chat_user")
-	_, err = db.Exec("DELETE FROM chat.chat")
 	_, err = db.Exec("DELETE FROM chat.message")
 	_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
 	_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
@@ -147,7 +147,9 @@ func addFakeChatUsers(db *sql.DB) {
 		              
 		              (5, 6),
 		              (5, 4)`
-
+	counterOfRows := 0
+	_ = db.QueryRow("SELECT count(id) FROM chat.chat").Scan(&counterOfRows)
+	fmt.Println("Now is counter", counterOfRows)
 	_, err = db.Exec(query)
 	if err != nil {
 		fmt.Println("err in addFakeChatUsers:", err)
@@ -155,7 +157,10 @@ func addFakeChatUsers(db *sql.DB) {
 }
 
 func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
-	/*
+	counterOfRows := 0
+	_ = db.QueryRow("SELECT count(id) FROM chat.chat").Scan(&counterOfRows)
+	if counterOfRows == 0 {
+		fmt.Println("adding chats...")
 		fillTableChatWithFakeData("2", "mentor", "no desc", "avatar_path", 1, db) // type - group
 		fillTableChatWithFakeData("1", "ArtemkaChernikov", "no desc", "avatar_path", 2, db)
 		fillTableChatWithFakeData("3", "ArtemZhuk", "no desc", "avatar_path", 3, db) // type - channel
@@ -169,7 +174,7 @@ func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
 		addFakeMessage(3, 3, "В Бауманке открывают новые общаги, а Измайлово под снос", false, db) // Zhuk to channel
 		addFakeMessage(1, 4, "Ты когда базу данных уже допилишь? Docker запустился??", false, db)  // Naumov to TestUser
 		addFakeMessage(4, 5, "Фронт уже готов, когда бек доделаете?", false, db)                   // Volohov to TestUser
-	*/
+	}
 	return db
 }
 
@@ -192,9 +197,10 @@ func fillTableChatWithFakeData(chatType, name, description, avatar_path string, 
 	}
 }
 
-func (c *Chats) GetMessagesByChatID(chatID int) []*domain.Message {
+func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int) []*domain.Message {
 	chatMessagesArr := make([]*domain.Message, 0)
-	rows, err := c.db.Query("SELECT id, user_id, chat_id, message.message, edited FROM chat.message WHERE chat_id = $1", chatID)
+
+	rows, err := c.db.QueryContext(ctx, "SELECT id, user_id, chat_id, message.message, edited FROM chat.message WHERE chat_id = $1", chatID)
 	if err != nil {
 		//TODO
 		fmt.Println("err in func GetChatsByID:", err)

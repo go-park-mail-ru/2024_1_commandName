@@ -9,10 +9,12 @@ import (
 	chatsdelivery "ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/middleware"
 
+	database "ProjectMessenger/db"
+
 	"github.com/gorilla/mux"
 )
 
-var DEBUG = false
+var DEBUG = true
 
 func main() {
 	Router()
@@ -26,8 +28,11 @@ func main() {
 // @BasePath  /
 func Router() {
 	router := mux.NewRouter()
-	authHandler := authdelivery.NewAuthHandler()
-	chatsHandler := chatsdelivery.NewChatsHandler(authHandler)
+
+	dataBase := database.СreateDatabase()
+
+	authHandler := authdelivery.NewAuthHandler(dataBase)
+	chatsHandler := chatsdelivery.NewChatsHandler(authHandler, dataBase)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)

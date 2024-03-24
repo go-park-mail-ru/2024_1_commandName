@@ -12,7 +12,7 @@ services:
   postgres:
     image: postgres:16.2
     ports:
-      - "5432:5432"
+      - "8888:5432"
     volumes:
       - ./db:/docker-entrypoint-initdb.d
     #      - postgres_data:/var/lib/postgresql/data/
