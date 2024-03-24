@@ -336,6 +336,33 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: updates profile info
+  /uploadAvatar:
+    post:
+      consumes:
+      - multipart/form-data
+      operationId: UploadAvatar
+      parameters:
+      - description: avatar image
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: uploads or changes avatar
 schemes:
 - http
 swagger: "2.0"

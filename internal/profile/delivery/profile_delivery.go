@@ -150,6 +150,17 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	misc.WriteStatusJson(w, 200, nil)
 }
 
+// UploadAvatar uploads or changes avatar
+//
+// @Summary uploads or changes avatar
+// @ID UploadAvatar
+// @Accept multipart/form-data
+// @Produce json
+// @Param avatar formData file true "avatar image"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Описание ошибки"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /uploadAvatar [post]
 func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
@@ -162,14 +173,14 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
 	err := r.ParseMultipartForm(32 << 20) // 32 MB is the maximum avatar size
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "bad avatar"})
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "Недопустимый файл"})
 		return
 	}
 
 	// Get the avatar from the request
 	avatar, handler, err := r.FormFile("avatar")
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "bad avatar"})
+		misc.WriteStatusJson(w, 400, domain.Error{Error: "Недопустимый файл"})
 		return
 	}
 	defer avatar.Close()
