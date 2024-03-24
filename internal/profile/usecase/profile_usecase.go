@@ -4,8 +4,10 @@ import (
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"net/http"
+	"os"
 )
 import authusecase "ProjectMessenger/internal/auth/usecase"
 
@@ -78,17 +80,26 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 }
 
 func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
-	user, found := userStorage.GetByUserID(userID)
-	if !found {
-		return fmt.Errorf("internal error")
-	}
 	buff := make([]byte, 512)
 	if _, err = multipartFile.Read(buff); err != nil {
+		return fmt.Errorf("internal error")
+	}
+	seek, err := multipartFile.Seek(0, io.SeekStart)
+	if err != nil || seek != 0 {
 		return fmt.Errorf("internal error")
 	}
 	mimeType := http.DetectContentType(buff)
 	if mimeType != "image/png" && mimeType != "image/jpeg" && mimeType != "image/pjpeg" && mimeType != "image/webp" {
 		return fmt.Errorf("Файл не является изображением")
+	}
+
+	user, found := userStorage.GetByUserID(userID)
+	if !found {
+		return fmt.Errorf("internal error")
+	}
+	oldAvatarPath := ""
+	if user.Avatar != "" {
+		oldAvatarPath = user.Avatar
 	}
 
 	path, err := userStorage.StoreAvatar(multipartFile, fileHandler)
@@ -99,6 +110,13 @@ func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeade
 	ok := userStorage.UpdateUser(user)
 	if !ok {
 		return fmt.Errorf("internal error")
+	}
+
+	if oldAvatarPath != "" {
+		err = os.Remove(oldAvatarPath)
+		if err != nil {
+			return fmt.Errorf("internal error")
+		}
 	}
 	return nil
 }

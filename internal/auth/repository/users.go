@@ -58,7 +58,7 @@ func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart
 		return "", fmt.Errorf("Файл не является изображением")
 	}
 
-	fmt.Println(extension)
+	//fmt.Println(extension)
 
 	filename := misc.RandStringRunes(16)
 	filePath := "./uploads/" + filename + "." + extension
@@ -83,22 +83,22 @@ func fillFakeUsers() map[uint]domain.Person {
 	testUserHash, testUserSalt := misc.GenerateHashAndSalt("Demouser123!")
 	return map[uint]domain.Person{
 		1: {ID: 1, Username: "IvanNaumov", Email: "ivan@mail.ru", Name: "Ivan", Surname: "Naumov",
-			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
 			PasswordSalt: usersSalt, Password: usersHash},
 		2: {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
-			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
 			PasswordSalt: usersSalt, Password: usersHash},
 		3: {ID: 3, Username: "ArtemZhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
-			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
 			PasswordSalt: usersSalt, Password: usersHash},
 		4: {ID: 4, Username: "AlexanderVolohov", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
-			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
 			PasswordSalt: usersSalt, Password: usersHash},
 		5: {ID: 5, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
-			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
 			PasswordSalt: usersSalt, Password: usersHash},
 		6: {ID: 6, Username: "testUser", Email: "test@mail.ru", Name: "Test", Surname: "User",
-			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "avatarPath",
+			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 	}
 }
