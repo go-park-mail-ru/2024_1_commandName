@@ -433,6 +433,9 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "last_message": {
+                    "$ref": "#/definitions/domain.Message"
+                },
                 "messages": {
                     "type": "array",
                     "items": {
@@ -497,6 +500,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "message_text": {
+                    "type": "string"
+                },
+                "sent_at": {
                     "type": "string"
                 },
                 "user_id": {

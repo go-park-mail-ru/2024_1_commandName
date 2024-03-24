@@ -45,6 +45,8 @@ definitions:
         type: string
       id:
         type: integer
+      last_message:
+        $ref: '#/definitions/domain.Message'
       messages:
         items:
           $ref: '#/definitions/domain.Message'
@@ -87,6 +89,8 @@ definitions:
       id:
         type: integer
       message_text:
+        type: string
+      sent_at:
         type: string
       user_id:
         type: integer
