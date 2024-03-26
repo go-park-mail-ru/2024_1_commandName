@@ -31,11 +31,23 @@ func createSession(user domain.Person, sessionStorage SessionStore) string {
 
 func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" || user.Password == "" {
-		return "", fmt.Errorf("required field is empty")
+		customErr := &domain.CustomError{
+			Type:    "userRegistration",
+			Message: "required field is empty",
+			Segment: "method RegisterAndLoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 	_, userFound := userStorage.GetByUsername(ctx, user.Username)
 	if userFound {
-		return "", fmt.Errorf("Пользователь с таким именем уже существет")
+		customErr := &domain.CustomError{
+			Type:    "userRegistration",
+			Message: "Пользователь с таким именем уже существует",
+			Segment: "method RegisterAndLoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 
 	passwordHash, passwordSalt := misc.GenerateHashAndSalt(user.Password)
@@ -45,7 +57,13 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 	var userID uint
 	userID, err = userStorage.CreateUser(ctx, user)
 	if err != nil {
-		return "", err
+		customErr := &domain.CustomError{
+			Type:    "userRegistration",
+			Message: err.Error(),
+			Segment: "method RegisterAndLoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 	user.ID = userID
 	sessionID = createSession(user, sessionStorage)
@@ -56,16 +74,35 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 func LoginUser(ctx context.Context, user domain.Person,
 	userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" {
-		return "", fmt.Errorf("wrong json structure")
+		customErr := &domain.CustomError{
+			Type:    "userLogin",
+			Message: "wrong json structure",
+			Segment: "method LoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
+
 	userFromStorage, userFound := userStorage.GetByUsername(ctx, user.Username)
 	if !userFound {
-		return "", fmt.Errorf("Пользователь не найден")
+		customErr := &domain.CustomError{
+			Type:    "userLogin",
+			Message: "Пользователь не найден",
+			Segment: "method LoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 	passwordProvided := user.Password
 	passwordProvidedHash := misc.GenerateHash(passwordProvided, userFromStorage.PasswordSalt)
 	if userFromStorage.Password != passwordProvidedHash {
-		return "", fmt.Errorf("Неверный пароль")
+		customErr := &domain.CustomError{
+			Type:    "userLogin",
+			Message: "Неверный пароль",
+			Segment: "method LoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 	sessionID = createSession(userFromStorage, sessionStorage)
 	return sessionID, nil

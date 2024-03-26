@@ -22,11 +22,16 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, false
 		}
-		//TODO
-		fmt.Println("Err in func GetByUsername", err)
+
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetByUsername, users.go",
+		}
+		fmt.Println(customErr.Error())
+
 		return user, false
 	}
-	fmt.Println("ID of user: ", user.ID)
 	return user, true
 }
 
@@ -34,11 +39,17 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
 		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt).Scan(&userID)
 	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method CreateUser, users.go",
+		}
+		fmt.Println(customErr.Error())
+
 		return 0, err
 	}
-	u.countOfUsers++
-	fmt.Println(userID)
 
+	u.countOfUsers++
 	return userID, nil
 }
 
@@ -49,24 +60,40 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	if counter == 0 {
 		_, err := db.Exec("ALTER SEQUENCE auth.person_id_seq RESTART WITH 1")
 		if err != nil {
-			//TODO
-			fmt.Println("Error in fakeData -> createUsers -> ALTER SEQUENCE auth.person_id_seq:", err)
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method CreateFakeUsers, users.go",
+			}
+			fmt.Println(customErr.Error())
 		}
 		_, err = db.Exec("ALTER SEQUENCE auth.session_id_seq RESTART WITH 1")
 		if err != nil {
-			//TODO
-			fmt.Println("Error in fakeData -> createUsers -> ALTER SEQUENCE auth.session_id_seq:", err)
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method CreateFakeUsers, users.go",
+			}
+			fmt.Println(customErr.Error())
 		}
 		_, err = db.Exec("DELETE FROM auth.person")
 		if err != nil {
-			//TODO
-			fmt.Println("Error in fakeData -> createUsers -> delete from table person:", err)
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method CreateFakeUsers, users.go",
+			}
+			fmt.Println(customErr.Error())
 		}
 
 		_, err = db.Exec("DELETE FROM auth.session")
 		if err != nil {
-			//TODO
-			fmt.Println("Error in fakeData -> createUsers -> delete from table session:", err)
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method CreateFakeUsers, users.go",
+			}
+			fmt.Println(customErr.Error())
 		}
 
 		for i := 0; i < countOfUsers; i++ {
@@ -74,8 +101,12 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 			user := getFakeUser(i + 1)
 			_, err := db.Exec(query, user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt)
 			if err != nil {
-				//TODO
-				fmt.Println("Error in fakeData createUsers:", err)
+				customErr := &domain.CustomError{
+					Type:    "database",
+					Message: err.Error(),
+					Segment: "method CreateFakeUsers, users.go",
+				}
+				fmt.Println(customErr.Error())
 			}
 		}
 	}

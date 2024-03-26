@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
 )
 
@@ -19,8 +20,13 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, false
 		}
-		//TODO
-		fmt.Println("err in func GetUserIDbySessionID:", err)
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetUserIDbySessionID, sessions.go",
+		}
+		fmt.Println(customErr.Error())
+		return 0, false
 	}
 	return userID, true
 }
@@ -30,8 +36,13 @@ func (s *Sessions) CreateSession(userID uint) (sessionID string) {
 	sessionID = misc.RandStringRunes(32)
 	_, err := s.db.Exec("INSERT INTO auth.session (sessionid, userid) VALUES ($1, $2)", sessionID, userID)
 	if err != nil {
-		//TODO
-		fmt.Println("err in func CreateSession:", err)
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method CreateSession, sessions.go",
+		}
+		fmt.Println(customErr.Error())
+		return ""
 	}
 	return sessionID
 }
@@ -39,8 +50,12 @@ func (s *Sessions) CreateSession(userID uint) (sessionID string) {
 func (s *Sessions) DeleteSession(ctx context.Context, sessionID string) {
 	_, err := s.db.ExecContext(ctx, "DELETE FROM auth.session WHERE sessionID = $1", sessionID)
 	if err != nil {
-		//TODO
-		fmt.Println("err in func DeleteSession:", err)
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method DeleteSession, sessions.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 }
 
