@@ -7,6 +7,7 @@ type Chat struct {
 	Description string      `json:"description"`
 	AvatarPath  string      `json:"avatar"`
 	CreatorID   string      `json:"creator"`
-	Messages    []*Message  `json:"messages"`
+	Messages    []*Message  `json:"messages,omitempty"`
 	Users       []*ChatUser `json:"users"`
+	LastMessage Message     `json:"last_message"`
 }
