@@ -145,3 +145,21 @@ func NewUserStorage(db *sql.DB) *Users {
 		countOfUsers: 6,
 	}
 }
+
+func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return user, false
+		}
+
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetByUserID, users.go",
+		}
+		fmt.Println(customErr.Error())
+		return user, false
+	}
+	return user, true
+}
