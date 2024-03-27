@@ -13,3 +13,7 @@ type Error struct {
 type Chats struct {
 	Chats []Chat `json:"chats"`
 }
+
+type User struct {
+	User Person `json:"user"`
+}

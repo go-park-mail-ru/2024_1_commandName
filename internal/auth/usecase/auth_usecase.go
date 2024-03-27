@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"mime/multipart"
+	"regexp"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -10,11 +12,14 @@ import (
 
 type SessionStore interface {
 	GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool)
-	CreateSession(userID uint) (sessionID string)
+	CreateSession(ctx context.Context, userID uint) (sessionID string)
 	DeleteSession(ctx context.Context, sessionID string)
 }
 
 type UserStore interface {
+	GetByUserID(userID uint) (user domain.Person, found bool)
+	UpdateUser(userUpdated domain.Person) (ok bool)
+	StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
 }
@@ -24,8 +29,8 @@ func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore
 	return authorized, userID
 }
 
-func createSession(user domain.Person, sessionStorage SessionStore) string {
-	sessionID := sessionStorage.CreateSession(user.ID)
+func createSession(ctx context.Context, user domain.Person, sessionStorage SessionStore) string {
+	sessionID := sessionStorage.CreateSession(ctx, user.ID)
 	return sessionID
 }
 
@@ -33,13 +38,16 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 	if user.Username == "" || user.Password == "" {
 		customErr := &domain.CustomError{
 			Type:    "userRegistration",
-			Message: "required field is empty",
+			Message: "Обязательное поле не заполнено",
 			Segment: "method RegisterAndLoginUser, auth_usecase.go",
 		}
 		fmt.Println(customErr.Error())
 		return "", customErr
 	}
 	_, userFound := userStorage.GetByUsername(ctx, user.Username)
+	if !ValidatePassword(user.Password) {
+		return "", fmt.Errorf("Пароль не подходит по требованиям")
+	}
 	if userFound {
 		customErr := &domain.CustomError{
 			Type:    "userRegistration",
@@ -66,21 +74,14 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 		return "", customErr
 	}
 	user.ID = userID
-	sessionID = createSession(user, sessionStorage)
+	sessionID = createSession(ctx, user, sessionStorage)
 
 	return sessionID, nil
 }
 
-func LoginUser(ctx context.Context, user domain.Person,
-	userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
+func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" {
-		customErr := &domain.CustomError{
-			Type:    "userLogin",
-			Message: "wrong json structure",
-			Segment: "method LoginUser, auth_usecase.go",
-		}
-		fmt.Println(customErr.Error())
-		return "", customErr
+		return "", fmt.Errorf("wrong json structure")
 	}
 
 	userFromStorage, userFound := userStorage.GetByUsername(ctx, user.Username)
@@ -104,11 +105,31 @@ func LoginUser(ctx context.Context, user domain.Person,
 		fmt.Println(customErr.Error())
 		return "", customErr
 	}
-	sessionID = createSession(userFromStorage, sessionStorage)
+	sessionID = createSession(ctx, userFromStorage, sessionStorage)
 	return sessionID, nil
 }
 
 func LogoutUser(ctx context.Context, sessionID string, sessionStorage SessionStore) {
 	sessionStorage.DeleteSession(ctx, sessionID)
 	return
+}
+
+func ValidatePassword(password string) (ok bool) {
+	if len([]rune(password)) < 8 {
+		return false
+	}
+
+	uppercaseRegex := regexp.MustCompile(`[A-Z]`)
+	lowercaseRegex := regexp.MustCompile(`[a-z]`)
+	digitRegex := regexp.MustCompile(`[0-9]`)
+	specialCharsRegex := regexp.MustCompile(`[~!@#$%^&*_+()[\]{}></\\|"'.,:;-]`)
+	allowedCharsRegex := regexp.MustCompile(`^[a-zA-Z0-9~!@#$%^&*_+()[\]{}></\\|"'.,:;-]+$`)
+
+	if !uppercaseRegex.MatchString(password) || !lowercaseRegex.MatchString(password) ||
+		!digitRegex.MatchString(password) || !specialCharsRegex.MatchString(password) ||
+		!allowedCharsRegex.MatchString(password) {
+		return false
+	}
+
+	return true
 }

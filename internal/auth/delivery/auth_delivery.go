@@ -8,15 +8,17 @@ import (
 	"strings"
 	"time"
 
-	"ProjectMessenger/internal/auth/repository/db"
-	chatrepo "ProjectMessenger/internal/chats/repository/db"
+	_ "github.com/lib/pq"
 	_ "github.com/swaggo/http-swagger"
 
 	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/auth/repository/db"
+	"ProjectMessenger/internal/auth/repository/inMemory"
 	"ProjectMessenger/internal/auth/usecase"
+	chatrepoDB "ProjectMessenger/internal/chats/repository/db"
+	chatrepoMemory "ProjectMessenger/internal/chats/repository/inMemory"
 	chatusecase "ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
-	_ "github.com/lib/pq"
 )
 
 type AuthHandler struct {
@@ -26,11 +28,19 @@ type AuthHandler struct {
 }
 
 func NewAuthHandler(dataBase *sql.DB) *AuthHandler {
-
 	handler := AuthHandler{
 		Sessions: db.NewSessionStorage(dataBase),
-		Users:    db.NewUserStorage(dataBase),
-		Chats:    chatrepo.NewChatsStorage(dataBase),
+		//TODO Users:    db.NewUserStorage(dataBase),
+		Chats: chatrepoDB.NewChatsStorage(dataBase),
+	}
+	return &handler
+}
+
+func NewAuthMemoryStorage() *AuthHandler {
+	handler := AuthHandler{
+		Sessions: inMemory.NewSessionStorage(),
+		Users:    inMemory.NewUserStorage(),
+		Chats:    chatrepoMemory.NewChatsStorage(),
 	}
 	return &handler
 }
@@ -48,9 +58,10 @@ func NewAuthHandler(dataBase *sql.DB) *AuthHandler {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /login [post]
 func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	session, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
-		sessionExists, _ := usecase.CheckAuthorized(r.Context(), session.Value, authHandler.Sessions)
+		sessionExists, _ := usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 		if sessionExists {
 			misc.WriteStatusJson(w, 400, domain.Error{Error: "session already exists"})
 			return
@@ -77,7 +88,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID, err := usecase.LoginUser(r.Context(), jsonUser, authHandler.Users, authHandler.Sessions)
+	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
 		return
@@ -104,19 +115,19 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /logout [get]
 func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
 		return
 	}
-
-	sessionExists, _ := usecase.CheckAuthorized(r.Context(), session.Value, authHandler.Sessions)
+	sessionExists, _ := usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	if !sessionExists {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
 		return
 	}
 
-	usecase.LogoutUser(r.Context(), session.Value, authHandler.Sessions)
+	usecase.LogoutUser(ctx, session.Value, authHandler.Sessions)
 
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
@@ -136,6 +147,7 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /register [post]
 func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	if r.Method != http.MethodPost {
 		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
 		return
@@ -157,7 +169,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
-	sessionID, err := usecase.RegisterAndLoginUser(r.Context(), jsonUser, authHandler.Users, authHandler.Sessions)
+	sessionID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
 		return
@@ -182,14 +194,27 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /checkAuth [get]
 func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	authorized := false
 	session, err := r.Cookie("session_id")
 	if err == nil && session != nil {
-		authorized, _ = usecase.CheckAuthorized(r.Context(), session.Value, authHandler.Sessions)
+		authorized, _ = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	}
 	if authorized {
 		misc.WriteStatusJson(w, 200, nil)
 	} else {
 		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
 	}
+}
+
+func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.Request) (authorized bool, userID uint) {
+	ctx := r.Context()
+	session, err := r.Cookie("session_id")
+	if err == nil && session != nil {
+		authorized, userID = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
+	}
+	if !authorized {
+		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
+	}
+	return authorized, userID
 }
