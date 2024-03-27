@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
 	"mime/multipart"
 	"regexp"
@@ -10,9 +11,9 @@ import (
 )
 
 type SessionStore interface {
-	GetUserIDbySessionID(sessionID string) (userID uint, sessionExists bool)
-	CreateSession(userID uint) (sessionID string)
-	DeleteSession(sessionID string)
+	GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool)
+	CreateSession(ctx context.Context, userID uint) (sessionID string)
+	DeleteSession(ctx context.Context, sessionID string)
 }
 
 type UserStore interface {
@@ -23,17 +24,17 @@ type UserStore interface {
 	StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 }
 
-func CheckAuthorized(sessionID string, storage SessionStore) (authorized bool, userID uint) {
-	userID, authorized = storage.GetUserIDbySessionID(sessionID)
+func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore) (authorized bool, userID uint) {
+	userID, authorized = storage.GetUserIDbySessionID(ctx, sessionID)
 	return authorized, userID
 }
 
-func createSession(user domain.Person, sessionStorage SessionStore) string {
-	sessionID := sessionStorage.CreateSession(user.ID)
+func createSession(ctx context.Context, user domain.Person, sessionStorage SessionStore) string {
+	sessionID := sessionStorage.CreateSession(ctx, user.ID)
 	return sessionID
 }
 
-func RegisterAndLoginUser(user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
+func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" || user.Password == "" {
 		return "", fmt.Errorf("Обязательное поле не заполнено")
 	}
@@ -54,13 +55,12 @@ func RegisterAndLoginUser(user domain.Person, userStorage UserStore, sessionStor
 	if err != nil {
 		return "", err
 	}
-	sessionID = createSession(user, sessionStorage)
+	sessionID = createSession(ctx, user, sessionStorage)
 
 	return sessionID, nil
 }
 
-func LoginUser(user domain.Person,
-	userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
+func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" {
 		return "", fmt.Errorf("wrong json structure")
 	}
@@ -73,12 +73,12 @@ func LoginUser(user domain.Person,
 	if userFromStorage.Password != passwordProvidedHash {
 		return "", fmt.Errorf("Неверный пароль")
 	}
-	sessionID = createSession(userFromStorage, sessionStorage)
+	sessionID = createSession(ctx, userFromStorage, sessionStorage)
 	return sessionID, nil
 }
 
-func LogoutUser(sessionID string, sessionStorage SessionStore) {
-	sessionStorage.DeleteSession(sessionID)
+func LogoutUser(ctx context.Context, sessionID string, sessionStorage SessionStore) {
+	sessionStorage.DeleteSession(ctx, sessionID)
 	return
 }
 

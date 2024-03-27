@@ -1,22 +1,24 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
+
+	"github.com/gorilla/mux"
+	_ "github.com/swaggo/echo-swagger/example/docs"
 
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	chatsdelivery "ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/middleware"
 	profiledelivery "ProjectMessenger/internal/profile/delivery"
-
-	"github.com/gorilla/mux"
-	_ "github.com/swaggo/echo-swagger/example/docs"
 )
 
 var DEBUG = false
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	slog.SetDefault(logger)
 	Router()
 }
 
@@ -50,10 +52,10 @@ func Router() {
 	}
 	router.Use(middleware.AccessLogMiddleware)
 
+	slog.Info("http server starting on 8080")
 	err := http.ListenAndServe(":8080", router)
 	if err != nil {
-		fmt.Println("err")
-		log.Fatal(err)
+		slog.Error("server failed with ", "error", err)
 		return
 	}
 }

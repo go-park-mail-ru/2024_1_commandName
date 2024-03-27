@@ -1,17 +1,23 @@
 package middleware
 
 import (
-	"fmt"
+	"context"
+	"log/slog"
 	"net/http"
 	"time"
+
+	"ProjectMessenger/internal/misc"
 )
 
 func AccessLogMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("accessLogMiddleware", r.URL.Path)
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, "traceID", misc.RandStringRunes(8))
+		logger := slog.With("requestID", ctx.Value("traceID"))
+		logger.Info("accessLog", "path", r.URL.Path)
 		start := time.Now()
-		next.ServeHTTP(w, r)
-		fmt.Printf("[%s] %s, %s %s\n",
-			r.Method, r.RemoteAddr, r.URL.Path, time.Since(start))
+		next.ServeHTTP(w, r.WithContext(ctx))
+		logger.Info("requestProcessed", "method", r.Method, "remoteAddr", r.RemoteAddr, "URLPath",
+			r.URL.Path, "time", time.Since(start))
 	})
 }
