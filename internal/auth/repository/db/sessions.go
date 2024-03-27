@@ -15,7 +15,7 @@ type Sessions struct {
 }
 
 func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool) {
-	err := s.db.QueryRowContext(ctx, "SELECT id FROM auth.session WHERE sessionid = $1", sessionID).Scan(&userID)
+	err := s.db.QueryRowContext(ctx, "SELECT userid FROM auth.session WHERE sessionid = $1", sessionID).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, false
