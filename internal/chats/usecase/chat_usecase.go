@@ -1,14 +1,16 @@
 package usecase
 
 import (
+	"context"
+
 	"ProjectMessenger/domain"
 )
 
 type ChatStore interface {
-	GetChatsByID(userID uint) []domain.Chat
+	GetChatsByID(ctx context.Context, userID uint) []domain.Chat
 }
 
-func GetChatsForUser(userID uint, chatStorage ChatStore) []domain.Chat {
-	chats := chatStorage.GetChatsByID(userID)
+func GetChatsForUser(ctx context.Context, userID uint, chatStorage ChatStore) []domain.Chat {
+	chats := chatStorage.GetChatsByID(ctx, userID)
 	return chats
 }

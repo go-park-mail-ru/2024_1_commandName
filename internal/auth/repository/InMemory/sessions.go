@@ -1,4 +1,4 @@
-package repository
+package InMemory
 
 import "ProjectMessenger/internal/misc"
 

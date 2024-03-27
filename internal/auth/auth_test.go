@@ -23,8 +23,11 @@ type testCase struct {
 }
 
 func TestRegisterLoginLogout(t *testing.T) {
-	api := NewMyHandler(true)
-	api.ClearUserData()
+	api, err := CreateChatMeHandler(true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//api.ClearUserData()
 
 	var emptyUsernameUser = map[string]interface{}{
 		"username": "",

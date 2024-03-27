@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
 
 	"ProjectMessenger/domain"
@@ -8,18 +9,18 @@ import (
 )
 
 type SessionStore interface {
-	GetUserIDbySessionID(sessionID string) (userID uint, sessionExists bool)
+	GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool)
 	CreateSession(userID uint) (sessionID string)
-	DeleteSession(sessionID string)
+	DeleteSession(ctx context.Context, sessionID string)
 }
 
 type UserStore interface {
-	GetByUsername(username string) (user domain.Person, found bool)
-	CreateUser(user domain.Person) (userID uint, err error)
+	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
+	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
 }
 
-func CheckAuthorized(sessionID string, storage SessionStore) (authorized bool, userID uint) {
-	userID, authorized = storage.GetUserIDbySessionID(sessionID)
+func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore) (authorized bool, userID uint) {
+	userID, authorized = storage.GetUserIDbySessionID(ctx, sessionID)
 	return authorized, userID
 }
 
@@ -28,47 +29,86 @@ func createSession(user domain.Person, sessionStorage SessionStore) string {
 	return sessionID
 }
 
-func RegisterAndLoginUser(user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
+func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" || user.Password == "" {
-		return "", fmt.Errorf("required field is empty")
+		customErr := &domain.CustomError{
+			Type:    "userRegistration",
+			Message: "required field is empty",
+			Segment: "method RegisterAndLoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
-	_, userFound := userStorage.GetByUsername(user.Username)
+	_, userFound := userStorage.GetByUsername(ctx, user.Username)
 	if userFound {
-		return "", fmt.Errorf("Пользователь с таким именем уже существет")
+		customErr := &domain.CustomError{
+			Type:    "userRegistration",
+			Message: "Пользователь с таким именем уже существует",
+			Segment: "method RegisterAndLoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 
 	passwordHash, passwordSalt := misc.GenerateHashAndSalt(user.Password)
 	user.Password = passwordHash
 	user.PasswordSalt = passwordSalt
 
-	_, err = userStorage.CreateUser(user)
+	var userID uint
+	userID, err = userStorage.CreateUser(ctx, user)
 	if err != nil {
-		return "", err
+		customErr := &domain.CustomError{
+			Type:    "userRegistration",
+			Message: err.Error(),
+			Segment: "method RegisterAndLoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
+	user.ID = userID
 	sessionID = createSession(user, sessionStorage)
 
 	return sessionID, nil
 }
 
-func LoginUser(user domain.Person,
+func LoginUser(ctx context.Context, user domain.Person,
 	userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" {
-		return "", fmt.Errorf("wrong json structure")
+		customErr := &domain.CustomError{
+			Type:    "userLogin",
+			Message: "wrong json structure",
+			Segment: "method LoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
-	userFromStorage, userFound := userStorage.GetByUsername(user.Username)
+
+	userFromStorage, userFound := userStorage.GetByUsername(ctx, user.Username)
 	if !userFound {
-		return "", fmt.Errorf("Пользователь не найден")
+		customErr := &domain.CustomError{
+			Type:    "userLogin",
+			Message: "Пользователь не найден",
+			Segment: "method LoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 	passwordProvided := user.Password
 	passwordProvidedHash := misc.GenerateHash(passwordProvided, userFromStorage.PasswordSalt)
 	if userFromStorage.Password != passwordProvidedHash {
-		return "", fmt.Errorf("Неверный пароль")
+		customErr := &domain.CustomError{
+			Type:    "userLogin",
+			Message: "Неверный пароль",
+			Segment: "method LoginUser, auth_usecase.go",
+		}
+		fmt.Println(customErr.Error())
+		return "", customErr
 	}
 	sessionID = createSession(userFromStorage, sessionStorage)
 	return sessionID, nil
 }
 
-func LogoutUser(sessionID string, sessionStorage SessionStore) {
-	sessionStorage.DeleteSession(sessionID)
+func LogoutUser(ctx context.Context, sessionID string, sessionStorage SessionStore) {
+	sessionStorage.DeleteSession(ctx, sessionID)
 	return
 }

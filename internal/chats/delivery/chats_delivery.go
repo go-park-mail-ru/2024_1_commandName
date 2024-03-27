@@ -1,13 +1,14 @@
 package delivery
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	authusecase "ProjectMessenger/internal/auth/usecase"
-	"ProjectMessenger/internal/chats/repository"
+	db "ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
@@ -17,10 +18,10 @@ type ChatsHandler struct {
 	Chats       usecase.ChatStore
 }
 
-func NewChatsHandler(authHandler *authdelivery.AuthHandler) *ChatsHandler {
+func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		Chats:       repository.NewChatsStorage(),
+		Chats:       db.NewChatsStorage(dataBase),
 	}
 }
 
@@ -40,13 +41,13 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	authorized, userID := authusecase.CheckAuthorized(session.Value, chatsHandler.AuthHandler.Sessions)
+	authorized, userID := authusecase.CheckAuthorized(r.Context(), session.Value, chatsHandler.AuthHandler.Sessions)
 
 	if !authorized {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: "Person not authorized"})
 		return
 	}
 
-	chats := usecase.GetChatsForUser(userID, chatsHandler.AuthHandler.Chats)
+	chats := usecase.GetChatsForUser(r.Context(), userID, chatsHandler.AuthHandler.Chats)
 	misc.WriteStatusJson(w, 200, domain.Chats{Chats: chats})
 }

@@ -1,4 +1,4 @@
-package repository
+package inMemory
 
 import "ProjectMessenger/domain"
 
