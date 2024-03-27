@@ -163,3 +163,24 @@ func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Perso
 	}
 	return user, true
 }
+
+func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {
+	oldUser, found := u.GetByUserID(ctx, userUpdated.ID)
+	if !found {
+		return false
+	}
+
+	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, aboat = $5, password_hash = $6, create_date = $7, lastseen_datetime = $8, avatar = $9, password_salt = $10 where id = $11",
+		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.Avatar, userUpdated.PasswordSalt, oldUser.ID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method CreateUser, users.go",
+		}
+		fmt.Println(customErr.Error())
+
+		return false
+	}
+	return true
+}
