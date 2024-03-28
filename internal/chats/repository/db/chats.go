@@ -1,4 +1,4 @@
-package inMemory
+package db
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetChatsByID, chats.go",
+			Segment: "method GetChatsByID, profile.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil
@@ -34,7 +34,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
-				Segment: "method GetChatsByID, chats.go",
+				Segment: "method GetChatsByID, profile.go",
 			}
 			fmt.Println(customErr.Error())
 			return nil
@@ -46,7 +46,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetChatsByID, chats.go",
+			Segment: "method GetChatsByID, profile.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil
@@ -62,7 +62,7 @@ func (c *Chats) getChatUsersByChatID(ctx context.Context, chatID int) []*domain.
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method getChatUsersByChatID, chats.go",
+			Segment: "method getChatUsersByChatID, profile.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil
@@ -75,7 +75,7 @@ func (c *Chats) getChatUsersByChatID(ctx context.Context, chatID int) []*domain.
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
-				Segment: "method getChatUsersByChatID, chats.go",
+				Segment: "method getChatUsersByChatID, profile.go",
 			}
 			fmt.Println(customErr.Error())
 			return nil
@@ -144,7 +144,7 @@ func addFakeChatUsers(db *sql.DB) {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method addFakeChatUsers, chats.go",
+			Segment: "method addFakeChatUsers, profile.go",
 		}
 		fmt.Println(customErr.Error())
 	}
@@ -177,13 +177,14 @@ func addFakeChatUsers(db *sql.DB) {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method addFakeChatUsers, chats.go",
+			Segment: "method addFakeChatUsers, profile.go",
 		}
 		fmt.Println(customErr.Error())
 	}
 }
 
 func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
+	fmt.Println("in db.chats")
 	counterOfRows := 0
 	_ = db.QueryRow("SELECT count(id) FROM chat.chat").Scan(&counterOfRows)
 	if counterOfRows == 0 {
@@ -212,7 +213,7 @@ func addFakeMessage(user_id, chat_id int, message string, edited bool, db *sql.D
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method addFakeMessage, chats.go",
+			Segment: "method addFakeMessage, profile.go",
 		}
 		fmt.Println(customErr.Error())
 	}
@@ -226,7 +227,7 @@ func fillTableChatWithFakeData(chatType, name, description, avatar_path string, 
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method fillTableChatWithFakeData, chats.go",
+			Segment: "method fillTableChatWithFakeData, profile.go",
 		}
 		fmt.Println(customErr.Error())
 	}
@@ -240,7 +241,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int) []*domain.M
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetMessagesByChatID, chats.go",
+			Segment: "method GetMessagesByChatID, profile.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil
@@ -253,7 +254,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int) []*domain.M
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
-				Segment: "method GetMessagesByChatID, chats.go",
+				Segment: "method GetMessagesByChatID, profile.go",
 			}
 			fmt.Println(customErr.Error())
 			return nil
@@ -264,7 +265,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int) []*domain.M
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetMessagesByChatID, chats.go",
+			Segment: "method GetMessagesByChatID, profile.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil

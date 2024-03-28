@@ -1,23 +1,26 @@
 package usecase
 
 import (
+	"context"
+	"fmt"
+	//"io"
+	"mime/multipart"
+
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
-	"fmt"
-	"io"
-	"mime/multipart"
-	"net/http"
-	"os"
-)
-import authusecase "ProjectMessenger/internal/auth/usecase"
 
-func GetProfileInfo(userID uint, userStorage authusecase.UserStore) (user domain.Person, found bool) {
-	user, found = userStorage.GetByUserID(userID)
+	//"net/http"
+	//"os"
+	authusecase "ProjectMessenger/internal/auth/usecase"
+)
+
+func GetProfileInfo(ctx context.Context, userID uint, userStorage authusecase.UserStore) (user domain.Person, found bool) {
+	user, found = userStorage.GetByUserID(ctx, userID)
 	return user, found
 }
 
-func UpdateProfileInfo(updatedFields domain.Person, numOfUpdatedFields int, userID uint, userStorage authusecase.UserStore) (err error) {
-	userFromStorage, found := userStorage.GetByUserID(userID)
+func UpdateProfileInfo(ctx context.Context, updatedFields domain.Person, numOfUpdatedFields int, userID uint, userStorage authusecase.UserStore) (err error) {
+	userFromStorage, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		return fmt.Errorf("user not found")
 	}
@@ -47,15 +50,15 @@ func UpdateProfileInfo(updatedFields domain.Person, numOfUpdatedFields int, user
 		return fmt.Errorf("number of update fields is mismatched")
 	}
 
-	ok := userStorage.UpdateUser(userFromStorage)
+	ok := userStorage.UpdateUser(ctx, userFromStorage)
 	if !ok {
 		return fmt.Errorf("internal error")
 	}
 	return nil
 }
 
-func ChangePassword(oldPassword string, newPassword string, userID uint, userStorage authusecase.UserStore) (err error) {
-	userFromStorage, found := userStorage.GetByUserID(userID)
+func ChangePassword(ctx context.Context, oldPassword string, newPassword string, userID uint, userStorage authusecase.UserStore) (err error) {
+	userFromStorage, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		return fmt.Errorf("user not found")
 	}
@@ -72,15 +75,15 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 	userFromStorage.Password = newPasswordHash
 	userFromStorage.PasswordSalt = newPasswordSalt
 
-	ok := userStorage.UpdateUser(userFromStorage)
+	ok := userStorage.UpdateUser(ctx, userFromStorage)
 	if !ok {
 		return fmt.Errorf("error updating password")
 	}
 	return nil
 }
 
-func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
-	buff := make([]byte, 512)
+func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
+	/*buff := make([]byte, 512)
 	if _, err = multipartFile.Read(buff); err != nil {
 		return fmt.Errorf("internal error")
 	}
@@ -93,7 +96,7 @@ func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeade
 		return fmt.Errorf("Файл не является изображением")
 	}
 
-	user, found := userStorage.GetByUserID(userID)
+	user, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		return fmt.Errorf("internal error")
 	}
@@ -117,6 +120,6 @@ func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeade
 		if err != nil {
 			return fmt.Errorf("internal error")
 		}
-	}
+	}*/
 	return nil
 }

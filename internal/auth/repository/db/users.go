@@ -17,6 +17,7 @@ type Users struct {
 }
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
+	fmt.Println("get by username")
 	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -144,4 +145,77 @@ func NewUserStorage(db *sql.DB) *Users {
 		db:           CreateFakeUsers(6, db),
 		countOfUsers: 6,
 	}
+}
+
+func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return user, false
+		}
+
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetByUserID, users.go",
+		}
+		fmt.Println(customErr.Error())
+		return user, false
+	}
+	return user, true
+}
+
+func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {
+	oldUser, found := u.GetByUserID(ctx, userUpdated.ID)
+	if !found {
+		return false
+	}
+
+	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, aboat = $5, password_hash = $6, create_date = $7, lastseen_datetime = $8, avatar = $9, password_salt = $10 where id = $11",
+		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.Avatar, userUpdated.PasswordSalt, oldUser.ID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method CreateUser, users.go",
+		}
+		fmt.Println(customErr.Error())
+
+		return false
+	}
+	return true
+}
+
+func (u *Users) getContact(ctx context.Context, userID uint64) []*domain.Person {
+	contactArr := make([]*domain.Person, 0)
+	rows, err := u.db.QueryContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM chat.contacts cc JOIN auth.person ap ON cc.user1_id = ap.id WHERE cc.state = $1 and (cc.user1_id = $2 or cc.user2_id = $2)", userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return contactArr
+		}
+
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method getContact, users.go",
+		}
+		fmt.Println(customErr.Error())
+		return nil
+	}
+
+	for rows.Next() {
+		var userContact *domain.Person
+		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email, &userContact.Name, &userContact.Surname, &userContact.About, &userContact.Password, &userContact.CreateDate, &userContact.LastSeenDate, &userContact.Avatar, &userContact.PasswordSalt)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method getContact, users.go",
+			}
+			fmt.Println(customErr.Error())
+			return nil
+		}
+		contactArr = append(contactArr, userContact)
+	}
+	return contactArr
 }
