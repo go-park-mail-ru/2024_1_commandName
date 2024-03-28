@@ -8,5 +8,5 @@ type Message struct {
 	UserID          uint      `json:"user_id"`
 	Message         string    `json:"message_text"`
 	Edited          bool      `json:"edited"`
-	CreateTimestamp time.Time `json:"createTimestamp"`
+	CreateTimestamp time.Time `json:"sent_at"`
 }

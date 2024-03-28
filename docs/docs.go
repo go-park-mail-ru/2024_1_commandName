@@ -15,6 +15,55 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/changePassword": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "changes profile password",
+                "operationId": "ChangePassword",
+                "parameters": [
+                    {
+                        "description": "Old and new passwords",
+                        "name": "Password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.changePasswordStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "passwords are empty",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/checkAuth": {
             "get": {
                 "produces": [
@@ -32,13 +81,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Person not authorized",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     }
                 }
@@ -49,25 +98,54 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "gets chats previews for user",
+                "summary": "gets Chats previews for user",
                 "operationId": "GetChats",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Chats"
+                            "$ref": "#/definitions/domain.Response-domain_Chats"
                         }
                     },
                     "400": {
                         "description": "Person not authorized",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getProfileInfo": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "gets profile info",
+                "operationId": "GetProfileInfo",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_docsUserForGetProfile"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     }
                 }
@@ -104,19 +182,19 @@ const docTemplate = `{
                     "400": {
                         "description": "wrong json structure | user not found | wrong password",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
                     "405": {
                         "description": "use POST",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     }
                 }
@@ -139,13 +217,13 @@ const docTemplate = `{
                     "400": {
                         "description": "no session to logout",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     }
                 }
@@ -182,19 +260,103 @@ const docTemplate = `{
                     "400": {
                         "description": "user already exists | required field empty | wrong json structure",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
                     "405": {
                         "description": "use POST",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-models_Error"
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/updateProfileInfo": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "updates profile info",
+                "operationId": "UpdateProfileInfo",
+                "parameters": [
+                    {
+                        "description": "Send only the updated fields, and number of them",
+                        "name": "userAndNumOfUpdatedFields",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.updateUserStruct-delivery_docsUserForGetProfile"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "401": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/uploadAvatar": {
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "uploads or changes avatar",
+                "operationId": "UploadAvatar",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "avatar image",
+                        "name": "avatar",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Описание ошибки",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     }
                 }
@@ -202,6 +364,60 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "delivery.changePasswordStruct": {
+            "type": "object",
+            "properties": {
+                "newPassword": {
+                    "type": "string"
+                },
+                "oldPassword": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.docsUserForGetProfile": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "create_date": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_seen_date": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "surname": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.updateUserStruct-delivery_docsUserForGetProfile": {
+            "type": "object",
+            "properties": {
+                "numOfUpdatedFields": {
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/delivery.docsUserForGetProfile"
+                }
+            }
+        },
         "domain.Chat": {
             "type": "object",
             "properties": {
@@ -216,6 +432,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "last_message": {
+                    "$ref": "#/definitions/domain.Message"
                 },
                 "messages": {
                     "type": "array",
@@ -283,6 +502,9 @@ const docTemplate = `{
                 "message_text": {
                     "type": "string"
                 },
+                "sent_at": {
+                    "type": "string"
+                },
                 "user_id": {
                     "type": "integer"
                 }
@@ -299,11 +521,11 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Response-int": {
+        "domain.Response-delivery_docsUserForGetProfile": {
             "type": "object",
             "properties": {
                 "body": {
-                    "type": "integer"
+                    "$ref": "#/definitions/delivery.docsUserForGetProfile"
                 },
                 "status": {
                     "type": "integer",
@@ -311,7 +533,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Response-models_Chats": {
+        "domain.Response-domain_Chats": {
             "type": "object",
             "properties": {
                 "body": {
@@ -323,11 +545,23 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Response-models_Error": {
+        "domain.Response-domain_Error": {
             "type": "object",
             "properties": {
                 "body": {
                     "$ref": "#/definitions/domain.Error"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-int": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "integer"
                 },
                 "status": {
                     "type": "integer",

@@ -8,6 +8,8 @@ type CustomError struct {
 	Segment string
 }
 
-func (e *CustomError) Error() string {
-	return fmt.Sprintf("%s error in %s: %s", e.Segment, e.Message)
+func (e CustomError) Error() string {
+	//TODO (fix incorrect) res := fmt.Sprintf("error in %s: %s", e.Segment, e.Message)
+	res := fmt.Sprintf("%s", e.Message)
+	return res
 }
