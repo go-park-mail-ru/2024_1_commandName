@@ -1,13 +1,14 @@
 package delivery
 
 import (
+	"encoding/json"
+	"net/http"
+	"time"
+
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	"ProjectMessenger/internal/misc"
 	"ProjectMessenger/internal/profile/usecase"
-	"encoding/json"
-	"net/http"
-	"time"
 )
 
 type ProfileHandler struct {
@@ -55,7 +56,7 @@ func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) 
 	if !authorized {
 		return
 	}
-	user, found := usecase.GetProfileInfo(userID, p.AuthHandler.Users)
+	user, found := usecase.GetProfileInfo(r.Context(), userID, p.AuthHandler.Users)
 	if !found {
 		misc.WriteInternalErrorJson(w)
 		return
@@ -100,7 +101,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = usecase.UpdateProfileInfo(jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
+	err = usecase.UpdateProfileInfo(r.Context(), jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
 	if err != nil {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
 		return
@@ -142,7 +143,7 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = usecase.ChangePassword(passwordsJson.OldPassword, passwordsJson.NewPassword, userID, p.AuthHandler.Users)
+	err = usecase.ChangePassword(r.Context(), passwordsJson.OldPassword, passwordsJson.NewPassword, userID, p.AuthHandler.Users)
 	if err != nil {
 		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
 		return
@@ -185,7 +186,7 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	defer avatar.Close()
 
-	err = usecase.ChangeAvatar(avatar, handler, userID, p.AuthHandler.Users)
+	err = usecase.ChangeAvatar(r.Context(), avatar, handler, userID, p.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(w)

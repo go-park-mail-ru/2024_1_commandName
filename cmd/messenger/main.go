@@ -17,7 +17,7 @@ import (
 )
 
 var DEBUG = false
-var INMEMORY = true
+var INMEMORY = false
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))

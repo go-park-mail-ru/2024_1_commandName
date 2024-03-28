@@ -33,6 +33,7 @@ func (u *Users) GetByUserID(userID uint) (user domain.Person, found bool) {
 }
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
+	fmt.Println("here")
 	for _, v := range u.users {
 		if v.Username == username {
 			return v, true

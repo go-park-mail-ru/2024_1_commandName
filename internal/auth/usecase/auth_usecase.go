@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"mime/multipart"
 	"regexp"
 
 	"ProjectMessenger/domain"
@@ -17,9 +16,9 @@ type SessionStore interface {
 }
 
 type UserStore interface {
-	GetByUserID(userID uint) (user domain.Person, found bool)
-	UpdateUser(userUpdated domain.Person) (ok bool)
-	StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
+	GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool)
+	UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool)
+	//StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
 }
@@ -83,7 +82,7 @@ func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, s
 	if user.Username == "" {
 		return "", fmt.Errorf("wrong json structure")
 	}
-
+	fmt.Println("here")
 	userFromStorage, userFound := userStorage.GetByUsername(ctx, user.Username)
 	if !userFound {
 		customErr := &domain.CustomError{

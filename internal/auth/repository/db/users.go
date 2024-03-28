@@ -17,6 +17,7 @@ type Users struct {
 }
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
+	fmt.Println("get by username")
 	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -183,4 +184,38 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 		return false
 	}
 	return true
+}
+
+func (u *Users) getContact(ctx context.Context, userID uint64) []*domain.Person {
+	contactArr := make([]*domain.Person, 0)
+	rows, err := u.db.QueryContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM chat.contacts cc JOIN auth.person ap ON cc.user1_id = ap.id WHERE cc.state = $1 and (cc.user1_id = $2 or cc.user2_id = $2)", userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return contactArr
+		}
+
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method getContact, users.go",
+		}
+		fmt.Println(customErr.Error())
+		return nil
+	}
+
+	for rows.Next() {
+		var userContact *domain.Person
+		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email, &userContact.Name, &userContact.Surname, &userContact.About, &userContact.Password, &userContact.CreateDate, &userContact.LastSeenDate, &userContact.Avatar, &userContact.PasswordSalt)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method getContact, users.go",
+			}
+			fmt.Println(customErr.Error())
+			return nil
+		}
+		contactArr = append(contactArr, userContact)
+	}
+	return contactArr
 }
