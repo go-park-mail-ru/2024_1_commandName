@@ -130,7 +130,6 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 		}
 		query := `INSERT INTO chat.contacts (user1_id, user2_id, state) VALUES ($1, $2, $3)`
 		_, err = db.Exec(query, 1, 2, 3) // Naumov to Chernikov -- friends
-		_, err = db.Exec(query, 2, 6, 3) // Chernikov to TestUser -- no answer
 		_, err = db.Exec(query, 2, 3, 3) // Chernikov to Zhuk -- friends
 		_, err = db.Exec(query, 6, 5, 3) // mentor to TestUser -- no answer
 		_, err = db.Exec(query, 4, 6, 3) // Volohov to TestUser -- friends
