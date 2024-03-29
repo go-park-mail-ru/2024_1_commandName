@@ -115,6 +115,38 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 			}
 		}
 	}
+
+	counter = 0
+	_ = db.QueryRow("SELECT count(id) FROM chat.contacts").Scan(&counter)
+	if counter == 0 {
+		_, err := db.Exec("ALTER SEQUENCE chat.contacts_id_seq RESTART WITH 1")
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method CreateFakeUsers, users.go",
+			}
+			fmt.Println(customErr.Error())
+		}
+		query := `INSERT INTO chat.contacts (user1_id, user2_id, state) VALUES ($1, $2, $3)`
+		_, err = db.Exec(query, 1, 2, 3) // Naumov to Chernikov -- friends
+		_, err = db.Exec(query, 2, 6, 1) // Chernikov to TestUser -- no answer
+		_, err = db.Exec(query, 2, 3, 3) // Chernikov to Zhuk -- friends
+		_, err = db.Exec(query, 6, 5, 2) // mentor to TestUser -- no answer
+		_, err = db.Exec(query, 4, 6, 3) // Volohov to TestUser -- friends
+		_, err = db.Exec(query, 2, 6, 3) // Chernikov to TestUser -- friends
+		_, err = db.Exec(query, 6, 1, 2) // Naumov to TestUser -- no answer
+		_, err = db.Exec(query, 6, 3, 1) // TestUser to Zhuk -- no answer
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method CreateFakeUsers -> Create fake contacts, users.go",
+			}
+			fmt.Println(customErr.Error())
+		}
+	}
+
 	return db
 }
 
