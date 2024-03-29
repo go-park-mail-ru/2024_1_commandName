@@ -42,6 +42,10 @@ type docsUserForGetProfile struct {
 	Avatar       string    `json:"avatar"`
 }
 
+type docsContacts struct {
+	Contacts []docsUserForGetProfile `json:"contacts"`
+}
+
 // GetProfileInfo gets profile info
 //
 // @Summary gets profile info
@@ -199,6 +203,15 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	misc.WriteStatusJson(w, 200, nil)
 }
 
+// GetContacts uploads or changes avatar
+//
+// @Summary uploads or changes avatar
+// @ID GetContacts
+// @Produce json
+// @Success 200 {object}  domain.Response[docsContacts]
+// @Failure 400 {object}  domain.Response[domain.Error] "Описание ошибки"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /getContacts [get]
 func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)

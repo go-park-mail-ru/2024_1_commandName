@@ -122,6 +122,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/getContacts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "uploads or changes avatar",
+                "operationId": "GetContacts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_docsContacts"
+                        }
+                    },
+                    "400": {
+                        "description": "Описание ошибки",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/getProfileInfo": {
             "get": {
                 "produces": [
@@ -375,6 +404,17 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.docsContacts": {
+            "type": "object",
+            "properties": {
+                "contacts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/delivery.docsUserForGetProfile"
+                    }
+                }
+            }
+        },
         "delivery.docsUserForGetProfile": {
             "type": "object",
             "properties": {
@@ -518,6 +558,18 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.Response-delivery_docsContacts": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.docsContacts"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
                 }
             }
         },

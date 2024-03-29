@@ -7,6 +7,13 @@ definitions:
       oldPassword:
         type: string
     type: object
+  delivery.docsContacts:
+    properties:
+      contacts:
+        items:
+          $ref: '#/definitions/delivery.docsUserForGetProfile'
+        type: array
+    type: object
   delivery.docsUserForGetProfile:
     properties:
       about:
@@ -101,6 +108,14 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  domain.Response-delivery_docsContacts:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.docsContacts'
+      status:
+        example: 200
+        type: integer
     type: object
   domain.Response-delivery_docsUserForGetProfile:
     properties:
@@ -210,6 +225,25 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: gets Chats previews for user
+  /getContacts:
+    get:
+      operationId: GetContacts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_docsContacts'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: uploads or changes avatar
   /getProfileInfo:
     get:
       operationId: GetProfileInfo
