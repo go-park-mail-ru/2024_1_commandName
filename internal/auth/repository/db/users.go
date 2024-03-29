@@ -219,7 +219,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	rows, err := u.db.QueryContext(ctx,
 		`
     SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.aboat, 
-            ap.create_date, ap.lastseen_datetime, ap.avatar
+             ap.lastseen_datetime, ap.avatar
     FROM chat.contacts cc
     JOIN auth.person ap ON 
       (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
@@ -243,7 +243,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 
 	for rows.Next() {
 		var userContact domain.Person
-		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email, &userContact.Name, &userContact.Surname, &userContact.About, &userContact.CreateDate, &userContact.LastSeenDate, &userContact.Avatar)
+		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email, &userContact.Name, &userContact.Surname, &userContact.About, &userContact.LastSeenDate, &userContact.Avatar)
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
