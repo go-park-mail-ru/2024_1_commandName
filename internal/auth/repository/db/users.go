@@ -144,13 +144,6 @@ func getFakeUser(number int) domain.Person {
 	return users[number]
 }
 
-func NewUserStorage(db *sql.DB) *Users {
-	return &Users{
-		db:           CreateFakeUsers(6, db),
-		countOfUsers: 6,
-	}
-}
-
 func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
 	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
@@ -223,7 +216,7 @@ func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart
 
 func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	contactArr := make([]domain.Person, 0)
-	rows, err := u.db.QueryContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM chat.contacts cc JOIN auth.person ap ON cc.user1_id = ap.id WHERE cc.state = $1 and (cc.user1_id = $2 or cc.user2_id = $2)", userID)
+	rows, err := u.db.QueryContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM chat.contacts cc JOIN auth.person ap ON cc.user1_id = ap.id WHERE cc.state = $1 and (cc.user1_id = $2 or cc.user2_id = $2)", 3, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return contactArr
@@ -254,4 +247,11 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 		contactArr = append(contactArr, *userContact)
 	}
 	return contactArr
+}
+
+func NewUserStorage(db *sql.DB) *Users {
+	return &Users{
+		db:           CreateFakeUsers(6, db),
+		countOfUsers: 6,
+	}
 }
