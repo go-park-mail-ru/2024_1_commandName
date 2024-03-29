@@ -248,7 +248,17 @@ func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart
 
 func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	contactArr := make([]domain.Person, 0)
-	rows, err := u.db.QueryContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM chat.contacts cc JOIN auth.person ap ON cc.user1_id = ap.id WHERE cc.state = $1 and (cc.user1_id = $2 or cc.user2_id = $2)", 3, userID)
+	rows, err := u.db.QueryContext(ctx,
+		`
+    SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.aboat, 
+            ap.create_date, ap.lastseen_datetime, ap.avatar
+    FROM chat.contacts cc
+    JOIN auth.person ap ON 
+      (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
+    OR (cc.user1_id = ap.id AND cc.user2_id = $1)  -- user is user1_id
+    WHERE cc.state = $2;
+  `,
+		userID, 3)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return contactArr
@@ -264,8 +274,8 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	}
 
 	for rows.Next() {
-		var userContact *domain.Person
-		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email, &userContact.Name, &userContact.Surname, &userContact.About, &userContact.Password, &userContact.CreateDate, &userContact.LastSeenDate, &userContact.Avatar, &userContact.PasswordSalt)
+		var userContact domain.Person
+		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email, &userContact.Name, &userContact.Surname, &userContact.About, &userContact.CreateDate, &userContact.LastSeenDate, &userContact.Avatar)
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -276,7 +286,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 			empty := make([]domain.Person, 0)
 			return empty
 		}
-		contactArr = append(contactArr, *userContact)
+		contactArr = append(contactArr, userContact)
 	}
 	return contactArr
 }
