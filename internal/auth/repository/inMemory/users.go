@@ -18,7 +18,7 @@ type Users struct {
 	currentID uint
 }
 
-func (u *Users) UpdateUser(userUpdated domain.Person) (ok bool) {
+func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {
 	_, found := u.users[userUpdated.ID]
 	if !found {
 		return false
@@ -27,13 +27,12 @@ func (u *Users) UpdateUser(userUpdated domain.Person) (ok bool) {
 	return true
 }
 
-func (u *Users) GetByUserID(userID uint) (user domain.Person, found bool) {
+func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
 	user, found = u.users[userID]
 	return user, found
 }
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
-	fmt.Println("here")
 	for _, v := range u.users {
 		if v.Username == username {
 			return v, true

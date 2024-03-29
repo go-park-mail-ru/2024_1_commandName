@@ -5,6 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"os"
+	"strings"
 	"time"
 
 	"ProjectMessenger/domain"
@@ -186,7 +190,38 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 	return true
 }
 
-func (u *Users) getContact(ctx context.Context, userID uint64) []*domain.Person {
+func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
+	originalName := fileHandler.Filename
+	fileNameSlice := strings.Split(originalName, ".")
+	if len(fileNameSlice) < 2 {
+		return "", fmt.Errorf("Файл не имеет расширения")
+	}
+	extension := fileNameSlice[len(fileNameSlice)-1]
+	if extension != "png" && extension != "jpg" && extension != "jpeg" && extension != "webp" && extension != "pjpeg" {
+		return "", fmt.Errorf("Файл не является изображением")
+	}
+
+	//fmt.Println(extension)
+
+	filename := misc.RandStringRunes(16)
+	filePath := "./uploads/" + filename + "." + extension
+
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return "", fmt.Errorf("internal error")
+	}
+	defer f.Close()
+
+	// Copy the contents of the file to the new file
+	_, err = io.Copy(f, multipartFile)
+	if err != nil {
+		return "", fmt.Errorf("internal error")
+	}
+
+	return filePath, nil
+}
+
+func (u *Users) GetContact(ctx context.Context, userID uint64) []*domain.Person {
 	contactArr := make([]*domain.Person, 0)
 	rows, err := u.db.QueryContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM chat.contacts cc JOIN auth.person ap ON cc.user1_id = ap.id WHERE cc.state = $1 and (cc.user1_id = $2 or cc.user2_id = $2)", userID)
 	if err != nil {

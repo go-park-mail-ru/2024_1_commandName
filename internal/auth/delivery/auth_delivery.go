@@ -39,8 +39,8 @@ func NewAuthHandler(dataBase *sql.DB) *AuthHandler {
 func NewAuthMemoryStorage() *AuthHandler {
 	handler := AuthHandler{
 		Sessions: inMemory.NewSessionStorage(),
-		//Users:    inMemory.NewUserStorage(),
-		Chats: chatrepoMemory.NewChatsStorage(),
+		Users:    inMemory.NewUserStorage(),
+		Chats:    chatrepoMemory.NewChatsStorage(),
 	}
 	return &handler
 }

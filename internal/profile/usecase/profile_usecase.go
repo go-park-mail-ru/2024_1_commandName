@@ -3,6 +3,10 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+
 	//"io"
 	"mime/multipart"
 
@@ -83,7 +87,7 @@ func ChangePassword(ctx context.Context, oldPassword string, newPassword string,
 }
 
 func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
-	/*buff := make([]byte, 512)
+	buff := make([]byte, 512)
 	if _, err = multipartFile.Read(buff); err != nil {
 		return fmt.Errorf("internal error")
 	}
@@ -110,7 +114,7 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 		return err
 	}
 	user.Avatar = path
-	ok := userStorage.UpdateUser(user)
+	ok := userStorage.UpdateUser(ctx, user)
 	if !ok {
 		return fmt.Errorf("internal error")
 	}
@@ -120,6 +124,6 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 		if err != nil {
 			return fmt.Errorf("internal error")
 		}
-	}*/
+	}
 	return nil
 }
