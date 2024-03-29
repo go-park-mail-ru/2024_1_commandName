@@ -2,9 +2,9 @@ package usecase
 
 import (
 	"context"
+	"sort"
 
 	"ProjectMessenger/domain"
-	"sort"
 )
 
 type ChatStore interface {
