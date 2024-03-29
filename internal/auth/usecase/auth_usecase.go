@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"regexp"
+	"time"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -22,6 +23,7 @@ type UserStore interface {
 	StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
+	GetContacts(ctx context.Context, userID uint) []domain.Person
 }
 
 func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore) (authorized bool, userID uint) {
@@ -61,6 +63,8 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 	passwordHash, passwordSalt := misc.GenerateHashAndSalt(user.Password)
 	user.Password = passwordHash
 	user.PasswordSalt = passwordSalt
+	user.CreateDate = time.Now()
+	user.LastSeenDate = user.CreateDate
 
 	var userID uint
 	userID, err = userStorage.CreateUser(ctx, user)

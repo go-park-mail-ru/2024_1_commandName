@@ -18,6 +18,11 @@ type Users struct {
 	currentID uint
 }
 
+func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {
 	_, found := u.users[userUpdated.ID]
 	if !found {

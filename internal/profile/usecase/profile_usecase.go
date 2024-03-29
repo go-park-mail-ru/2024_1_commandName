@@ -127,3 +127,8 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 	}
 	return nil
 }
+
+func GetContacts(ctx context.Context, userID uint, userStorage authusecase.UserStore) []domain.Person {
+	contacts := userStorage.GetContacts(ctx, userID)
+	return contacts
+}

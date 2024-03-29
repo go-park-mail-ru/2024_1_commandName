@@ -189,11 +189,11 @@ func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
 	_ = db.QueryRow("SELECT count(id) FROM chat.chat").Scan(&counterOfRows)
 	if counterOfRows == 0 {
 		fmt.Println("adding chats...")
-		fillTableChatWithFakeData("2", "mentor", "no desc", "avatar_path", 1, db) // type - group
-		fillTableChatWithFakeData("1", "ArtemkaChernikov", "no desc", "avatar_path", 2, db)
-		fillTableChatWithFakeData("3", "ArtemZhuk", "no desc", "avatar_path", 3, db) // type - channel
-		fillTableChatWithFakeData("1", "IvanNaumov", "no desc", "avatar_path", 4, db)
-		fillTableChatWithFakeData("1", "AlexanderVolohov", "no desc", "avatar_path", 5, db)
+		fillTableChatWithFakeData("2", "mentor", "no desc", "", 1, db) // type - group
+		fillTableChatWithFakeData("1", "ArtemkaChernikov", "no desc", "", 2, db)
+		fillTableChatWithFakeData("3", "ArtemZhuk", "no desc", "", 3, db) // type - channel
+		fillTableChatWithFakeData("1", "IvanNaumov", "no desc", "", 4, db)
+		fillTableChatWithFakeData("1", "AlexanderVolohov", "no desc", "", 5, db)
 
 		addFakeChatUsers(db)
 

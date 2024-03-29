@@ -43,13 +43,12 @@ func Router() {
 	if INMEMORY {
 		authHandler = authdelivery.NewAuthMemoryStorage()
 		chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
-		profileHandler = profiledelivery.NewProfileHandler(authHandler)
 	} else {
 		dataBase := database.СreateDatabase()
 		authHandler = authdelivery.NewAuthHandler(dataBase)
 		chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
-		// profileHandler := profiledelivery.NewProfileHandler(authHandler)
 	}
+	profileHandler = profiledelivery.NewProfileHandler(authHandler)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
@@ -60,6 +59,7 @@ func Router() {
 	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
 	router.HandleFunc("/changePassword", profileHandler.ChangePassword)
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
+	router.HandleFunc("/getContacts", profileHandler.GetContacts)
 
 	// middleware
 	if DEBUG {

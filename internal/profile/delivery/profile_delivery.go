@@ -198,3 +198,13 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 	misc.WriteStatusJson(w, 200, nil)
 }
+
+func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+	contacts := usecase.GetContacts(ctx, userID, p.AuthHandler.Users)
+	misc.WriteStatusJson(w, 200, domain.Contacts{Contacts: contacts})
+}

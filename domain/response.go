@@ -17,3 +17,7 @@ type Chats struct {
 type User struct {
 	User Person `json:"user"`
 }
+
+type Contacts struct {
+	Contacts []Person `json:"contacts"`
+}

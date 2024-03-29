@@ -152,7 +152,7 @@ func NewUserStorage(db *sql.DB) *Users {
 }
 
 func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, false
@@ -221,8 +221,8 @@ func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart
 	return filePath, nil
 }
 
-func (u *Users) GetContact(ctx context.Context, userID uint64) []*domain.Person {
-	contactArr := make([]*domain.Person, 0)
+func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
+	contactArr := make([]domain.Person, 0)
 	rows, err := u.db.QueryContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM chat.contacts cc JOIN auth.person ap ON cc.user1_id = ap.id WHERE cc.state = $1 and (cc.user1_id = $2 or cc.user2_id = $2)", userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -235,7 +235,7 @@ func (u *Users) GetContact(ctx context.Context, userID uint64) []*domain.Person 
 			Segment: "method getContact, users.go",
 		}
 		fmt.Println(customErr.Error())
-		return nil
+		return contactArr
 	}
 
 	for rows.Next() {
@@ -248,9 +248,10 @@ func (u *Users) GetContact(ctx context.Context, userID uint64) []*domain.Person 
 				Segment: "method getContact, users.go",
 			}
 			fmt.Println(customErr.Error())
-			return nil
+			empty := make([]domain.Person, 0)
+			return empty
 		}
-		contactArr = append(contactArr, userContact)
+		contactArr = append(contactArr, *userContact)
 	}
 	return contactArr
 }
