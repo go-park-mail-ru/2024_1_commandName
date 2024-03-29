@@ -130,13 +130,13 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 		}
 		query := `INSERT INTO chat.contacts (user1_id, user2_id, state) VALUES ($1, $2, $3)`
 		_, err = db.Exec(query, 1, 2, 3) // Naumov to Chernikov -- friends
-		_, err = db.Exec(query, 2, 6, 1) // Chernikov to TestUser -- no answer
+		_, err = db.Exec(query, 2, 6, 3) // Chernikov to TestUser -- no answer
 		_, err = db.Exec(query, 2, 3, 3) // Chernikov to Zhuk -- friends
-		_, err = db.Exec(query, 6, 5, 2) // mentor to TestUser -- no answer
+		_, err = db.Exec(query, 6, 5, 3) // mentor to TestUser -- no answer
 		_, err = db.Exec(query, 4, 6, 3) // Volohov to TestUser -- friends
 		_, err = db.Exec(query, 2, 6, 3) // Chernikov to TestUser -- friends
-		_, err = db.Exec(query, 6, 1, 2) // Naumov to TestUser -- no answer
-		_, err = db.Exec(query, 6, 3, 1) // TestUser to Zhuk -- no answer
+		_, err = db.Exec(query, 6, 1, 3) // Naumov to TestUser -- no answer
+		_, err = db.Exec(query, 6, 3, 3) // TestUser to Zhuk -- no answer
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -275,7 +275,9 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 
 	for rows.Next() {
 		var userContact domain.Person
-		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email, &userContact.Name, &userContact.Surname, &userContact.About, &userContact.LastSeenDate, &userContact.Avatar)
+		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email,
+			&userContact.Name, &userContact.Surname, &userContact.About,
+			&userContact.LastSeenDate, &userContact.Avatar)
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
