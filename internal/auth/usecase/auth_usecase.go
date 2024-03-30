@@ -20,7 +20,7 @@ type SessionStore interface {
 type UserStore interface {
 	GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool)
 	UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool)
-	StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
+	StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
 	GetContacts(ctx context.Context, userID uint) []domain.Person

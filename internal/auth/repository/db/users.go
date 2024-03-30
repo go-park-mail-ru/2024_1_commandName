@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime/multipart"
 	"os"
 	"strings"
@@ -21,10 +22,13 @@ type Users struct {
 }
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
-	fmt.Println("get by username")
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	//fmt.Println("get by username")
+	logger.Debug("GetByUsername", "username", username)
 	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("GetByUsername didn't found user", "username", username)
 			return user, false
 		}
 
@@ -33,14 +37,16 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 			Message: err.Error(),
 			Segment: "method GetByUsername, users.go",
 		}
-		fmt.Println(customErr.Error())
-
+		//fmt.Println(customErr.Error())
+		logger.Error(customErr.Error())
 		return user, false
 	}
+	logger.Debug("GetByUsername found user", "username", username)
 	return user, true
 }
 
 func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint, err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
 		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt).Scan(&userID)
 	if err != nil {
@@ -49,17 +55,16 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 			Message: err.Error(),
 			Segment: "method CreateUser, users.go",
 		}
-		fmt.Println(customErr.Error())
-
+		//fmt.Println(customErr.Error())
+		logger.Error(customErr.Error())
 		return 0, err
 	}
-
+	logger.Info("created user", "userID", user)
 	u.countOfUsers++
 	return userID, nil
 }
 
 func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
-	fmt.Println("In create fake users.")
 	counter := 0
 	_ = db.QueryRow("SELECT count(id) FROM auth.person").Scan(&counter)
 	if counter == 0 {
@@ -70,7 +75,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 				Message: err.Error(),
 				Segment: "method CreateFakeUsers, users.go",
 			}
-			fmt.Println(customErr.Error())
+			slog.Error(customErr.Error())
 		}
 		_, err = db.Exec("ALTER SEQUENCE auth.session_id_seq RESTART WITH 1")
 		if err != nil {
@@ -79,7 +84,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 				Message: err.Error(),
 				Segment: "method CreateFakeUsers, users.go",
 			}
-			fmt.Println(customErr.Error())
+			slog.Error(customErr.Error())
 		}
 		_, err = db.Exec("DELETE FROM auth.person")
 		if err != nil {
@@ -88,7 +93,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 				Message: err.Error(),
 				Segment: "method CreateFakeUsers, users.go",
 			}
-			fmt.Println(customErr.Error())
+			slog.Error(customErr.Error())
 		}
 
 		_, err = db.Exec("DELETE FROM auth.session")
@@ -98,7 +103,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 				Message: err.Error(),
 				Segment: "method CreateFakeUsers, users.go",
 			}
-			fmt.Println(customErr.Error())
+			slog.Error(customErr.Error())
 		}
 
 		for i := 0; i < countOfUsers; i++ {
@@ -111,7 +116,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 					Message: err.Error(),
 					Segment: "method CreateFakeUsers, users.go",
 				}
-				fmt.Println(customErr.Error())
+				slog.Error(customErr.Error())
 			}
 		}
 	}
@@ -126,7 +131,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 				Message: err.Error(),
 				Segment: "method CreateFakeUsers, users.go",
 			}
-			fmt.Println(customErr.Error())
+			slog.Error(customErr.Error())
 		}
 		query := `INSERT INTO chat.contacts (user1_id, user2_id, state) VALUES ($1, $2, $3)`
 		_, err = db.Exec(query, 1, 2, 3) // Naumov to Chernikov -- friends
@@ -142,10 +147,10 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 				Message: err.Error(),
 				Segment: "method CreateFakeUsers -> Create fake contacts, users.go",
 			}
-			fmt.Println(customErr.Error())
+			slog.Error(customErr.Error())
 		}
 	}
-
+	slog.Info("created fake users")
 	return db
 }
 
@@ -176,9 +181,11 @@ func getFakeUser(number int) domain.Person {
 }
 
 func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("GetByUserID didn't found user", "userID", userID)
 			return user, false
 		}
 
@@ -187,15 +194,18 @@ func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Perso
 			Message: err.Error(),
 			Segment: "method GetByUserID, users.go",
 		}
-		fmt.Println(customErr.Error())
+		logger.Error(customErr.Error())
 		return user, false
 	}
+	logger.Debug("GetByUserID found user", "userID", userID)
 	return user, true
 }
 
 func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	oldUser, found := u.GetByUserID(ctx, userUpdated.ID)
 	if !found {
+		logger.Debug("UpdateUser didn't found user(via GetByUserID)", "userID", userUpdated.ID)
 		return false
 	}
 
@@ -207,21 +217,24 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 			Message: err.Error(),
 			Segment: "method CreateUser, users.go",
 		}
-		fmt.Println(customErr.Error())
-
+		logger.Error(customErr.Error())
 		return false
 	}
+	logger.Debug("UpdateUser success", "userID", userUpdated.ID)
 	return true
 }
 
-func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
+func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	originalName := fileHandler.Filename
 	fileNameSlice := strings.Split(originalName, ".")
 	if len(fileNameSlice) < 2 {
+		logger.Info("StoreAvatar filename without extension")
 		return "", fmt.Errorf("Файл не имеет расширения")
 	}
 	extension := fileNameSlice[len(fileNameSlice)-1]
 	if extension != "png" && extension != "jpg" && extension != "jpeg" && extension != "webp" && extension != "pjpeg" {
+		logger.Info("StoreAvatar file isn't an image")
 		return "", fmt.Errorf("Файл не является изображением")
 	}
 
@@ -232,6 +245,7 @@ func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
+		logger.Error("StoreAvatar failed to open a file", "path", filePath)
 		return "", fmt.Errorf("internal error")
 	}
 	defer f.Close()
@@ -239,13 +253,15 @@ func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart
 	// Copy the contents of the file to the new file
 	_, err = io.Copy(f, multipartFile)
 	if err != nil {
+		logger.Error("StoreAvatar failed to copy file", "path", filePath)
 		return "", fmt.Errorf("internal error")
 	}
-
+	logger.Debug("StoreAvatar success", "path", filePath)
 	return filePath, nil
 }
 
 func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	contactArr := make([]domain.Person, 0)
 	rows, err := u.db.QueryContext(ctx,
 		`
@@ -260,6 +276,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 		userID, 3)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("GetContacts no contacts", "userID", userID)
 			return contactArr
 		}
 
@@ -268,7 +285,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 			Message: err.Error(),
 			Segment: "method getContact, users.go",
 		}
-		fmt.Println(customErr.Error())
+		logger.Error(customErr.Error())
 		return contactArr
 	}
 
@@ -283,16 +300,18 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 				Message: err.Error(),
 				Segment: "method getContact, users.go",
 			}
-			fmt.Println(customErr.Error())
+			logger.Error(customErr.Error())
 			empty := make([]domain.Person, 0)
 			return empty
 		}
 		contactArr = append(contactArr, userContact)
 	}
+	logger.Debug("GetContacts found contacts", "userID", userID, "numOfContacts", len(contactArr))
 	return contactArr
 }
 
 func NewUserStorage(db *sql.DB) *Users {
+	slog.Info("created user storage")
 	return &Users{
 		db:           CreateFakeUsers(6, db),
 		countOfUsers: 6,

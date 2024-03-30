@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"ProjectMessenger/domain"
@@ -21,6 +20,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 	logger.Debug("GetUserIDbySessionID", "userID", userID, "sessionID", sessionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("didn't found user by session", "userID", userID, "sessionID", sessionID)
 			return 0, false
 		}
 		customErr := &domain.CustomError{
@@ -32,6 +32,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 		logger.Error(customErr.Error())
 		return 0, false
 	}
+	logger.Debug("found user by session", "userID", userID, "sessionID", sessionID)
 	return userID, true
 }
 
@@ -51,6 +52,7 @@ func (s *Sessions) CreateSession(ctx context.Context, userID uint) (sessionID st
 		logger.Error(customErr.Error())
 		return ""
 	}
+	logger.Info("created session", "sessionID", sessionID, "userID", userID)
 	return sessionID
 }
 
@@ -64,8 +66,10 @@ func (s *Sessions) DeleteSession(ctx context.Context, sessionID string) {
 			Message: err.Error(),
 			Segment: "method DeleteSession, sessions.go",
 		}
-		fmt.Println(customErr.Error())
+		//fmt.Println(customErr.Error())
+		logger.Error(customErr.Error())
 	}
+	logger.Info("deleted session", "sessionID", sessionID)
 }
 
 func NewSessionStorage(db *sql.DB) *Sessions {

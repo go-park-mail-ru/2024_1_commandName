@@ -56,20 +56,21 @@ type docsContacts struct {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getProfileInfo [get]
 func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 	user, found := usecase.GetProfileInfo(r.Context(), userID, p.AuthHandler.Users)
 	if !found {
-		misc.WriteInternalErrorJson(w)
+		misc.WriteInternalErrorJson(ctx, w)
 		return
 	}
 	user.ID = 0
 	user.Password = ""
 	user.PasswordSalt = ""
 
-	misc.WriteStatusJson(w, 200, domain.User{User: user})
+	misc.WriteStatusJson(ctx, w, 200, domain.User{User: user})
 }
 
 // UpdateProfileInfo updates profile info
@@ -84,12 +85,13 @@ func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /updateProfileInfo [post]
 func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 	if r.Method != http.MethodPost {
-		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
 
@@ -97,20 +99,20 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 	var jsonUser updateUserStruct[domain.Person]
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
 	if jsonUser.NumOfUpdatedFields <= 0 {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
 
-	err = usecase.UpdateProfileInfo(r.Context(), jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
+	err = usecase.UpdateProfileInfo(ctx, jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
-	misc.WriteStatusJson(w, 200, nil)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
 // ChangePassword changes profile password
@@ -126,12 +128,13 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /changePassword [post]
 func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 	if r.Method != http.MethodPost {
-		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
 
@@ -139,20 +142,20 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	var passwordsJson changePasswordStruct
 	err := decoder.Decode(&passwordsJson)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
 	if passwordsJson.OldPassword == "" || passwordsJson.NewPassword == "" {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "Поля пустые"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "Поля пустые"})
 		return
 	}
 
 	err = usecase.ChangePassword(r.Context(), passwordsJson.OldPassword, passwordsJson.NewPassword, userID, p.AuthHandler.Users)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
-	misc.WriteStatusJson(w, 200, nil)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
 // UploadAvatar uploads or changes avatar
@@ -167,25 +170,26 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /uploadAvatar [post]
 func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 	if r.Method != http.MethodPost {
-		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
 	err := r.ParseMultipartForm(32 << 20) // 32 MB is the maximum avatar size
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "Недопустимый файл"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "Недопустимый файл"})
 		return
 	}
 
 	// Get the avatar from the request
 	avatar, handler, err := r.FormFile("avatar")
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "Недопустимый файл"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "Недопустимый файл"})
 		return
 	}
 	defer avatar.Close()
@@ -193,14 +197,14 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	err = usecase.ChangeAvatar(r.Context(), avatar, handler, userID, p.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
-			misc.WriteInternalErrorJson(w)
+			misc.WriteInternalErrorJson(ctx, w)
 		} else {
-			misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		}
 		return
 	}
 
-	misc.WriteStatusJson(w, 200, nil)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
 // GetContacts uploads or changes avatar
@@ -219,5 +223,5 @@ func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	contacts := usecase.GetContacts(ctx, userID, p.AuthHandler.Users)
-	misc.WriteStatusJson(w, 200, domain.Contacts{Contacts: contacts})
+	misc.WriteStatusJson(ctx, w, 200, domain.Contacts{Contacts: contacts})
 }

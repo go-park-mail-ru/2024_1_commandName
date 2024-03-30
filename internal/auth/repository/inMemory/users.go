@@ -53,7 +53,7 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 	return user.ID, nil
 }
 
-func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
+func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
 	originalName := fileHandler.Filename
 	fileNameSlice := strings.Split(originalName, ".")
 	if len(fileNameSlice) < 2 {
