@@ -1,7 +1,6 @@
 package delivery
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -19,7 +18,7 @@ type MessageHandler struct {
 	mu          sync.RWMutex
 }
 
-func NewMessagesHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *MessageHandler {
+func NewMessagesHandler(authHandler *authdelivery.AuthHandler) *MessageHandler {
 	return &MessageHandler{
 		AuthHandler: authHandler,
 		Connections: make(map[uint]*websocket.Conn),
