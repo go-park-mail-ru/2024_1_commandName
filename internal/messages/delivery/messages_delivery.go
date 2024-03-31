@@ -1,12 +1,14 @@
 package delivery
 
 import (
-	"errors"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"sync"
 
 	authdelivery "ProjectMessenger/internal/auth/delivery"
+	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
+	messageRepository "ProjectMessenger/internal/messages/repository/db"
 	"ProjectMessenger/internal/messages/usecase"
 	"github.com/gorilla/websocket"
 )
@@ -18,11 +20,19 @@ type MessageHandler struct {
 	mu          sync.RWMutex
 }
 
-func NewMessagesHandler(authHandler *authdelivery.AuthHandler) *MessageHandler {
+func NewMessagesHandler(authHandler *authdelivery.AuthHandler, database *sql.DB) *MessageHandler {
 	return &MessageHandler{
 		AuthHandler: authHandler,
 		Connections: make(map[uint]*websocket.Conn),
+		Messages:    messageRepository.NewMessageStorage(database),
 		//Messages:       db.NewChatsStorage(dataBase),
+	}
+}
+
+func NewMessagesHandlerMemory(authHandler *authdelivery.AuthHandler) *MessageHandler {
+	return &MessageHandler{
+		AuthHandler: authHandler,
+		//Messages:    chatsInMemoryRepository.NewChatsStorage(),
 	}
 }
 
@@ -33,7 +43,7 @@ func (messageHandler MessageHandler) GetMessages(w http.ResponseWriter, r *http.
 	}
 	fmt.Println(userID)
 
-	upgrader := UpgradeConnection()
+	upgrader := messageRepository.UpgradeConnection()
 
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -41,68 +51,8 @@ func (messageHandler MessageHandler) GetMessages(w http.ResponseWriter, r *http.
 		return
 	}
 
-	messageHandler.AddConnection(connection, userID)
-	messageHandler.readMessages(connection, userID)
+	usecase.GetMessagesByWebSocket(connection, userID, messageHandler.Messages)
+	//messageHandler.AddConnection(connection, userID)
+	//messageHandler.ReadMessages(connection, userID)
 
-}
-
-func (m *MessageHandler) PrintMessage(message []byte) {
-	fmt.Print("От пользователя пришло сообщение: ")
-	fmt.Println(string(message))
-}
-
-func UpgradeConnection() websocket.Upgrader {
-	upgrader := websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			return true // Пропускаем любой запрос
-		},
-	}
-	return upgrader
-}
-
-func (m *MessageHandler) readMessages(connection *websocket.Conn, userID uint) {
-	defer func() {
-		m.DeleteConnection(userID)
-		connection.Close()
-	}()
-
-	for {
-		mt, message, err := connection.ReadMessage()
-
-		if err != nil || mt == websocket.CloseMessage {
-			break // Выходим из цикла, если клиент пытается закрыть соединение или связь с клиентом прервана
-		}
-		err = m.SendMessageToUser(userID, message)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		go m.PrintMessage(message)
-	}
-}
-
-func (m *MessageHandler) SendMessageToUser(userID uint, message []byte) error {
-	connection := m.GetConnection(userID)
-	if connection == nil {
-		return errors.New("No connection found for user")
-	}
-	return connection.WriteMessage(websocket.TextMessage, message)
-}
-
-func (m *MessageHandler) AddConnection(connection *websocket.Conn, userID uint) {
-	m.mu.Lock()
-	m.Connections[userID] = connection
-	m.mu.Unlock()
-}
-
-func (m *MessageHandler) DeleteConnection(userID uint) {
-	m.mu.Lock()
-	delete(m.Connections, userID)
-	m.mu.Unlock()
-}
-
-func (m *MessageHandler) GetConnection(userID uint) *websocket.Conn {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.Connections[userID]
 }

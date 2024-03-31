@@ -45,13 +45,14 @@ func Router() {
 	if INMEMORY {
 		authHandler = authdelivery.NewAuthMemoryStorage()
 		chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
+		messageHandler = messagedelivery.NewMessagesHandlerMemory(authHandler)
 	} else {
 		dataBase := database.СreateDatabase()
 		authHandler = authdelivery.NewAuthHandler(dataBase)
 		chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
+		messageHandler = messagedelivery.NewMessagesHandler(authHandler, dataBase)
 	}
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
-	messageHandler = messagedelivery.NewMessagesHandler(authHandler)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
