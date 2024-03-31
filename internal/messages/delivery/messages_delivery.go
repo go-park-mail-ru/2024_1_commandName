@@ -51,7 +51,7 @@ func (messageHandler MessageHandler) GetMessages(w http.ResponseWriter, r *http.
 		return
 	}
 
-	usecase.GetMessagesByWebSocket(connection, userID, messageHandler.Messages)
+	usecase.GetMessagesByWebSocket(r.Context(), connection, userID, messageHandler.Messages)
 	//messageHandler.AddConnection(connection, userID)
 	//messageHandler.ReadMessages(connection, userID)
 

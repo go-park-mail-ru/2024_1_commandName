@@ -1,12 +1,15 @@
 package db
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 
+	"ProjectMessenger/domain"
 	"github.com/gorilla/websocket"
 )
 
@@ -30,7 +33,7 @@ func UpgradeConnection() websocket.Upgrader {
 	return upgrader
 }
 
-func (m *Messages) ReadMessages(connection *websocket.Conn, userID uint) {
+func (m *Messages) ReadMessages(ctx context.Context, connection *websocket.Conn, userID uint) {
 	defer func() {
 		m.DeleteConnection(userID)
 		connection.Close()
@@ -42,12 +45,17 @@ func (m *Messages) ReadMessages(connection *websocket.Conn, userID uint) {
 		if err != nil || mt == websocket.CloseMessage {
 			break // Выходим из цикла, если клиент пытается закрыть соединение или связь с клиентом прервана
 		}
-		err = m.SendMessageToUser(userID, message)
-		if err != nil {
-			fmt.Println(err)
-		}
 
-		go m.PrintMessage(message)
+		userDecodedMessage := DecodeJSON(message)
+		//fmt.Println("DECODED MESSAGE: ", userDecodedMessage)
+		m.SetMessage(ctx, userDecodedMessage)
+
+		/*
+			err = m.SendMessageToUser(userID, message)
+			if err != nil {
+				fmt.Println(err)
+			}*/
+
 	}
 }
 
@@ -81,5 +89,25 @@ func NewMessageStorage(db *sql.DB) *Messages {
 	return &Messages{
 		db:          db,
 		Connections: make(map[uint]*websocket.Conn),
+	}
+}
+
+func DecodeJSON(message []byte) domain.Message {
+	var mess domain.Message
+	err := json.Unmarshal(message, &mess)
+	if err != nil {
+		// TODO
+		fmt.Println(err)
+		return domain.Message{}
+	}
+	return mess
+}
+
+func (m *Messages) SetMessage(ctx context.Context, message domain.Message) {
+	query := "INSERT INTO chat.message (user_id, chat_id, message, edited, create_datetime) VALUES($1, $2, $3, $4, $5) "
+	_, err := m.db.ExecContext(ctx, query, message.UserID, message.ChatID, message.Message, message.Edited, message.CreateTimestamp)
+	if err != nil {
+		// TODO
+		fmt.Println(err)
 	}
 }
