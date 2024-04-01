@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -48,6 +49,7 @@ func Router() {
 		messageHandler = messagedelivery.NewMessagesHandlerMemory(authHandler)
 	} else {
 		dataBase := database.СreateDatabase()
+		fmt.Println(dataBase)
 		authHandler = authdelivery.NewAuthHandler(dataBase)
 		chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
 		messageHandler = messagedelivery.NewMessagesHandler(authHandler, dataBase)

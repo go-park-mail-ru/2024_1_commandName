@@ -19,8 +19,7 @@ type Users struct {
 }
 
 func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {
