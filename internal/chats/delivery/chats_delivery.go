@@ -46,7 +46,6 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 	if !authorized {
 		return
 	}
-
 	chats := usecase.GetChatsForUser(ctx, userID, chatsHandler.AuthHandler.Chats)
 	misc.WriteStatusJson(w, 200, domain.Chats{Chats: chats})
 }

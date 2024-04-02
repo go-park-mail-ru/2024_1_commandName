@@ -39,7 +39,8 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 			fmt.Println(customErr.Error())
 			return nil
 		}
-		chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
+		messagesPerPageLimit := 100
+		chat.Messages = c.GetMessagesByChatID(ctx, chat.ID, messagesPerPageLimit)
 		chats = append(chats, chat)
 	}
 	if err = rows.Err(); err != nil {
@@ -233,10 +234,10 @@ func fillTableChatWithFakeData(chatType, name, description, avatar_path string, 
 	}
 }
 
-func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int) []*domain.Message {
+func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int, limit int) []*domain.Message {
 	chatMessagesArr := make([]*domain.Message, 0)
 
-	rows, err := c.db.QueryContext(ctx, "SELECT id, user_id, chat_id, message.message, edited FROM chat.message WHERE chat_id = $1", chatID)
+	rows, err := c.db.QueryContext(ctx, "SELECT id, user_id, chat_id, message.message, edited, create_datetime FROM chat.message WHERE chat_id = $1 ORDER BY create_datetime DESC LIMIT $2", chatID, limit)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -250,7 +251,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int) []*domain.M
 
 	for rows.Next() {
 		var mess domain.Message
-		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.Edited); err != nil {
+		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.Edited, &mess.CreateTimestamp); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),

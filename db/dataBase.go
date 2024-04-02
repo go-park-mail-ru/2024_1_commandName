@@ -3,9 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"os"
 
-	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -26,25 +24,26 @@ func СreateDatabase() *sql.DB {
 		return nil
 	}
 
-	m, err := migrate.New(
-		"file://migrations",
-		connStrToDataBase,
-	)
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
-
-	if err := m.Up(); err != nil {
-		if err.Error() == "no change" {
-			fmt.Println("Database already up-to-date")
-		} else {
-			fmt.Println("Error applying migrations:", err)
+	/*
+		m, err := migrate.New(
+			"file://migrations",
+			connStrToDataBase,
+		)
+		if err != nil {
+			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
-	} else {
-		fmt.Println("Migrations applied successfully")
-	}
 
+		if err := m.Up(); err != nil {
+			if err.Error() == "no change" {
+				fmt.Println("Database already up-to-date")
+			} else {
+				fmt.Println("Error applying migrations:", err)
+				os.Exit(1)
+			}
+		} else {
+			fmt.Println("Migrations applied successfully")
+		}
+	*/
 	return dataBase
 }
