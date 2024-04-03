@@ -93,6 +93,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/getChatMessages": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "GetChatMessages",
+                "operationId": "getChatMessages",
+                "parameters": [
+                    {
+                        "description": "ID of chat",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.RequestChatIDBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Messages"
+                        }
+                    },
+                    "400": {
+                        "description": "wrong json structure",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "405": {
+                        "description": "use POST",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/getChats": {
             "get": {
                 "produces": [
@@ -364,6 +413,14 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "delivery.RequestChatIDBody": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "type": "integer"
+                }
+            }
+        },
         "delivery.changePasswordStruct": {
             "type": "object",
             "properties": {
@@ -510,6 +567,17 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.Messages": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Message"
+                    }
+                }
+            }
+        },
         "domain.Person": {
             "type": "object",
             "properties": {
@@ -550,6 +618,18 @@ const docTemplate = `{
             "properties": {
                 "body": {
                     "$ref": "#/definitions/domain.Error"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-domain_Messages": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/domain.Messages"
                 },
                 "status": {
                     "type": "integer",

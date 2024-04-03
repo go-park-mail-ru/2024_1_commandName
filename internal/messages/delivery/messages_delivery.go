@@ -63,6 +63,18 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 	usecase.GetMessagesByWebSocket(ctx, connection, userID, messageHandler.Messages)
 }
 
+// GetChatMessages returns messages of some chat
+//
+// @Summary GetChatMessages
+// @ID getChatMessages
+// @Accept application/json
+// @Produce application/json
+// @Param user body  RequestChatIDBody true "ID of chat"
+// @Success 200 {object}  domain.Response[domain.Messages]
+// @Failure 405 {object}  domain.Response[domain.Error] "use POST"
+// @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /getChatMessages [post]
 func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
 	authorized, _ := messageHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {

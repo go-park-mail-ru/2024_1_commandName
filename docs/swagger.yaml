@@ -1,5 +1,10 @@
 basePath: /
 definitions:
+  delivery.RequestChatIDBody:
+    properties:
+      chatID:
+        type: integer
+    type: object
   delivery.changePasswordStruct:
     properties:
       newPassword:
@@ -95,6 +100,13 @@ definitions:
       user_id:
         type: integer
     type: object
+  domain.Messages:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/domain.Message'
+        type: array
+    type: object
   domain.Person:
     properties:
       password:
@@ -122,6 +134,14 @@ definitions:
     properties:
       body:
         $ref: '#/definitions/domain.Error'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-domain_Messages:
+    properties:
+      body:
+        $ref: '#/definitions/domain.Messages'
       status:
         example: 200
         type: integer
@@ -191,6 +211,38 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
+  /getChatMessages:
+    post:
+      consumes:
+      - application/json
+      operationId: getChatMessages
+      parameters:
+      - description: ID of chat
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.RequestChatIDBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Messages'
+        "400":
+          description: wrong json structure
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: GetChatMessages
   /getChats:
     get:
       operationId: GetChats
