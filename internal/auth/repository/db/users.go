@@ -22,7 +22,7 @@ type Users struct {
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
 	fmt.Println("get by username")
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, false
@@ -41,7 +41,7 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 }
 
 func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint, err error) {
-	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
+	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
 		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt).Scan(&userID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -102,7 +102,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 		}
 
 		for i := 0; i < countOfUsers; i++ {
-			query := `INSERT INTO auth.person (username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+			query := `INSERT INTO auth.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 			user := getFakeUser(i + 1)
 			_, err := db.Exec(query, user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt)
 			if err != nil {
@@ -177,7 +177,7 @@ func getFakeUser(number int) domain.Person {
 }
 
 func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return user, false
@@ -200,7 +200,7 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 		return false
 	}
 
-	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, aboat = $5, password_hash = $6, create_date = $7, lastseen_datetime = $8, avatar = $9, password_salt = $10 where id = $11",
+	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, create_date = $7, lastseen_datetime = $8, avatar = $9, password_salt = $10 where id = $11",
 		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.Avatar, userUpdated.PasswordSalt, oldUser.ID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -250,7 +250,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	contactArr := make([]domain.Person, 0)
 	rows, err := u.db.QueryContext(ctx,
 		`
-    SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.aboat, 
+    SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, 
              ap.lastseen_datetime, ap.avatar
     FROM chat.contacts cc
     JOIN auth.person ap ON 
