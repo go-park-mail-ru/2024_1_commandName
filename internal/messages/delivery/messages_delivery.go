@@ -44,6 +44,17 @@ func NewMessagesHandlerMemory(authHandler *authdelivery.AuthHandler) *MessageHan
 	}
 }
 
+// SendMessage method to send messages
+//
+// @Summary SendMessage
+// @Description Сначала по этому URL надо произвести upgrade до вебсокета, потом слать json сообщений
+// @ID sendMessage
+// @Accept application/json
+// @Produce application/json
+// @Param user body  domain.Message true "message that was sent"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error | could not upgrade connection"
+// @Router /sendMessage [post]
 func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authorized, userID := messageHandler.AuthHandler.CheckAuthNonAPI(w, r)

@@ -89,16 +89,8 @@ definitions:
     properties:
       chat_id:
         type: integer
-      edited:
-        type: boolean
-      id:
-        type: integer
       message_text:
         type: string
-      sent_at:
-        type: string
-      user_id:
-        type: integer
     type: object
   domain.Messages:
     properties:
@@ -364,6 +356,32 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: registers user
+  /sendMessage:
+    post:
+      consumes:
+      - application/json
+      description: Сначала по этому URL надо произвести upgrade до вебсокета, потом
+        слать json сообщений
+      operationId: sendMessage
+      parameters:
+      - description: message that was sent
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Message'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "500":
+          description: Internal server error | could not upgrade connection
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: SendMessage
   /updateProfileInfo:
     post:
       consumes:

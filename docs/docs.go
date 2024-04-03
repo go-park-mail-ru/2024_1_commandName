@@ -327,6 +327,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/sendMessage": {
+            "post": {
+                "description": "Сначала по этому URL надо произвести upgrade до вебсокета, потом слать json сообщений",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "SendMessage",
+                "operationId": "sendMessage",
+                "parameters": [
+                    {
+                        "description": "message that was sent",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Message"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error | could not upgrade connection",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/updateProfileInfo": {
             "post": {
                 "consumes": [
@@ -550,20 +588,8 @@ const docTemplate = `{
                 "chat_id": {
                     "type": "integer"
                 },
-                "edited": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "integer"
-                },
                 "message_text": {
                     "type": "string"
-                },
-                "sent_at": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         },

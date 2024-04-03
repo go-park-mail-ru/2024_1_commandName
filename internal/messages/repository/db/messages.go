@@ -51,6 +51,7 @@ func (m *Messages) ReadMessages(ctx context.Context, connection *websocket.Conn,
 		userDecodedMessage := DecodeJSON(message)
 		userDecodedMessage.UserID = userID
 		userDecodedMessage.CreateTimestamp = time.Now()
+		m.SendMessageToUser(userID, []byte(`{"status": 200}`))
 		m.SetMessage(ctx, userDecodedMessage)
 	}
 }

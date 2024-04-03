@@ -3,10 +3,10 @@ package domain
 import "time"
 
 type Message struct {
-	ID              int       `json:"id"`
+	ID              int       `json:"id" swaggerignore:"true"`
 	ChatID          int       `json:"chat_id"`
-	UserID          uint      `json:"user_id"`
+	UserID          uint      `json:"user_id" swaggerignore:"true"`
 	Message         string    `json:"message_text"`
-	Edited          bool      `json:"edited"`
-	CreateTimestamp time.Time `json:"sent_at"`
+	Edited          bool      `json:"edited" swaggerignore:"true"`
+	CreateTimestamp time.Time `json:"sent_at" swaggerignore:"true"`
 }
