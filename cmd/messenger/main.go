@@ -18,6 +18,7 @@ import (
 
 var DEBUG = false
 var INMEMORY = false
+var AVATAR_PATH = "./uploads/"
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))

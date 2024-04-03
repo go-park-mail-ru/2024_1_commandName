@@ -30,7 +30,7 @@ type AuthHandler struct {
 func NewAuthHandler(dataBase *sql.DB) *AuthHandler {
 	handler := AuthHandler{
 		Sessions: db.NewSessionStorage(dataBase),
-		Users:    db.NewUserStorage(dataBase),
+		Users:    db.NewUserStorage(dataBase, "./uploads/"),
 		Chats:    chatrepoDB.NewChatsStorage(dataBase),
 	}
 	return &handler

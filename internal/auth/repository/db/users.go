@@ -19,6 +19,7 @@ import (
 type Users struct {
 	db           *sql.DB
 	countOfUsers uint
+	pathToAvatar string
 }
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
@@ -241,7 +242,7 @@ func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, f
 	//fmt.Println(extension)
 
 	filename := misc.RandStringRunes(16)
-	filePath := "./uploads/" + filename + "." + extension
+	filePath := u.pathToAvatar + filename + "." + extension
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -310,10 +311,11 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	return contactArr
 }
 
-func NewUserStorage(db *sql.DB) *Users {
+func NewUserStorage(db *sql.DB, pathToAvatar string) *Users {
 	slog.Info("created user storage")
 	return &Users{
 		db:           CreateFakeUsers(6, db),
 		countOfUsers: 6,
+		pathToAvatar: pathToAvatar,
 	}
 }
