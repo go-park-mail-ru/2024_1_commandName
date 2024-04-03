@@ -27,10 +27,10 @@ type AuthHandler struct {
 	Chats    chatusecase.ChatStore
 }
 
-func NewAuthHandler(dataBase *sql.DB) *AuthHandler {
+func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
 		Sessions: db.NewSessionStorage(dataBase),
-		Users:    db.NewUserStorage(dataBase, "./uploads/"),
+		Users:    db.NewUserStorage(dataBase, avatarPath),
 		Chats:    chatrepoDB.NewChatsStorage(dataBase),
 	}
 	return &handler

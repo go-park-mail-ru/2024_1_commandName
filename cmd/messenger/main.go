@@ -46,7 +46,7 @@ func Router() {
 		chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
 	} else {
 		dataBase := database.СreateDatabase()
-		authHandler = authdelivery.NewAuthHandler(dataBase)
+		authHandler = authdelivery.NewAuthHandler(dataBase, AVATAR_PATH)
 		chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
 	}
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
