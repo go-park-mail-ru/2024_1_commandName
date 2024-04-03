@@ -225,7 +225,7 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 	return true
 }
 
-func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
+func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (name string, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	originalName := fileHandler.Filename
 	fileNameSlice := strings.Split(originalName, ".")
@@ -258,7 +258,7 @@ func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, f
 		return "", fmt.Errorf("internal error")
 	}
 	logger.Debug("StoreAvatar success", "path", filePath)
-	return filePath, nil
+	return filename + "." + extension, nil
 }
 
 func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
