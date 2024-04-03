@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"ProjectMessenger/domain"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -47,6 +49,8 @@ func (m *Messages) ReadMessages(ctx context.Context, connection *websocket.Conn,
 		}
 
 		userDecodedMessage := DecodeJSON(message)
+		userDecodedMessage.UserID = userID
+		userDecodedMessage.CreateTimestamp = time.Now()
 		m.SetMessage(ctx, userDecodedMessage)
 	}
 }
