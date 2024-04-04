@@ -7,7 +7,6 @@ import (
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	db "ProjectMessenger/internal/chats/repository/db"
-	chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
@@ -21,13 +20,6 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *C
 	return &ChatsHandler{
 		AuthHandler: authHandler,
 		Chats:       db.NewChatsStorage(dataBase),
-	}
-}
-
-func NewChatsHandlerMemory(authHandler *authdelivery.AuthHandler) *ChatsHandler {
-	return &ChatsHandler{
-		AuthHandler: authHandler,
-		Chats:       chatsInMemoryRepository.NewChatsStorage(),
 	}
 }
 
@@ -47,6 +39,6 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	chats := usecase.GetChatsForUser(ctx, userID, chatsHandler.Chats)
+	chats := usecase.GetChatsForUser(ctx, userID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
 	misc.WriteStatusJson(ctx, w, 200, domain.Chats{Chats: chats})
 }

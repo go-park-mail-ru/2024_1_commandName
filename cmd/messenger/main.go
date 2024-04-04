@@ -43,7 +43,7 @@ func Router() {
 
 	if INMEMORY {
 		authHandler = authdelivery.NewAuthMemoryStorage()
-		chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
+		//chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
 	} else {
 		dataBase := database.СreateDatabase()
 		authHandler = authdelivery.NewAuthHandler(dataBase, AVATAR_PATH)

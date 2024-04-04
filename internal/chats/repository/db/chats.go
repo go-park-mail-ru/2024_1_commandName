@@ -53,7 +53,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 	return chats
 }
 
-func (c *Chats) getChatUsersByChatID(ctx context.Context, chatID int) []*domain.ChatUser {
+func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID int) []*domain.ChatUser {
 	chatUsers := make([]*domain.ChatUser, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {
@@ -139,10 +139,10 @@ func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
 	if counterOfRows == 0 {
 		fmt.Println("adding chats...")
 		fillTableChatWithFakeData("2", "mentor", "no desc", "", 1, db) // type - group
-		fillTableChatWithFakeData("1", "ArtemkaChernikov", "no desc", "", 2, db)
+		fillTableChatWithFakeData("1", "", "no desc", "", 2, db)
 		fillTableChatWithFakeData("3", "ArtemZhuk", "no desc", "", 3, db) // type - channel
-		fillTableChatWithFakeData("1", "IvanNaumov", "no desc", "", 4, db)
-		fillTableChatWithFakeData("1", "AlexanderVolohov", "no desc", "", 5, db)
+		fillTableChatWithFakeData("1", "", "no desc", "", 4, db)
+		fillTableChatWithFakeData("1", "", "no desc", "", 5, db)
 
 		addFakeChatUsers(db)
 
