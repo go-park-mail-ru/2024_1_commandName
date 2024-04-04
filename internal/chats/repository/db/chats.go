@@ -9,9 +9,7 @@ import (
 )
 
 type Chats struct {
-	db       *sql.DB
-	chats    map[int]domain.Chat
-	chatUser []domain.ChatUser
+	db *sql.DB
 }
 
 func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
@@ -83,55 +81,6 @@ func (c *Chats) getChatUsersByChatID(ctx context.Context, chatID int) []*domain.
 		chatUsers = append(chatUsers, &chatUser)
 	}
 	return chatUsers
-}
-
-func (c *Chats) fillFakeChats(ctx context.Context) {
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 1, UserID: 6})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 1, UserID: 5})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 2, UserID: 6})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 2, UserID: 2})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 3, UserID: 6})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 3, UserID: 3})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 4, UserID: 6})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 4, UserID: 1})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 5, UserID: 6})
-	c.chatUser = append(c.chatUser, domain.ChatUser{ChatID: 5, UserID: 4})
-
-	messagesChat1 := make([]*domain.Message, 0)
-	messagesChat1 = append(messagesChat1,
-		&domain.Message{ID: 1, ChatID: 1, UserID: 5, Message: "Очень хороший код, ставлю 100 баллов", Edited: false},
-	)
-
-	chat1 := domain.Chat{Name: "mentors", ID: 1, Type: "group", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat1, Users: c.getChatUsersByChatID(ctx, 1)}
-	c.chats[chat1.ID] = chat1
-
-	messagesChat2 := make([]*domain.Message, 0)
-	messagesChat2 = append(messagesChat2,
-		&domain.Message{ID: 1, ChatID: 2, UserID: 2, Message: "Пойдём в столовку?", Edited: false},
-	)
-	chat2 := domain.Chat{Name: "ArtemkaChernikov", ID: 2, Type: "person", Description: "", AvatarPath: "", CreatorID: "2", Messages: messagesChat2, Users: c.getChatUsersByChatID(ctx, 2)}
-	c.chats[chat2.ID] = chat2
-
-	messagesChat3 := make([]*domain.Message, 0)
-	messagesChat3 = append(messagesChat3,
-		&domain.Message{ID: 1, ChatID: 3, UserID: 3, Message: "В Бауманке открывают новые общаги, а Измайлово под снос", Edited: false},
-	)
-	chat3 := domain.Chat{Name: "Bauman News", ID: 3, Type: "channel", Description: "", AvatarPath: "", CreatorID: "3", Messages: messagesChat3, Users: c.getChatUsersByChatID(ctx, 3)}
-	c.chats[chat3.ID] = chat3
-
-	messagesChat4 := make([]*domain.Message, 0)
-	messagesChat4 = append(messagesChat4,
-		&domain.Message{ID: 1, ChatID: 4, UserID: 1, Message: "Ты когда базу данных уже допилишь? Docker запустился??", Edited: false},
-	)
-	chat4 := domain.Chat{Name: "IvanNaumov", ID: 4, Type: "person", Description: "", AvatarPath: "", CreatorID: "1", Messages: messagesChat4, Users: c.getChatUsersByChatID(ctx, 4)}
-	c.chats[chat4.ID] = chat4
-
-	messagesChat5 := make([]*domain.Message, 0)
-	messagesChat5 = append(messagesChat5,
-		&domain.Message{ID: 1, ChatID: 5, UserID: 4, Message: "Фронт уже готов, когда бек доделаете??", Edited: false},
-	)
-	chat5 := domain.Chat{Name: "AlexanderVolohov", ID: 5, Type: "person", Description: "", AvatarPath: "", CreatorID: "5", Messages: messagesChat5, Users: c.getChatUsersByChatID(ctx, 5)}
-	c.chats[chat5.ID] = chat5
 }
 
 func addFakeChatUsers(db *sql.DB) {
