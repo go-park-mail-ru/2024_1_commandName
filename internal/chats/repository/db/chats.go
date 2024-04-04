@@ -3,7 +3,9 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
 
 	"ProjectMessenger/domain"
 )
@@ -12,14 +14,67 @@ type Chats struct {
 	db *sql.DB
 }
 
-func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
+func NewChatsStorage(db *sql.DB) *Chats {
+	return &Chats{
+		db: fillTablesMessageAndChatWithFakeData(db),
+	}
+}
+
+func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	chat := domain.Chat{}
+	err := c.db.QueryRowContext(ctx, `SELECT id, type, name, description, avatar_path, creator_id 
+		FROM chat.chat WHERE id  = $1`, chatID).Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.CreatorID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("GetChat didn't found chat", "chatID", chatID)
+			return chat, fmt.Errorf("Chat not found")
+		}
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetChatsForUser, profile.go",
+		}
+		logger.Error(err.Error(), "segment", customErr.Segment)
+		//fmt.Println(customErr.Error())
+		return domain.Chat{}, fmt.Errorf("internal error")
+	}
+	chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
+
+	logger.Debug("GetChat: found chat", "chatID", chatID)
+	return chat, nil
+}
+
+func (c *Chats) CheckDialogueExists(ctx context.Context, userID1, userID2 uint) (exists bool) {
+	rows, err := c.db.QueryContext(ctx, "SELECT cu1.chat_id FROM chat.chat_user cu1 INNER JOIN chat.chat_user cu2 ON cu1.chat_id = cu2.chat_id WHERE cu1.user_id = $1 AND cu2.user_id = $2  AND cu1.user_id <> cu2.user_id;", userID1, userID2)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetChatsForUser, profile.go",
+		}
+		fmt.Println(customErr.Error())
+		return false
+	}
+
+	if !rows.Next() {
+		return false
+	}
+	return true
+}
+
+func (c *Chats) CreateDialogue(ctx context.Context, userID1, userID2 uint) {
+
+}
+
+func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat {
 	chats := make([]domain.Chat, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT id, type, name, description, avatar_path, creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetChatsByID, profile.go",
+			Segment: "method GetChatsForUser, profile.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil
@@ -32,7 +87,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
-				Segment: "method GetChatsByID, profile.go",
+				Segment: "method GetChatsForUser, profile.go",
 			}
 			fmt.Println(customErr.Error())
 			return nil
@@ -44,7 +99,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetChatsByID, profile.go",
+			Segment: "method GetChatsForUser, profile.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil
@@ -53,7 +108,7 @@ func (c *Chats) GetChatsByID(ctx context.Context, userID uint) []domain.Chat {
 	return chats
 }
 
-func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID int) []*domain.ChatUser {
+func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain.ChatUser {
 	chatUsers := make([]*domain.ChatUser, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {
@@ -81,6 +136,46 @@ func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID int) []*domain.
 		chatUsers = append(chatUsers, &chatUser)
 	}
 	return chatUsers
+}
+
+func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message {
+	chatMessagesArr := make([]*domain.Message, 0)
+
+	rows, err := c.db.QueryContext(ctx, "SELECT id, user_id, chat_id, message.message, edited FROM chat.message WHERE chat_id = $1", chatID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetMessagesByChatID, profile.go",
+		}
+		fmt.Println(customErr.Error())
+		return nil
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var mess domain.Message
+		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.Edited); err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method GetMessagesByChatID, profile.go",
+			}
+			fmt.Println(customErr.Error())
+			return nil
+		}
+		chatMessagesArr = append(chatMessagesArr, &mess)
+	}
+	if err = rows.Err(); err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetMessagesByChatID, profile.go",
+		}
+		fmt.Println(customErr.Error())
+		return nil
+	}
+	return chatMessagesArr
 }
 
 func addFakeChatUsers(db *sql.DB) {
@@ -179,51 +274,5 @@ func fillTableChatWithFakeData(chatType, name, description, avatar_path string, 
 			Segment: "method fillTableChatWithFakeData, profile.go",
 		}
 		fmt.Println(customErr.Error())
-	}
-}
-
-func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID int) []*domain.Message {
-	chatMessagesArr := make([]*domain.Message, 0)
-
-	rows, err := c.db.QueryContext(ctx, "SELECT id, user_id, chat_id, message.message, edited FROM chat.message WHERE chat_id = $1", chatID)
-	if err != nil {
-		customErr := &domain.CustomError{
-			Type:    "database",
-			Message: err.Error(),
-			Segment: "method GetMessagesByChatID, profile.go",
-		}
-		fmt.Println(customErr.Error())
-		return nil
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var mess domain.Message
-		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.Edited); err != nil {
-			customErr := &domain.CustomError{
-				Type:    "database",
-				Message: err.Error(),
-				Segment: "method GetMessagesByChatID, profile.go",
-			}
-			fmt.Println(customErr.Error())
-			return nil
-		}
-		chatMessagesArr = append(chatMessagesArr, &mess)
-	}
-	if err = rows.Err(); err != nil {
-		customErr := &domain.CustomError{
-			Type:    "database",
-			Message: err.Error(),
-			Segment: "method GetMessagesByChatID, profile.go",
-		}
-		fmt.Println(customErr.Error())
-		return nil
-	}
-	return chatMessagesArr
-}
-
-func NewChatsStorage(db *sql.DB) *Chats {
-	return &Chats{
-		db: fillTablesMessageAndChatWithFakeData(db),
 	}
 }

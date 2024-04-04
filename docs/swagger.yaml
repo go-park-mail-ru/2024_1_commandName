@@ -12,6 +12,11 @@ definitions:
       oldPassword:
         type: string
     type: object
+  delivery.chatJson:
+    properties:
+      chat:
+        $ref: '#/definitions/domain.Chat'
+    type: object
   delivery.docsContacts:
     properties:
       contacts:
@@ -39,6 +44,11 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  delivery.getChatStruct:
+    properties:
+      chat_id:
+        type: integer
     type: object
   delivery.updateUserStruct-delivery_docsUserForGetProfile:
     properties:
@@ -113,6 +123,14 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  domain.Response-delivery_chatJson:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.chatJson'
+      status:
+        example: 200
+        type: integer
     type: object
   domain.Response-delivery_docsContacts:
     properties:
@@ -239,6 +257,62 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
+  /createDialogue:
+    get:
+      consumes:
+      - application/json
+      operationId: CreateDialogue
+      parameters:
+      - description: Person
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Person'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Chats'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: creates dialogue
+  /getChat:
+    post:
+      consumes:
+      - application/json
+      operationId: GetChat
+      parameters:
+      - description: id of chat to get
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.getChatStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatJson'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: gets one chat
   /getChats:
     get:
       operationId: GetChats

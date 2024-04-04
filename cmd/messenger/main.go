@@ -56,6 +56,7 @@ func Router() {
 	router.HandleFunc("/logout", authHandler.Logout)
 	router.HandleFunc("/register", authHandler.Register)
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
+	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
 	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
 	router.HandleFunc("/changePassword", profileHandler.ChangePassword)
