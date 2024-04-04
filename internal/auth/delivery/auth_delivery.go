@@ -15,23 +15,18 @@ import (
 	"ProjectMessenger/internal/auth/repository/db"
 	"ProjectMessenger/internal/auth/repository/inMemory"
 	"ProjectMessenger/internal/auth/usecase"
-	chatrepoDB "ProjectMessenger/internal/chats/repository/db"
-	chatrepoMemory "ProjectMessenger/internal/chats/repository/inMemory"
-	chatusecase "ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
 
 type AuthHandler struct {
 	Sessions usecase.SessionStore
 	Users    usecase.UserStore
-	Chats    chatusecase.ChatStore
 }
 
 func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
 		Sessions: db.NewSessionStorage(dataBase),
 		Users:    db.NewUserStorage(dataBase, avatarPath),
-		Chats:    chatrepoDB.NewChatsStorage(dataBase),
 	}
 	return &handler
 }
@@ -40,7 +35,6 @@ func NewAuthMemoryStorage() *AuthHandler {
 	handler := AuthHandler{
 		Sessions: inMemory.NewSessionStorage(),
 		Users:    inMemory.NewUserStorage(),
-		Chats:    chatrepoMemory.NewChatsStorage(),
 	}
 	return &handler
 }
