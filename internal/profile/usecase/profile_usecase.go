@@ -132,3 +132,22 @@ func GetContacts(ctx context.Context, userID uint, userStorage authusecase.UserS
 	contacts := userStorage.GetContacts(ctx, userID)
 	return contacts
 }
+
+func AddContact(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore) (err error) {
+	userToAdd, found := userStorage.GetByUsername(ctx, usernameToAdd)
+	if !found {
+		return fmt.Errorf("Такого имени пользователя не существует")
+	}
+	contacts := GetContacts(ctx, userAddingID, userStorage)
+	for i := range contacts {
+		if contacts[i].Username == usernameToAdd {
+			return fmt.Errorf("Такой контакт уже существует")
+		}
+	}
+
+	ok := userStorage.AddContact(ctx, userAddingID, userToAdd.ID)
+	if !ok {
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}

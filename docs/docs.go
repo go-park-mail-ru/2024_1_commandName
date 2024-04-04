@@ -15,6 +15,49 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/addContact": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "adds contact for user",
+                "operationId": "AddContact",
+                "parameters": [
+                    {
+                        "description": "username of user to add to contacts",
+                        "name": "usernameToAdd",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.addContactStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Описание ошибки",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/changePassword": {
             "post": {
                 "consumes": [
@@ -127,7 +170,7 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "uploads or changes avatar",
+                "summary": "returns contacts of user",
                 "operationId": "GetContacts",
                 "responses": {
                     "200": {
@@ -393,6 +436,14 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "delivery.addContactStruct": {
+            "type": "object",
+            "properties": {
+                "username_of_user_to_add": {
+                    "type": "string"
+                }
+            }
+        },
         "delivery.changePasswordStruct": {
             "type": "object",
             "properties": {

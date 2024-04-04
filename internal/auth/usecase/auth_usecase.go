@@ -24,6 +24,7 @@ type UserStore interface {
 	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
 	GetContacts(ctx context.Context, userID uint) []domain.Person
+	AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
 }
 
 func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore) (authorized bool, userID uint) {

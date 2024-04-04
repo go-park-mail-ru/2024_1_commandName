@@ -1,5 +1,10 @@
 basePath: /
 definitions:
+  delivery.addContactStruct:
+    properties:
+      username_of_user_to_add:
+        type: string
+    type: object
   delivery.changePasswordStruct:
     properties:
       newPassword:
@@ -155,6 +160,34 @@ info:
   title: Messenger authorization API
   version: "1.0"
 paths:
+  /addContact:
+    post:
+      consumes:
+      - application/json
+      operationId: AddContact
+      parameters:
+      - description: username of user to add to contacts
+        in: body
+        name: usernameToAdd
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.addContactStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: adds contact for user
   /changePassword:
     post:
       consumes:
@@ -243,7 +276,7 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
-      summary: uploads or changes avatar
+      summary: returns contacts of user
   /getProfileInfo:
     get:
       operationId: GetProfileInfo

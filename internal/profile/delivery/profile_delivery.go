@@ -26,6 +26,10 @@ type changePasswordStruct struct {
 	NewPassword string `json:"newPassword"`
 }
 
+type addContactStruct struct {
+	UsernameOfUserToAdd string `json:"username_of_user_to_add"`
+}
+
 func NewProfileHandler(authHandler *authdelivery.AuthHandler) *ProfileHandler {
 	return &ProfileHandler{AuthHandler: authHandler}
 }
@@ -207,9 +211,9 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
-// GetContacts uploads or changes avatar
+// GetContacts returns contacts of user
 //
-// @Summary uploads or changes avatar
+// @Summary returns contacts of user
 // @ID GetContacts
 // @Produce json
 // @Success 200 {object}  domain.Response[docsContacts]
@@ -224,4 +228,41 @@ func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
 	}
 	contacts := usecase.GetContacts(ctx, userID, p.AuthHandler.Users)
 	misc.WriteStatusJson(ctx, w, 200, domain.Contacts{Contacts: contacts})
+}
+
+// AddContact adds contact for user
+//
+// @Summary adds contact for user
+// @ID AddContact
+// @Accept json
+// @Produce json
+// @Param usernameToAdd body addContactStruct true "username of user to add to contacts"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Описание ошибки"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /addContact [post]
+func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var contact addContactStruct
+	err := decoder.Decode(&contact)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	err = usecase.AddContact(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users)
+	if err != nil {
+		if err.Error() == "internal error" {
+			misc.WriteInternalErrorJson(ctx, w)
+		} else {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+			return
+		}
+	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }

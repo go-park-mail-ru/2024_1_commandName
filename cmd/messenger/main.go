@@ -61,6 +61,7 @@ func Router() {
 	router.HandleFunc("/changePassword", profileHandler.ChangePassword)
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
 	router.HandleFunc("/getContacts", profileHandler.GetContacts)
+	router.HandleFunc("/addContact", profileHandler.AddContact)
 
 	// middleware
 	if DEBUG {
