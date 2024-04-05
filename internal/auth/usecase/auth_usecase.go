@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"regexp"
+	"time"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -17,11 +18,14 @@ type SessionStore interface {
 }
 
 type UserStore interface {
-	GetByUserID(userID uint) (user domain.Person, found bool)
-	UpdateUser(userUpdated domain.Person) (ok bool)
-	StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
+	GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool)
+	UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool)
+	StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
+	GetContacts(ctx context.Context, userID uint) []domain.Person
+	AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
+	GetAllUserIDs(ctx context.Context) (userIDs []uint)
 }
 
 func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore) (authorized bool, userID uint) {
@@ -34,7 +38,7 @@ func createSession(ctx context.Context, user domain.Person, sessionStorage Sessi
 	return sessionID
 }
 
-func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
+func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, userID uint, err error) {
 	if user.Username == "" || user.Password == "" {
 		customErr := &domain.CustomError{
 			Type:    "userRegistration",
@@ -42,11 +46,11 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 			Segment: "method RegisterAndLoginUser, auth_usecase.go",
 		}
 		fmt.Println(customErr.Error())
-		return "", customErr
+		return "", 0, customErr
 	}
 	_, userFound := userStorage.GetByUsername(ctx, user.Username)
 	if !ValidatePassword(user.Password) {
-		return "", fmt.Errorf("Пароль не подходит по требованиям")
+		return "", 0, fmt.Errorf("Пароль не подходит по требованиям")
 	}
 	if userFound {
 		customErr := &domain.CustomError{
@@ -55,14 +59,15 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 			Segment: "method RegisterAndLoginUser, auth_usecase.go",
 		}
 		fmt.Println(customErr.Error())
-		return "", customErr
+		return "", 0, customErr
 	}
 
 	passwordHash, passwordSalt := misc.GenerateHashAndSalt(user.Password)
 	user.Password = passwordHash
 	user.PasswordSalt = passwordSalt
+	user.CreateDate = time.Now()
+	user.LastSeenDate = user.CreateDate
 
-	var userID uint
 	userID, err = userStorage.CreateUser(ctx, user)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -71,19 +76,18 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 			Segment: "method RegisterAndLoginUser, auth_usecase.go",
 		}
 		fmt.Println(customErr.Error())
-		return "", customErr
+		return "", userID, customErr
 	}
 	user.ID = userID
 	sessionID = createSession(ctx, user, sessionStorage)
 
-	return sessionID, nil
+	return sessionID, userID, nil
 }
 
 func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage SessionStore) (sessionID string, err error) {
 	if user.Username == "" {
 		return "", fmt.Errorf("wrong json structure")
 	}
-
 	userFromStorage, userFound := userStorage.GetByUsername(ctx, user.Username)
 	if !userFound {
 		customErr := &domain.CustomError{

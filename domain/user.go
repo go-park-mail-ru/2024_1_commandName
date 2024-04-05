@@ -12,7 +12,7 @@ type Person struct {
 	Surname      string    `json:"surname" swaggerignore:"true"`
 	About        string    `json:"about" swaggerignore:"true"`
 	Password     string    `json:"password,omitempty"`
-	CreateDate   time.Time `json:"create_date" swaggerignore:"true"`
+	CreateDate   time.Time `json:"create_date,omitempty" swaggerignore:"true"`
 	LastSeenDate time.Time `json:"last_seen_date" swaggerignore:"true"`
 	Avatar       string    `json:"avatar" swaggerignore:"true"`
 	PasswordSalt string    `json:"password_salt,omitempty" swaggerignore:"true"`

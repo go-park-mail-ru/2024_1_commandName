@@ -2,25 +2,29 @@ package misc
 
 import (
 	"ProjectMessenger/domain"
+	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 )
 
 const INTERNALERRORJSON = "{\"status\": 500,\"body\":{\"error\": \"Internal server error\"}}"
 
-func WriteStatusJson(w http.ResponseWriter, status int, body any) {
+func WriteStatusJson(ctx context.Context, w http.ResponseWriter, status int, body any) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	w.Header().Set("Content-Type", "application/json")
 	jsonByte, err := MarshalStatusJson(status, body)
 	if err != nil {
-		WriteInternalErrorJson(w)
+		WriteInternalErrorJson(ctx, w)
 		return
 	}
 	_, err = w.Write(jsonByte)
 	if err != nil {
-		WriteInternalErrorJson(w)
+		WriteInternalErrorJson(ctx, w)
 		return
 	}
+	logger.Info("response", "status", status, "body", body)
 }
 
 func MarshalStatusJson(status int, body any) ([]byte, error) {
@@ -35,9 +39,11 @@ func MarshalStatusJson(status int, body any) ([]byte, error) {
 	return marshal, nil
 }
 
-func WriteInternalErrorJson(w http.ResponseWriter) {
+func WriteInternalErrorJson(ctx context.Context, w http.ResponseWriter) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	// implementation similar to http.Error, only difference is the Content-type
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 	_, _ = fmt.Fprintln(w, INTERNALERRORJSON)
+	logger.Info("response internal error", "body", INTERNALERRORJSON)
 }

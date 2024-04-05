@@ -14,7 +14,7 @@ func AccessLogMiddleware(next http.Handler) http.Handler {
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, "traceID", misc.RandStringRunes(8))
 		logger := slog.With("requestID", ctx.Value("traceID"))
-		logger.Info("accessLog", "path", r.URL.Path)
+		logger.Info("request accessLog", "path", r.URL.Path)
 		start := time.Now()
 		next.ServeHTTP(w, r.WithContext(ctx))
 		logger.Info("requestProcessed", "method", r.Method, "remoteAddr", r.RemoteAddr, "URLPath",

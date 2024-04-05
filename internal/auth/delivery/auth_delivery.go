@@ -1,9 +1,11 @@
 package delivery
 
 import (
+	profileUsecase "ProjectMessenger/internal/profile/usecase"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -15,23 +17,18 @@ import (
 	"ProjectMessenger/internal/auth/repository/db"
 	"ProjectMessenger/internal/auth/repository/inMemory"
 	"ProjectMessenger/internal/auth/usecase"
-	chatrepoDB "ProjectMessenger/internal/chats/repository/db"
-	chatrepoMemory "ProjectMessenger/internal/chats/repository/inMemory"
-	chatusecase "ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
 
 type AuthHandler struct {
 	Sessions usecase.SessionStore
 	Users    usecase.UserStore
-	Chats    chatusecase.ChatStore
 }
 
-func NewAuthHandler(dataBase *sql.DB) *AuthHandler {
+func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
 		Sessions: db.NewSessionStorage(dataBase),
-		//TODO Users:    db.NewUserStorage(dataBase),
-		Chats: chatrepoDB.NewChatsStorage(dataBase),
+		Users:    db.NewUserStorage(dataBase, avatarPath),
 	}
 	return &handler
 }
@@ -40,7 +37,6 @@ func NewAuthMemoryStorage() *AuthHandler {
 	handler := AuthHandler{
 		Sessions: inMemory.NewSessionStorage(),
 		Users:    inMemory.NewUserStorage(),
-		Chats:    chatrepoMemory.NewChatsStorage(),
 	}
 	return &handler
 }
@@ -63,12 +59,12 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if !errors.Is(err, http.ErrNoCookie) {
 		sessionExists, _ := usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 		if sessionExists {
-			misc.WriteStatusJson(w, 400, domain.Error{Error: "session already exists"})
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "session already exists"})
 			return
 		}
 	}
 	if r.Method != http.MethodPost {
-		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
 	ct := r.Header.Get("Content-Type")
@@ -90,7 +86,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 
@@ -102,7 +98,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 	}
 	http.SetCookie(w, cookie)
-	misc.WriteStatusJson(w, 200, nil)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
 // Logout logs user out
@@ -118,12 +114,12 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "no session to logout"})
 		return
 	}
 	sessionExists, _ := usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	if !sessionExists {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "no session to logout"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "no session to logout"})
 		return
 	}
 
@@ -131,7 +127,7 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
-	misc.WriteStatusJson(w, 200, nil)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
 // Register registers user
@@ -148,8 +144,9 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Router /register [post]
 func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
-		misc.WriteStatusJson(w, 405, domain.Error{Error: "use POST"})
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
 	ct := r.Header.Get("Content-Type")
@@ -166,13 +163,18 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	var jsonUser domain.Person
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
-	sessionID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
+	sessionID, userID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
+	}
+
+	ok := profileUsecase.AddToAllContacts(ctx, userID, authHandler.Users)
+	if !ok {
+		logger.Error("Register: contacts failed", "userID", userID)
 	}
 
 	cookie := &http.Cookie{
@@ -181,7 +183,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		Expires: time.Now().Add(10 * time.Hour),
 	}
 	http.SetCookie(w, cookie)
-	misc.WriteStatusJson(w, 200, nil)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
 // CheckAuth checks that user is authenticated
@@ -201,9 +203,9 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 		authorized, _ = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	}
 	if authorized {
-		misc.WriteStatusJson(w, 200, nil)
+		misc.WriteStatusJson(ctx, w, 200, nil)
 	} else {
-		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
+		misc.WriteStatusJson(ctx, w, 401, domain.Error{Error: "Person not authorized"})
 	}
 }
 
@@ -214,7 +216,7 @@ func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.R
 		authorized, userID = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	}
 	if !authorized {
-		misc.WriteStatusJson(w, 401, domain.Error{Error: "Person not authorized"})
+		misc.WriteStatusJson(ctx, w, 401, domain.Error{Error: "Person not authorized"})
 	}
 	return authorized, userID
 }

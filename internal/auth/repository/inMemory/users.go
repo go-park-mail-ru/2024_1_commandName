@@ -18,7 +18,22 @@ type Users struct {
 	currentID uint
 }
 
-func (u *Users) UpdateUser(userUpdated domain.Person) (ok bool) {
+func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (u *Users) AddContact(ctx context.Context, userID1, userID2 uint) (ok bool) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {
 	_, found := u.users[userUpdated.ID]
 	if !found {
 		return false
@@ -27,7 +42,7 @@ func (u *Users) UpdateUser(userUpdated domain.Person) (ok bool) {
 	return true
 }
 
-func (u *Users) GetByUserID(userID uint) (user domain.Person, found bool) {
+func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
 	user, found = u.users[userID]
 	return user, found
 }
@@ -48,7 +63,7 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 	return user.ID, nil
 }
 
-func (u *Users) StoreAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
+func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error) {
 	originalName := fileHandler.Filename
 	fileNameSlice := strings.Split(originalName, ".")
 	if len(fileNameSlice) < 2 {

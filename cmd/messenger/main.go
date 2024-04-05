@@ -17,7 +17,8 @@ import (
 )
 
 var DEBUG = false
-var INMEMORY = true
+var INMEMORY = false
+var AVATAR_PATH = "./uploads/"
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
@@ -42,24 +43,26 @@ func Router() {
 
 	if INMEMORY {
 		authHandler = authdelivery.NewAuthMemoryStorage()
-		chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
-		profileHandler = profiledelivery.NewProfileHandler(authHandler)
+		//chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
 	} else {
 		dataBase := database.СreateDatabase()
-		authHandler = authdelivery.NewAuthHandler(dataBase)
+		authHandler = authdelivery.NewAuthHandler(dataBase, AVATAR_PATH)
 		chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
-		// profileHandler := profiledelivery.NewProfileHandler(authHandler)
 	}
+	profileHandler = profiledelivery.NewProfileHandler(authHandler)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
 	router.HandleFunc("/logout", authHandler.Logout)
 	router.HandleFunc("/register", authHandler.Register)
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
+	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
 	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
 	router.HandleFunc("/changePassword", profileHandler.ChangePassword)
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
+	router.HandleFunc("/getContacts", profileHandler.GetContacts)
+	router.HandleFunc("/addContact", profileHandler.AddContact)
 
 	// middleware
 	if DEBUG {

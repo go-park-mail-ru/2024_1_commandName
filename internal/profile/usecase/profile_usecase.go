@@ -1,23 +1,30 @@
 package usecase
 
 import (
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/misc"
+	"context"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
-)
-import authusecase "ProjectMessenger/internal/auth/usecase"
 
-func GetProfileInfo(userID uint, userStorage authusecase.UserStore) (user domain.Person, found bool) {
-	user, found = userStorage.GetByUserID(userID)
+	//"io"
+	"mime/multipart"
+
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/misc"
+
+	//"net/http"
+	//"os"
+	authusecase "ProjectMessenger/internal/auth/usecase"
+)
+
+func GetProfileInfo(ctx context.Context, userID uint, userStorage authusecase.UserStore) (user domain.Person, found bool) {
+	user, found = userStorage.GetByUserID(ctx, userID)
 	return user, found
 }
 
-func UpdateProfileInfo(updatedFields domain.Person, numOfUpdatedFields int, userID uint, userStorage authusecase.UserStore) (err error) {
-	userFromStorage, found := userStorage.GetByUserID(userID)
+func UpdateProfileInfo(ctx context.Context, updatedFields domain.Person, numOfUpdatedFields int, userID uint, userStorage authusecase.UserStore) (err error) {
+	userFromStorage, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		return fmt.Errorf("user not found")
 	}
@@ -47,15 +54,15 @@ func UpdateProfileInfo(updatedFields domain.Person, numOfUpdatedFields int, user
 		return fmt.Errorf("number of update fields is mismatched")
 	}
 
-	ok := userStorage.UpdateUser(userFromStorage)
+	ok := userStorage.UpdateUser(ctx, userFromStorage)
 	if !ok {
 		return fmt.Errorf("internal error")
 	}
 	return nil
 }
 
-func ChangePassword(oldPassword string, newPassword string, userID uint, userStorage authusecase.UserStore) (err error) {
-	userFromStorage, found := userStorage.GetByUserID(userID)
+func ChangePassword(ctx context.Context, oldPassword string, newPassword string, userID uint, userStorage authusecase.UserStore) (err error) {
+	userFromStorage, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		return fmt.Errorf("user not found")
 	}
@@ -72,14 +79,14 @@ func ChangePassword(oldPassword string, newPassword string, userID uint, userSto
 	userFromStorage.Password = newPasswordHash
 	userFromStorage.PasswordSalt = newPasswordSalt
 
-	ok := userStorage.UpdateUser(userFromStorage)
+	ok := userStorage.UpdateUser(ctx, userFromStorage)
 	if !ok {
 		return fmt.Errorf("error updating password")
 	}
 	return nil
 }
 
-func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
+func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
 	buff := make([]byte, 512)
 	if _, err = multipartFile.Read(buff); err != nil {
 		return fmt.Errorf("internal error")
@@ -93,7 +100,7 @@ func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeade
 		return fmt.Errorf("Файл не является изображением")
 	}
 
-	user, found := userStorage.GetByUserID(userID)
+	user, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		return fmt.Errorf("internal error")
 	}
@@ -102,12 +109,12 @@ func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeade
 		oldAvatarPath = user.Avatar
 	}
 
-	path, err := userStorage.StoreAvatar(multipartFile, fileHandler)
+	fileName, err := userStorage.StoreAvatar(ctx, multipartFile, fileHandler)
 	if err != nil {
 		return err
 	}
-	user.Avatar = path
-	ok := userStorage.UpdateUser(user)
+	user.Avatar = fileName
+	ok := userStorage.UpdateUser(ctx, user)
 	if !ok {
 		return fmt.Errorf("internal error")
 	}
@@ -119,4 +126,44 @@ func ChangeAvatar(multipartFile multipart.File, fileHandler *multipart.FileHeade
 		}
 	}
 	return nil
+}
+
+func GetContacts(ctx context.Context, userID uint, userStorage authusecase.UserStore) []domain.Person {
+	contacts := userStorage.GetContacts(ctx, userID)
+	return contacts
+}
+
+func AddContactByUsername(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore) (err error) {
+	userToAdd, found := userStorage.GetByUsername(ctx, usernameToAdd)
+	if !found {
+		return fmt.Errorf("Такого имени пользователя не существует")
+	}
+	contacts := GetContacts(ctx, userAddingID, userStorage)
+	for i := range contacts {
+		if contacts[i].Username == usernameToAdd {
+			return fmt.Errorf("Такой контакт уже существует")
+		}
+	}
+
+	ok := userStorage.AddContact(ctx, userAddingID, userToAdd.ID)
+	if !ok {
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
+func AddToAllContacts(ctx context.Context, userAddingID uint, userStorage authusecase.UserStore) (ok bool) {
+	userIDs := userStorage.GetAllUserIDs(ctx)
+	if userIDs == nil {
+		return false
+	}
+	for i := range userIDs {
+		if userIDs[i] == userAddingID {
+			continue
+		}
+		if !userStorage.AddContact(ctx, userAddingID, userIDs[i]) {
+			return false
+		}
+	}
+	return true
 }

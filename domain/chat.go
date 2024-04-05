@@ -1,7 +1,7 @@
 package domain
 
 type Chat struct {
-	ID          int         `json:"id"`
+	ID          uint        `json:"id"`
 	Type        string      `json:"type"`
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
