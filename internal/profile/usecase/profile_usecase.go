@@ -119,7 +119,7 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 		return fmt.Errorf("internal error")
 	}
 
-	if oldAvatarPath != "" && oldAvatarPath != "avatarPath" {
+	if oldAvatarPath != "" {
 		err = os.Remove(oldAvatarPath)
 		if err != nil {
 			return fmt.Errorf("internal error")
