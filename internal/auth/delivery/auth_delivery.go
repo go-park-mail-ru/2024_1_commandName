@@ -1,9 +1,11 @@
 package delivery
 
 import (
+	profileUsecase "ProjectMessenger/internal/profile/usecase"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -142,6 +144,7 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Router /register [post]
 func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
@@ -163,10 +166,15 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
-	sessionID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
+	sessionID, userID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
+	}
+
+	ok := profileUsecase.AddToAllContacts(ctx, userID, authHandler.Users)
+	if !ok {
+		logger.Error("Register: contacts failed", "userID", userID)
 	}
 
 	cookie := &http.Cookie{

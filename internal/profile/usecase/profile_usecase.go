@@ -133,7 +133,7 @@ func GetContacts(ctx context.Context, userID uint, userStorage authusecase.UserS
 	return contacts
 }
 
-func AddContact(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore) (err error) {
+func AddContactByUsername(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore) (err error) {
 	userToAdd, found := userStorage.GetByUsername(ctx, usernameToAdd)
 	if !found {
 		return fmt.Errorf("Такого имени пользователя не существует")
@@ -150,4 +150,20 @@ func AddContact(ctx context.Context, userAddingID uint, usernameToAdd string, us
 		return fmt.Errorf("internal error")
 	}
 	return nil
+}
+
+func AddToAllContacts(ctx context.Context, userAddingID uint, userStorage authusecase.UserStore) (ok bool) {
+	userIDs := userStorage.GetAllUserIDs(ctx)
+	if userIDs == nil {
+		return false
+	}
+	for i := range userIDs {
+		if userIDs[i] == userAddingID {
+			continue
+		}
+		if !userStorage.AddContact(ctx, userAddingID, userIDs[i]) {
+			return false
+		}
+	}
+	return true
 }

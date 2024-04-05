@@ -18,6 +18,11 @@ type Users struct {
 	currentID uint
 }
 
+func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (u *Users) AddContact(ctx context.Context, userID1, userID2 uint) (ok bool) {
 	//TODO implement me
 	panic("implement me")

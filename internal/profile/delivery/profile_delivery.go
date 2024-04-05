@@ -255,7 +255,7 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	err = usecase.AddContact(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users)
+	err = usecase.AddContactByUsername(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)

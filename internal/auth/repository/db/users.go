@@ -31,6 +31,43 @@ func NewUserStorage(db *sql.DB, pathToAvatar string) *Users {
 	}
 }
 
+func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	userIDs = make([]uint, 0)
+	rows, err := u.db.QueryContext(ctx, "SELECT id FROM auth.person")
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("GetAllUserIDs: no IDs")
+			return userIDs
+		}
+
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetAllUserIDs, users.go",
+		}
+		logger.Error(customErr.Error())
+		return nil
+	}
+
+	for rows.Next() {
+		var id uint
+		err = rows.Scan(&id)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method GetAllUserIDs, users.go",
+			}
+			logger.Error(customErr.Error())
+			return nil
+		}
+		userIDs = append(userIDs, id)
+	}
+	logger.Debug("GetAllUserIDs: found contacts", "numOfIDs", len(userIDs))
+	return userIDs
+}
+
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	//fmt.Println("get by username")
