@@ -136,8 +136,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/createDialogue": {
-            "get": {
+        "/createPrivateChat": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -145,15 +145,15 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "summary": "creates dialogue",
-                "operationId": "CreateDialogue",
+                "operationId": "CreatePrivateChat",
                 "parameters": [
                     {
-                        "description": "Person",
+                        "description": "ID of person to create private chat with",
                         "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Person"
+                            "$ref": "#/definitions/delivery.userIDJson"
                         }
                     }
                 ],
@@ -161,11 +161,11 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Chats"
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDStruct"
                         }
                     },
                     "400": {
-                        "description": "Person not authorized",
+                        "description": "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -196,7 +196,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/delivery.getChatStruct"
+                            "$ref": "#/definitions/delivery.chatIDStruct"
                         }
                     }
                 ],
@@ -541,6 +541,14 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.chatIDStruct": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "delivery.chatJson": {
             "type": "object",
             "properties": {
@@ -592,14 +600,6 @@ const docTemplate = `{
                 }
             }
         },
-        "delivery.getChatStruct": {
-            "type": "object",
-            "properties": {
-                "chat_id": {
-                    "type": "integer"
-                }
-            }
-        },
         "delivery.updateUserStruct-delivery_docsUserForGetProfile": {
             "type": "object",
             "properties": {
@@ -608,6 +608,14 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/delivery.docsUserForGetProfile"
+                }
+            }
+        },
+        "delivery.userIDJson": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -711,6 +719,18 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.Response-delivery_chatIDStruct": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.chatIDStruct"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
                 }
             }
         },

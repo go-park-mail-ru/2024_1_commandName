@@ -18,12 +18,16 @@ type ChatsHandler struct {
 	Chats       usecase.ChatStore
 }
 
-type getChatStruct struct {
+type chatIDStruct struct {
 	ChatID uint `json:"chat_id"`
 }
 
 type chatJson struct {
 	Chat domain.Chat `json:"chat"`
+}
+
+type userIDJson struct {
+	ID uint `json:"user_id"`
 }
 
 func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
@@ -59,7 +63,7 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 // @ID GetChat
 // @Accept json
 // @Produce json
-// @Param user body  getChatStruct true "id of chat to get"
+// @Param user body  chatIDStruct true "id of chat to get"
 // @Success 200 {object}  domain.Response[chatJson]
 // @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
@@ -73,7 +77,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	chatIDStruct := getChatStruct{}
+	chatIDStruct := chatIDStruct{}
 	err := decoder.Decode(&chatIDStruct)
 	if err != nil {
 		http.Error(w, "wrong json structure", 400)
@@ -94,24 +98,39 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 	misc.WriteStatusJson(ctx, w, 200, chatJson{Chat: chat})
 }
 
-// CreateDialogue creates dialogue
+// CreatePrivateChat creates dialogue
 //
 // @Summary creates dialogue
-// @ID CreateDialogue
+// @ID CreatePrivateChat
 // @Accept json
 // @Produce json
-// @Param user body  domain.Person true "Person"
-// @Success 200 {object}  domain.Response[domain.Chats]
-// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Param user body userIDJson true "ID of person to create private chat with"
+// @Success 200 {object}  domain.Response[chatIDStruct]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
-// @Router /createDialogue [get]
-func (chatsHandler ChatsHandler) CreateDialogue(w http.ResponseWriter, r *http.Request) {
+// @Router /createPrivateChat [post]
+func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 
-	chats := usecase.GetChatsForUser(ctx, userID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
-	misc.WriteStatusJson(ctx, w, 200, domain.Chats{Chats: chats})
+	userIDFromRequest := userIDJson{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&userIDFromRequest)
+
+	chatID, err := usecase.CreatePrivateChat(ctx, userID, userIDFromRequest.ID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
+	if err != nil {
+		if err.Error() == "internal error" {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		logger.Error(err.Error())
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
 }

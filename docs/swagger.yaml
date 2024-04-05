@@ -12,6 +12,11 @@ definitions:
       oldPassword:
         type: string
     type: object
+  delivery.chatIDStruct:
+    properties:
+      chat_id:
+        type: integer
+    type: object
   delivery.chatJson:
     properties:
       chat:
@@ -45,17 +50,17 @@ definitions:
       username:
         type: string
     type: object
-  delivery.getChatStruct:
-    properties:
-      chat_id:
-        type: integer
-    type: object
   delivery.updateUserStruct-delivery_docsUserForGetProfile:
     properties:
       numOfUpdatedFields:
         type: integer
       user:
         $ref: '#/definitions/delivery.docsUserForGetProfile'
+    type: object
+  delivery.userIDJson:
+    properties:
+      user_id:
+        type: integer
     type: object
   domain.Chat:
     properties:
@@ -123,6 +128,14 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  domain.Response-delivery_chatIDStruct:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.chatIDStruct'
+      status:
+        example: 200
+        type: integer
     type: object
   domain.Response-delivery_chatJson:
     properties:
@@ -257,27 +270,28 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
-  /createDialogue:
-    get:
+  /createPrivateChat:
+    post:
       consumes:
       - application/json
-      operationId: CreateDialogue
+      operationId: CreatePrivateChat
       parameters:
-      - description: Person
+      - description: ID of person to create private chat with
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/domain.Person'
+          $ref: '#/definitions/delivery.userIDJson'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Response-domain_Chats'
+            $ref: '#/definitions/domain.Response-delivery_chatIDStruct'
         "400":
-          description: Person not authorized
+          description: Person not authorized | Пользователь, с которым вы хотите создать
+            дилаог, не найден | Чат с этим пользователем уже существует
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
         "500":
@@ -296,7 +310,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/delivery.getChatStruct'
+          $ref: '#/definitions/delivery.chatIDStruct'
       produces:
       - application/json
       responses:

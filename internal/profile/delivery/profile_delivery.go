@@ -70,7 +70,6 @@ func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) 
 		misc.WriteInternalErrorJson(ctx, w)
 		return
 	}
-	user.ID = 0
 	user.Password = ""
 	user.PasswordSalt = ""
 

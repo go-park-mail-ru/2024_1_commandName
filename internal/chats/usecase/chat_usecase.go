@@ -13,8 +13,9 @@ import (
 type ChatStore interface {
 	GetChatsForUser(ctx context.Context, userID uint) []domain.Chat
 	GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain.ChatUser
-	CheckDialogueExists(ctx context.Context, userID1, userID2 uint) (exists bool)
+	CheckPrivateChatExists(ctx context.Context, userID1, userID2 uint) (exists bool, chatID uint, err error)
 	GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error)
+	CreateChat(ctx context.Context, userIDs ...uint) (chatID uint, err error)
 }
 
 func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {
@@ -23,7 +24,7 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatS
 	if err != nil {
 		return domain.Chat{}, err
 	}
-	belongs := CheckUserBelongsToChat(ctx, userID, chatID, chatStorage, userStorage)
+	belongs := CheckUserBelongsToChat(ctx, chatID, userID, chatStorage, userStorage)
 	if !belongs {
 		logger.Info("GetChatByChatID: user does not belong", "userID", userID, "chatID", chatID)
 		return domain.Chat{}, fmt.Errorf("user does not belong to chat")
@@ -94,16 +95,28 @@ func GetCompanionNameForPrivateChat(ctx context.Context, chatID uint, userReques
 	}
 }
 
-func CreateDialogue(ctx context.Context, creatingUserID uint, companionUsername string, chatStorage ChatStore, userStorage usecase.UserStore) (err error) {
+// CreatePrivateChat created chat, or returns existing
+func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uint, chatStorage ChatStore, userStorage usecase.UserStore) (chatID uint, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	companion, found := userStorage.GetByUsername(ctx, companionUsername)
-	if !found {
-		logger.Error("CreateDialogue: user wasn't found", "username", companionUsername)
-		return fmt.Errorf("Пользователь, с которым вы хотите создать дилаог, не найден")
+	if creatingUserID == companionID {
+		return 0, fmt.Errorf("Диалог с самим собой пока не поддерживается")
 	}
-	exists := chatStorage.CheckDialogueExists(ctx, creatingUserID, companion.ID)
-	if exists {
 
+	companion, found := userStorage.GetByUserID(ctx, companionID)
+	if !found {
+		logger.Error("CreatePrivateChat: user wasn't found", "companionID", companionID)
+		return 0, fmt.Errorf("Пользователь, с которым вы хотите создать диалог, не найден")
 	}
-	return nil
+	exists, chatID, err := chatStorage.CheckPrivateChatExists(ctx, creatingUserID, companion.ID)
+	if err != nil {
+		return 0, err
+	}
+	if exists {
+		return chatID, nil
+	}
+	chatID, err = chatStorage.CreateChat(ctx, creatingUserID, companion.ID)
+	if err != nil {
+		return 0, err
+	}
+	return chatID, nil
 }
