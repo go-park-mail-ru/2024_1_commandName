@@ -83,7 +83,7 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 
 	for rows.Next() {
 		var chat domain.Chat
-		if err = rows.Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.CreatorID, &chat.CreatorID); err != nil {
+		if err = rows.Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.CreatorID); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
