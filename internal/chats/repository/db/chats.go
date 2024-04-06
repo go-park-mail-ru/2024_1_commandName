@@ -130,6 +130,37 @@ func (c *Chats) CreateChat(ctx context.Context, userIDs ...uint) (chatID uint, e
 	return chatID, nil
 }
 
+func (c *Chats) DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := `DELETE FROM chat.chat_user WHERE chat_id = $1`
+	res, err := c.db.Exec(query, chatID)
+	if err != nil {
+		logger.Error("DeleteChat: 1", "err", err.Error())
+		return false, fmt.Errorf("internal error")
+	}
+
+	query = `DELETE FROM chat.chat WHERE id = $1`
+	res, err = c.db.Exec(query, chatID)
+	if err != nil {
+		logger.Error("DeleteChat: 2", "err", err.Error())
+		return false, fmt.Errorf("internal error")
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		logger.Error("DeleteChat: 3", "err", err.Error())
+		return false, fmt.Errorf("internal error")
+	}
+
+	if count == 0 {
+		return false, nil
+	} else if count == 1 {
+		return true, nil
+	} else {
+		logger.Error("DeleteChat: more than one chat was deleted")
+		return true, fmt.Errorf("internal error")
+	}
+}
+
 func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat {
 	chats := make([]domain.Chat, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT id, type, name, description, avatar_path, last_action_datetime,creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)

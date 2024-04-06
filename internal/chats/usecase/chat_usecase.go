@@ -16,6 +16,7 @@ type ChatStore interface {
 	CheckPrivateChatExists(ctx context.Context, userID1, userID2 uint) (exists bool, chatID uint, err error)
 	GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error)
 	CreateChat(ctx context.Context, userIDs ...uint) (chatID uint, err error)
+	DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error)
 }
 
 func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {
@@ -123,4 +124,17 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 		return 0, false, err
 	}
 	return chatID, true, nil
+}
+
+func DeletePrivateChat(ctx context.Context, chatID, deletingUserID uint, chatStorage ChatStore) (wasDeleted bool, err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	logger.Debug("DeleteChat: enter", "userID", deletingUserID, "chatID", chatID)
+
+	wasDeleted, err = chatStorage.DeleteChat(ctx, chatID)
+	if err != nil {
+		logger.Error("DeleteChat: error", "error", err.Error(), "wasDeleted", wasDeleted)
+		return false, err
+	}
+	logger.Debug("DeleteChat: success", "wasDeleted", wasDeleted)
+	return wasDeleted, err
 }

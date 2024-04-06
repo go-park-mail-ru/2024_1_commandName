@@ -58,15 +58,19 @@ func Router() {
 	router.HandleFunc("/login", authHandler.Login)
 	router.HandleFunc("/logout", authHandler.Logout)
 	router.HandleFunc("/register", authHandler.Register)
+
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
+	router.HandleFunc("/deleteChat", chatsHandler.DeleteChat)
+
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
 	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
 	router.HandleFunc("/changePassword", profileHandler.ChangePassword)
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
 	router.HandleFunc("/getContacts", profileHandler.GetContacts)
 	router.HandleFunc("/addContact", profileHandler.AddContact)
+
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
 

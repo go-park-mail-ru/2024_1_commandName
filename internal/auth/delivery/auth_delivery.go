@@ -80,8 +80,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var jsonUser domain.Person
 	err = decoder.Decode(&jsonUser)
 	if err != nil {
-		http.Error(w, "wrong json structure", 400)
-		return
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)

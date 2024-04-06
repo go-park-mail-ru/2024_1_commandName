@@ -161,11 +161,54 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-delivery_chatIDIsNewStruct"
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDIsNewJsonResponse"
                         }
                     },
                     "400": {
                         "description": "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/deleteChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "deletes chat",
+                "operationId": "DeleteChat",
+                "parameters": [
+                    {
+                        "description": "ID of chat to delete",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.chatIDStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_deleteChatJsonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized | User doesn't belong to chat",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -204,7 +247,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-delivery_chatJson"
+                            "$ref": "#/definitions/domain.Response-delivery_chatJsonResponse"
                         }
                     },
                     "400": {
@@ -636,7 +679,7 @@ const docTemplate = `{
                 }
             }
         },
-        "delivery.chatIDIsNewStruct": {
+        "delivery.chatIDIsNewJsonResponse": {
             "type": "object",
             "properties": {
                 "chat_id": {
@@ -655,11 +698,19 @@ const docTemplate = `{
                 }
             }
         },
-        "delivery.chatJson": {
+        "delivery.chatJsonResponse": {
             "type": "object",
             "properties": {
                 "chat": {
                     "$ref": "#/definitions/domain.Chat"
+                }
+            }
+        },
+        "delivery.deleteChatJsonResponse": {
+            "type": "object",
+            "properties": {
+                "successfully_deleted": {
+                    "type": "boolean"
                 }
             }
         },
@@ -830,11 +881,11 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Response-delivery_chatIDIsNewStruct": {
+        "domain.Response-delivery_chatIDIsNewJsonResponse": {
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/delivery.chatIDIsNewStruct"
+                    "$ref": "#/definitions/delivery.chatIDIsNewJsonResponse"
                 },
                 "status": {
                     "type": "integer",
@@ -842,11 +893,23 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Response-delivery_chatJson": {
+        "domain.Response-delivery_chatJsonResponse": {
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/delivery.chatJson"
+                    "$ref": "#/definitions/delivery.chatJsonResponse"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_deleteChatJsonResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.deleteChatJsonResponse"
                 },
                 "status": {
                     "type": "integer",

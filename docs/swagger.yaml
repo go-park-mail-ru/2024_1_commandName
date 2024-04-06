@@ -17,7 +17,7 @@ definitions:
       oldPassword:
         type: string
     type: object
-  delivery.chatIDIsNewStruct:
+  delivery.chatIDIsNewJsonResponse:
     properties:
       chat_id:
         type: integer
@@ -29,10 +29,15 @@ definitions:
       chat_id:
         type: integer
     type: object
-  delivery.chatJson:
+  delivery.chatJsonResponse:
     properties:
       chat:
         $ref: '#/definitions/domain.Chat'
+    type: object
+  delivery.deleteChatJsonResponse:
+    properties:
+      successfully_deleted:
+        type: boolean
     type: object
   delivery.docsContacts:
     properties:
@@ -142,18 +147,26 @@ definitions:
       username:
         type: string
     type: object
-  domain.Response-delivery_chatIDIsNewStruct:
+  domain.Response-delivery_chatIDIsNewJsonResponse:
     properties:
       body:
-        $ref: '#/definitions/delivery.chatIDIsNewStruct'
+        $ref: '#/definitions/delivery.chatIDIsNewJsonResponse'
       status:
         example: 200
         type: integer
     type: object
-  domain.Response-delivery_chatJson:
+  domain.Response-delivery_chatJsonResponse:
     properties:
       body:
-        $ref: '#/definitions/delivery.chatJson'
+        $ref: '#/definitions/delivery.chatJsonResponse'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_deleteChatJsonResponse:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.deleteChatJsonResponse'
       status:
         example: 200
         type: integer
@@ -309,7 +322,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Response-delivery_chatIDIsNewStruct'
+            $ref: '#/definitions/domain.Response-delivery_chatIDIsNewJsonResponse'
         "400":
           description: Person not authorized | Пользователь, с которым вы хотите создать
             дилаог, не найден | Чат с этим пользователем уже существует
@@ -320,6 +333,34 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: creates dialogue
+  /deleteChat:
+    post:
+      consumes:
+      - application/json
+      operationId: DeleteChat
+      parameters:
+      - description: ID of chat to delete
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.chatIDStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_deleteChatJsonResponse'
+        "400":
+          description: Person not authorized | User doesn't belong to chat
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: deletes chat
   /getChat:
     post:
       consumes:
@@ -338,7 +379,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Response-delivery_chatJson'
+            $ref: '#/definitions/domain.Response-delivery_chatJsonResponse'
         "400":
           description: Person not authorized
           schema:
