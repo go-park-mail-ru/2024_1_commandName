@@ -21,3 +21,7 @@ type User struct {
 type Contacts struct {
 	Contacts []Person `json:"contacts"`
 }
+
+type Messages struct {
+	Messages []Message `json:"messages"`
+}

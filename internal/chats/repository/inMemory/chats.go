@@ -1,9 +1,10 @@
 package inMemory
 
 import (
-	"ProjectMessenger/domain"
 	"context"
 	"time"
+
+	"ProjectMessenger/domain"
 )
 
 type Chats struct {

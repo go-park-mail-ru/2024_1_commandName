@@ -29,8 +29,7 @@ func (u *Users) AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
 }
 
 func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
-	//TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool) {

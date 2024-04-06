@@ -10,6 +10,7 @@ import (
 
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	chatsdelivery "ProjectMessenger/internal/chats/delivery"
+	messagedelivery "ProjectMessenger/internal/messages/delivery"
 	"ProjectMessenger/internal/middleware"
 	profiledelivery "ProjectMessenger/internal/profile/delivery"
 
@@ -40,6 +41,7 @@ func Router() {
 	var authHandler *authdelivery.AuthHandler
 	var chatsHandler *chatsdelivery.ChatsHandler
 	var profileHandler *profiledelivery.ProfileHandler
+	var messageHandler *messagedelivery.MessageHandler
 
 	if INMEMORY {
 		authHandler = authdelivery.NewAuthMemoryStorage()
@@ -48,6 +50,7 @@ func Router() {
 		dataBase := database.СreateDatabase()
 		authHandler = authdelivery.NewAuthHandler(dataBase, AVATAR_PATH)
 		chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
+		messageHandler = messagedelivery.NewMessagesHandler(authHandler, dataBase)
 	}
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
 
@@ -64,6 +67,8 @@ func Router() {
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
 	router.HandleFunc("/getContacts", profileHandler.GetContacts)
 	router.HandleFunc("/addContact", profileHandler.AddContact)
+	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
+	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
 
 	// middleware
 	if DEBUG {

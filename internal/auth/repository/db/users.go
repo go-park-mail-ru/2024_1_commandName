@@ -70,7 +70,6 @@ func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
 
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	//fmt.Println("get by username")
 	logger.Debug("GetByUsername", "username", username)
 	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, aboat, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
@@ -84,7 +83,6 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 			Message: err.Error(),
 			Segment: "method GetByUsername, users.go",
 		}
-		//fmt.Println(customErr.Error())
 		logger.Error(customErr.Error())
 		return user, false
 	}
@@ -102,7 +100,6 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 			Message: err.Error(),
 			Segment: "method CreateUser, users.go",
 		}
-		//fmt.Println(customErr.Error())
 		logger.Error(customErr.Error())
 		return 0, err
 	}

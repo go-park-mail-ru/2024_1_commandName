@@ -15,49 +15,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/addContact": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "adds contact for user",
-                "operationId": "AddContact",
-                "parameters": [
-                    {
-                        "description": "username of user to add to contacts",
-                        "name": "usernameToAdd",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/delivery.addContactStruct"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-int"
-                        }
-                    },
-                    "400": {
-                        "description": "Описание ошибки",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    }
-                }
-            }
-        },
         "/changePassword": {
             "post": {
                 "consumes": [
@@ -136,7 +93,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/createPrivateChat": {
+        "/getChatMessages": {
             "post": {
                 "consumes": [
                     "application/json"
@@ -144,16 +101,16 @@ const docTemplate = `{
                 "produces": [
                     "application/json"
                 ],
-                "summary": "creates dialogue",
-                "operationId": "CreatePrivateChat",
+                "summary": "GetChatMessages",
+                "operationId": "getChatMessages",
                 "parameters": [
                     {
-                        "description": "ID of person to create private chat with",
+                        "description": "ID of chat",
                         "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/delivery.userIDJson"
+                            "$ref": "#/definitions/delivery.RequestChatIDBody"
                         }
                     }
                 ],
@@ -161,54 +118,17 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-delivery_chatIDIsNewStruct"
+                            "$ref": "#/definitions/domain.Response-domain_Messages"
                         }
                     },
                     "400": {
-                        "description": "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует",
+                        "description": "wrong json structure",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
                     },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    }
-                }
-            }
-        },
-        "/getChat": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "gets one chat",
-                "operationId": "GetChat",
-                "parameters": [
-                    {
-                        "description": "id of chat to get",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/delivery.chatIDStruct"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-delivery_chatJson"
-                        }
-                    },
-                    "400": {
-                        "description": "Person not authorized",
+                    "405": {
+                        "description": "use POST",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -238,35 +158,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Person not authorized",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    }
-                }
-            }
-        },
-        "/getContacts": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "returns contacts of user",
-                "operationId": "GetContacts",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-delivery_docsContacts"
-                        }
-                    },
-                    "400": {
-                        "description": "Описание ошибки",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -436,6 +327,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/sendMessage": {
+            "post": {
+                "description": "Сначала по этому URL надо произвести upgrade до вебсокета, потом слать json сообщений",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "SendMessage",
+                "operationId": "sendMessage",
+                "parameters": [
+                    {
+                        "description": "message that was sent",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Message"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error | could not upgrade connection",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/updateProfileInfo": {
             "post": {
                 "consumes": [
@@ -522,11 +451,11 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "delivery.addContactStruct": {
+        "delivery.RequestChatIDBody": {
             "type": "object",
             "properties": {
-                "username_of_user_to_add": {
-                    "type": "string"
+                "chatID": {
+                    "type": "integer"
                 }
             }
         },
@@ -538,44 +467,6 @@ const docTemplate = `{
                 },
                 "oldPassword": {
                     "type": "string"
-                }
-            }
-        },
-        "delivery.chatIDIsNewStruct": {
-            "type": "object",
-            "properties": {
-                "chat_id": {
-                    "type": "integer"
-                },
-                "is_new_chat": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "delivery.chatIDStruct": {
-            "type": "object",
-            "properties": {
-                "chat_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "delivery.chatJson": {
-            "type": "object",
-            "properties": {
-                "chat": {
-                    "$ref": "#/definitions/domain.Chat"
-                }
-            }
-        },
-        "delivery.docsContacts": {
-            "type": "object",
-            "properties": {
-                "contacts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/delivery.docsUserForGetProfile"
-                    }
                 }
             }
         },
@@ -622,14 +513,6 @@ const docTemplate = `{
                 }
             }
         },
-        "delivery.userIDJson": {
-            "type": "object",
-            "properties": {
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
         "domain.Chat": {
             "type": "object",
             "properties": {
@@ -637,7 +520,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "creator": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
@@ -705,20 +588,19 @@ const docTemplate = `{
                 "chat_id": {
                     "type": "integer"
                 },
-                "edited": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "integer"
-                },
                 "message_text": {
                     "type": "string"
-                },
-                "sent_at": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
+                }
+            }
+        },
+        "domain.Messages": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Message"
+                    }
                 }
             }
         },
@@ -730,42 +612,6 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "domain.Response-delivery_chatIDIsNewStruct": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "$ref": "#/definitions/delivery.chatIDIsNewStruct"
-                },
-                "status": {
-                    "type": "integer",
-                    "example": 200
-                }
-            }
-        },
-        "domain.Response-delivery_chatJson": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "$ref": "#/definitions/delivery.chatJson"
-                },
-                "status": {
-                    "type": "integer",
-                    "example": 200
-                }
-            }
-        },
-        "domain.Response-delivery_docsContacts": {
-            "type": "object",
-            "properties": {
-                "body": {
-                    "$ref": "#/definitions/delivery.docsContacts"
-                },
-                "status": {
-                    "type": "integer",
-                    "example": 200
                 }
             }
         },
@@ -798,6 +644,18 @@ const docTemplate = `{
             "properties": {
                 "body": {
                     "$ref": "#/definitions/domain.Error"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-domain_Messages": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/domain.Messages"
                 },
                 "status": {
                     "type": "integer",
