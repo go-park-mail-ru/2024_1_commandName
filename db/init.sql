@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS chat.chat
     name        TEXT CHECK (length(name) <= 20),
     description TEXT CHECK (length(description) <= 70),
     avatar_path TEXT,
+    last_action_datetime TIMESTAMP,
     creator_id  INT REFERENCES auth.person (id)
 );
 

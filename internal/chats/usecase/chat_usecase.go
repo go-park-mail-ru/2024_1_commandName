@@ -29,6 +29,10 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatS
 		logger.Info("GetChatByChatID: user does not belong", "userID", userID, "chatID", chatID)
 		return domain.Chat{}, fmt.Errorf("user does not belong to chat")
 	}
+	/*users := chatStorage.GetChatUsersByChatID(ctx, chatID)
+	for i := range users{
+		chat.Users = append()
+	}*/
 
 	if chat.Type == "1" {
 		name, _ := GetCompanionNameForPrivateChat(ctx, chatID, userID, chatStorage, userStorage)
@@ -52,7 +56,7 @@ func GetChatsForUser(ctx context.Context, userID uint, chatStorage ChatStore, us
 	}
 
 	sort.Slice(chats, func(i, j int) bool {
-		return chats[j].LastMessage.CreateTimestamp.Before(chats[i].LastMessage.CreateTimestamp)
+		return chats[j].LastActionDateTime.Before(chats[i].LastActionDateTime)
 	})
 	return chats
 }
