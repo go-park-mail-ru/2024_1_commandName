@@ -8,7 +8,7 @@ import (
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
-	db "ProjectMessenger/internal/chats/repository/db"
+	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
@@ -19,7 +19,8 @@ type ChatsHandler struct {
 }
 
 type chatIDStruct struct {
-	ChatID uint `json:"chat_id"`
+	ChatID    uint `json:"chat_id"`
+	IsNewChat bool `json:"is_new_chat"`
 }
 
 type chatJson struct {
@@ -71,6 +72,10 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
+		return
+	}
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
@@ -112,6 +117,10 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
+		return
+	}
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
@@ -121,7 +130,7 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&userIDFromRequest)
 
-	chatID, err := usecase.CreatePrivateChat(ctx, userID, userIDFromRequest.ID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
+	chatID, isNewChat, err := usecase.CreatePrivateChat(ctx, userID, userIDFromRequest.ID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)
@@ -132,5 +141,5 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 		return
 	}
 
-	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
+	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID, IsNewChat: isNewChat})
 }

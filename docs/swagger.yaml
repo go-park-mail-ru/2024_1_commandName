@@ -16,6 +16,8 @@ definitions:
     properties:
       chat_id:
         type: integer
+      is_new_chat:
+        type: boolean
     type: object
   delivery.chatJson:
     properties:
@@ -67,7 +69,7 @@ definitions:
       avatar:
         type: string
       creator:
-        type: string
+        type: integer
       description:
         type: string
       id:

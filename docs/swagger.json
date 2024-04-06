@@ -542,6 +542,9 @@
             "properties": {
                 "chat_id": {
                     "type": "integer"
+                },
+                "is_new_chat": {
+                    "type": "boolean"
                 }
             }
         },
@@ -622,7 +625,7 @@
                     "type": "string"
                 },
                 "creator": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"

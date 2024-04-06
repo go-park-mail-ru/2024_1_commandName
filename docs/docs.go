@@ -546,6 +546,9 @@ const docTemplate = `{
             "properties": {
                 "chat_id": {
                     "type": "integer"
+                },
+                "is_new_chat": {
+                    "type": "boolean"
                 }
             }
         },
@@ -626,7 +629,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "creator": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
