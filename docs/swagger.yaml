@@ -12,12 +12,17 @@ definitions:
       oldPassword:
         type: string
     type: object
-  delivery.chatIDStruct:
+  delivery.chatIDIsNewStruct:
     properties:
       chat_id:
         type: integer
       is_new_chat:
         type: boolean
+    type: object
+  delivery.chatIDStruct:
+    properties:
+      chat_id:
+        type: integer
     type: object
   delivery.chatJson:
     properties:
@@ -131,10 +136,10 @@ definitions:
       username:
         type: string
     type: object
-  domain.Response-delivery_chatIDStruct:
+  domain.Response-delivery_chatIDIsNewStruct:
     properties:
       body:
-        $ref: '#/definitions/delivery.chatIDStruct'
+        $ref: '#/definitions/delivery.chatIDIsNewStruct'
       status:
         example: 200
         type: integer
@@ -290,7 +295,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Response-delivery_chatIDStruct'
+            $ref: '#/definitions/domain.Response-delivery_chatIDIsNewStruct'
         "400":
           description: Person not authorized | Пользователь, с которым вы хотите создать
             дилаог, не найден | Чат с этим пользователем уже существует

@@ -161,7 +161,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-delivery_chatIDStruct"
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDIsNewStruct"
                         }
                     },
                     "400": {
@@ -541,7 +541,7 @@ const docTemplate = `{
                 }
             }
         },
-        "delivery.chatIDStruct": {
+        "delivery.chatIDIsNewStruct": {
             "type": "object",
             "properties": {
                 "chat_id": {
@@ -549,6 +549,14 @@ const docTemplate = `{
                 },
                 "is_new_chat": {
                     "type": "boolean"
+                }
+            }
+        },
+        "delivery.chatIDStruct": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -725,11 +733,11 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Response-delivery_chatIDStruct": {
+        "domain.Response-delivery_chatIDIsNewStruct": {
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/delivery.chatIDStruct"
+                    "$ref": "#/definitions/delivery.chatIDIsNewStruct"
                 },
                 "status": {
                     "type": "integer",

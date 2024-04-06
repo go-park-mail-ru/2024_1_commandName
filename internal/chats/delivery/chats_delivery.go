@@ -18,9 +18,13 @@ type ChatsHandler struct {
 	Chats       usecase.ChatStore
 }
 
-type chatIDStruct struct {
+type chatIDIsNewStruct struct {
 	ChatID    uint `json:"chat_id"`
 	IsNewChat bool `json:"is_new_chat"`
+}
+
+type chatIDStruct struct {
+	ChatID uint `json:"chat_id"`
 }
 
 type chatJson struct {
@@ -110,7 +114,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 // @Accept json
 // @Produce json
 // @Param user body userIDJson true "ID of person to create private chat with"
-// @Success 200 {object}  domain.Response[chatIDStruct]
+// @Success 200 {object}  domain.Response[chatIDIsNewStruct]
 // @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /createPrivateChat [post]
@@ -141,5 +145,5 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 		return
 	}
 
-	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID, IsNewChat: isNewChat})
+	misc.WriteStatusJson(ctx, w, 200, chatIDIsNewStruct{ChatID: chatID, IsNewChat: isNewChat})
 }
