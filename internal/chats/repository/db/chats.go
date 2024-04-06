@@ -29,7 +29,7 @@ func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetChat didn't found chat", "chatID", chatID)
-			return chat, fmt.Errorf("Chat not found")
+			return chat, fmt.Errorf("Чат не найден")
 		}
 		customErr := &domain.CustomError{
 			Type:    "database",

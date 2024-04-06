@@ -11,6 +11,49 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/addContact": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "adds contact for user",
+                "operationId": "AddContact",
+                "parameters": [
+                    {
+                        "description": "username of user to add to contacts",
+                        "name": "usernameToAdd",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.addContactStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Описание ошибки",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/changePassword": {
             "post": {
                 "consumes": [
@@ -75,6 +118,92 @@
                         }
                     },
                     "401": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/createPrivateChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "creates dialogue",
+                "operationId": "CreatePrivateChat",
+                "parameters": [
+                    {
+                        "description": "ID of person to create private chat with",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.userIDJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDIsNewStruct"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "gets one chat",
+                "operationId": "GetChat",
+                "parameters": [
+                    {
+                        "description": "id of chat to get",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.chatIDStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_chatJson"
+                        }
+                    },
+                    "400": {
                         "description": "Person not authorized",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
@@ -154,6 +283,35 @@
                     },
                     "400": {
                         "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getContacts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "returns contacts of user",
+                "operationId": "GetContacts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_docsContacts"
+                        }
+                    },
+                    "400": {
+                        "description": "Описание ошибки",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -455,6 +613,14 @@
                 }
             }
         },
+        "delivery.addContactStruct": {
+            "type": "object",
+            "properties": {
+                "username_of_user_to_add": {
+                    "type": "string"
+                }
+            }
+        },
         "delivery.changePasswordStruct": {
             "type": "object",
             "properties": {
@@ -463,6 +629,44 @@
                 },
                 "oldPassword": {
                     "type": "string"
+                }
+            }
+        },
+        "delivery.chatIDIsNewStruct": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "is_new_chat": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "delivery.chatIDStruct": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "delivery.chatJson": {
+            "type": "object",
+            "properties": {
+                "chat": {
+                    "$ref": "#/definitions/domain.Chat"
+                }
+            }
+        },
+        "delivery.docsContacts": {
+            "type": "object",
+            "properties": {
+                "contacts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/delivery.docsUserForGetProfile"
+                    }
                 }
             }
         },
@@ -509,6 +713,14 @@
                 }
             }
         },
+        "delivery.userIDJson": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "domain.Chat": {
             "type": "object",
             "properties": {
@@ -516,13 +728,16 @@
                     "type": "string"
                 },
                 "creator": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
+                },
+                "last_action_date_time": {
+                    "type": "string"
                 },
                 "last_message": {
                     "$ref": "#/definitions/domain.Message"
@@ -608,6 +823,42 @@
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.Response-delivery_chatIDIsNewStruct": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.chatIDIsNewStruct"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_chatJson": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.chatJson"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_docsContacts": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.docsContacts"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
                 }
             }
         },

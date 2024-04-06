@@ -5,12 +5,41 @@ definitions:
       chatID:
         type: integer
     type: object
+  delivery.addContactStruct:
+    properties:
+      username_of_user_to_add:
+        type: string
+    type: object
   delivery.changePasswordStruct:
     properties:
       newPassword:
         type: string
       oldPassword:
         type: string
+    type: object
+  delivery.chatIDIsNewStruct:
+    properties:
+      chat_id:
+        type: integer
+      is_new_chat:
+        type: boolean
+    type: object
+  delivery.chatIDStruct:
+    properties:
+      chat_id:
+        type: integer
+    type: object
+  delivery.chatJson:
+    properties:
+      chat:
+        $ref: '#/definitions/domain.Chat'
+    type: object
+  delivery.docsContacts:
+    properties:
+      contacts:
+        items:
+          $ref: '#/definitions/delivery.docsUserForGetProfile'
+        type: array
     type: object
   delivery.docsUserForGetProfile:
     properties:
@@ -40,16 +69,23 @@ definitions:
       user:
         $ref: '#/definitions/delivery.docsUserForGetProfile'
     type: object
+  delivery.userIDJson:
+    properties:
+      user_id:
+        type: integer
+    type: object
   domain.Chat:
     properties:
       avatar:
         type: string
       creator:
-        type: string
+        type: integer
       description:
         type: string
       id:
         type: integer
+      last_action_date_time:
+        type: string
       last_message:
         $ref: '#/definitions/domain.Message'
       messages:
@@ -106,6 +142,30 @@ definitions:
       username:
         type: string
     type: object
+  domain.Response-delivery_chatIDIsNewStruct:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.chatIDIsNewStruct'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_chatJson:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.chatJson'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_docsContacts:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.docsContacts'
+      status:
+        example: 200
+        type: integer
+    type: object
   domain.Response-delivery_docsUserForGetProfile:
     properties:
       body:
@@ -152,6 +212,34 @@ info:
   title: Messenger authorization API
   version: "1.0"
 paths:
+  /addContact:
+    post:
+      consumes:
+      - application/json
+      operationId: AddContact
+      parameters:
+      - description: username of user to add to contacts
+        in: body
+        name: usernameToAdd
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.addContactStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: adds contact for user
   /changePassword:
     post:
       consumes:
@@ -203,6 +291,63 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
+  /createPrivateChat:
+    post:
+      consumes:
+      - application/json
+      operationId: CreatePrivateChat
+      parameters:
+      - description: ID of person to create private chat with
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.userIDJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatIDIsNewStruct'
+        "400":
+          description: Person not authorized | Пользователь, с которым вы хотите создать
+            дилаог, не найден | Чат с этим пользователем уже существует
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: creates dialogue
+  /getChat:
+    post:
+      consumes:
+      - application/json
+      operationId: GetChat
+      parameters:
+      - description: id of chat to get
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.chatIDStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatJson'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: gets one chat
   /getChatMessages:
     post:
       consumes:
@@ -254,6 +399,25 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: gets Chats previews for user
+  /getContacts:
+    get:
+      operationId: GetContacts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_docsContacts'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: returns contacts of user
   /getProfileInfo:
     get:
       operationId: GetProfileInfo

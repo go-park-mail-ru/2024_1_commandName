@@ -67,7 +67,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		misc.WriteStatusJson(w, 500, domain.Error{Error: "could not upgrade connection"})
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
 		return
 	}
 
@@ -87,6 +87,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChatMessages [post]
 func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	authorized, _ := messageHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
@@ -96,10 +97,10 @@ func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *
 	var RequestChatID RequestChatIDBody
 	err := decoder.Decode(&RequestChatID)
 	if err != nil {
-		misc.WriteStatusJson(w, 400, domain.Error{Error: "wrong json structure"})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
 	limit := 100
 	messages := usecase.GetChatMessages(r.Context(), limit, RequestChatID.ChatID, messageHandler.Messages)
-	misc.WriteStatusJson(w, 200, domain.Messages{Messages: messages})
+	misc.WriteStatusJson(ctx, w, 200, domain.Messages{Messages: messages})
 }
