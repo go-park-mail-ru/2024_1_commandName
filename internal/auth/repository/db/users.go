@@ -257,6 +257,10 @@ func (u *Users) AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
 	return true
 }
 
+func (u *Users) GetAvatarStoragePath() string {
+	return u.pathToAvatar
+}
+
 func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	counter := 0
 	_ = db.QueryRow("SELECT count(id) FROM auth.person").Scan(&counter)

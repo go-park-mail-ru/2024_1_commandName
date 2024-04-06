@@ -26,6 +26,7 @@ type UserStore interface {
 	GetContacts(ctx context.Context, userID uint) []domain.Person
 	AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
 	GetAllUserIDs(ctx context.Context) (userIDs []uint)
+	GetAvatarStoragePath() string
 }
 
 func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore) (authorized bool, userID uint) {

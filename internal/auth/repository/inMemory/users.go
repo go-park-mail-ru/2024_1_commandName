@@ -18,6 +18,11 @@ type Users struct {
 	currentID uint
 }
 
+func (u *Users) GetAvatarStoragePath() string {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
 	//TODO implement me
 	panic("implement me")
