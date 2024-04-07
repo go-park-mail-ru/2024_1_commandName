@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -57,6 +58,7 @@ func NewMessagesHandlerMemory(authHandler *authdelivery.AuthHandler) *MessageHan
 // @Router /sendMessage [post]
 func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
 	authorized, userID := messageHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
@@ -67,6 +69,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
+		logger.Error("SendMessage: upgrade failed", "err", err.Error())
 		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
 		return
 	}
