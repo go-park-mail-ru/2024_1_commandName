@@ -40,7 +40,9 @@ type config struct {
 
 func loadConfig() config {
 	envPath := os.Getenv("GOCHATME_HOME")
+	slog.Debug("env home =" + envPath)
 	f, err := os.Open(envPath + "config.yml")
+	slog.Debug("trying to open " + envPath + "config.yml")
 	if err != nil {
 		slog.Error("load config failed", "err", err)
 		panic(err)
