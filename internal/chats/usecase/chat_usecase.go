@@ -15,7 +15,7 @@ type ChatStore interface {
 	GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain.ChatUser
 	CheckPrivateChatExists(ctx context.Context, userID1, userID2 uint) (exists bool, chatID uint, err error)
 	GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error)
-	CreateChat(ctx context.Context, userIDs ...uint) (chatID uint, err error)
+	CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error)
 	DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error)
 }
 
@@ -119,7 +119,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	if exists {
 		return chatID, false, nil
 	}
-	chatID, err = chatStorage.CreateChat(ctx, creatingUserID, companion.ID)
+	chatID, err = chatStorage.CreateChat(ctx, "", "", creatingUserID, companion.ID)
 	if err != nil {
 		return 0, false, err
 	}
@@ -137,4 +137,30 @@ func DeletePrivateChat(ctx context.Context, chatID, deletingUserID uint, chatSto
 	}
 	logger.Debug("DeleteChat: success", "wasDeleted", wasDeleted)
 	return wasDeleted, err
+}
+
+func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, chatName, description string, chatStorage ChatStore) (chatID uint, err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	if len(usersIDs) < 3 {
+		logger.Info("CreateGroupChat: len < 3", "users", usersIDs)
+	}
+	userMap := make(map[uint]bool)
+	if usersIDs[0] != creatingUserID {
+
+	}
+	for i := range usersIDs {
+		if userMap[usersIDs[i]] == true {
+			logger.Info("user id is duplicated", "userID", usersIDs[i])
+			break
+		}
+		userMap[usersIDs[i]] = true
+	}
+	usersIDs = append(usersIDs, creatingUserID)
+	usersIDs[0], usersIDs[len(usersIDs)-1] = usersIDs[len(usersIDs)-1], usersIDs[0]
+
+	chatID, err = chatStorage.CreateChat(ctx, chatName, description, usersIDs...)
+	if err != nil {
+		return 0, nil
+	}
+	return chatID, nil
 }

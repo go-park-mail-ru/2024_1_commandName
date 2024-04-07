@@ -35,6 +35,12 @@ type userIDJson struct {
 	ID uint `json:"user_id"`
 }
 
+type createGroupJson struct {
+	GroupName   string `json:"group_name"`
+	Description string `json:"description"`
+	Users       []uint `json:"user_ids"`
+}
+
 type deleteChatJsonResponse struct {
 	SuccessfullyDeleted bool `json:"successfully_deleted"`
 }
@@ -199,4 +205,48 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, deleteChatJsonResponse{success})
+}
+
+// CreateGroupChat creates dialogue
+//
+// @Summary creates group chat
+// @ID CreateGroupChat
+// @Accept json
+// @Produce json
+// @Param user body createGroupJson true "IDs of users to create group chat with"
+// @Success 200 {object}  domain.Response[chatIDStruct]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /createGroupChat [post]
+func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
+		return
+	}
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	groupRequest := createGroupJson{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&groupRequest)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+	}
+
+	chatID, err := usecase.CreateGroupChat(ctx, userID, groupRequest.Users, groupRequest.GroupName, groupRequest.Description, chatsHandler.Chats)
+	if err != nil {
+		if err.Error() == "internal error" {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		logger.Error(err.Error())
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
 }

@@ -132,6 +132,49 @@
                 }
             }
         },
+        "/createGroupChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "creates group chat",
+                "operationId": "CreateGroupChat",
+                "parameters": [
+                    {
+                        "description": "IDs of users to create group chat with",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.createGroupJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDStruct"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/createPrivateChat": {
             "post": {
                 "consumes": [
@@ -702,6 +745,23 @@
                 }
             }
         },
+        "delivery.createGroupJson": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "group_name": {
+                    "type": "string"
+                },
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "delivery.deleteChatJsonResponse": {
             "type": "object",
             "properties": {
@@ -882,6 +942,18 @@
             "properties": {
                 "body": {
                     "$ref": "#/definitions/delivery.chatIDIsNewJsonResponse"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_chatIDStruct": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.chatIDStruct"
                 },
                 "status": {
                     "type": "integer",

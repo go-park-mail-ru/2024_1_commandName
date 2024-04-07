@@ -34,6 +34,17 @@ definitions:
       chat:
         $ref: '#/definitions/domain.Chat'
     type: object
+  delivery.createGroupJson:
+    properties:
+      description:
+        type: string
+      group_name:
+        type: string
+      user_ids:
+        items:
+          type: integer
+        type: array
+    type: object
   delivery.deleteChatJsonResponse:
     properties:
       successfully_deleted:
@@ -151,6 +162,14 @@ definitions:
     properties:
       body:
         $ref: '#/definitions/delivery.chatIDIsNewJsonResponse'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_chatIDStruct:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.chatIDStruct'
       status:
         example: 200
         type: integer
@@ -304,6 +323,35 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
+  /createGroupChat:
+    post:
+      consumes:
+      - application/json
+      operationId: CreateGroupChat
+      parameters:
+      - description: IDs of users to create group chat with
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.createGroupJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatIDStruct'
+        "400":
+          description: Person not authorized | Пользователь, с которым вы хотите создать
+            дилаог, не найден | Чат с этим пользователем уже существует
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: creates group chat
   /createPrivateChat:
     post:
       consumes:

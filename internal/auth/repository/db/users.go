@@ -352,24 +352,23 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 }
 
 func getFakeUser(number int) domain.Person {
-	usersHash, usersSalt := misc.GenerateHashAndSalt("testPassword!")
 	testUserHash, testUserSalt := misc.GenerateHashAndSalt("Demouser123!")
 	users := map[int]domain.Person{
 		1: {ID: 1, Username: "IvanNaumov", Email: "ivan@mail.ru", Name: "Ivan", Surname: "Naumov",
 			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
-			PasswordSalt: usersSalt, Password: usersHash},
+			PasswordSalt: testUserSalt, Password: testUserHash},
 		2: {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
 			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
-			PasswordSalt: usersSalt, Password: usersHash},
+			PasswordSalt: testUserSalt, Password: testUserHash},
 		3: {ID: 3, Username: "ArtemZhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
 			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
-			PasswordSalt: usersSalt, Password: usersHash},
+			PasswordSalt: testUserSalt, Password: testUserHash},
 		4: {ID: 4, Username: "AlexanderVolohov", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
 			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
-			PasswordSalt: usersSalt, Password: usersHash},
+			PasswordSalt: testUserSalt, Password: testUserHash},
 		5: {ID: 5, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
 			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
-			PasswordSalt: usersSalt, Password: usersHash},
+			PasswordSalt: testUserSalt, Password: testUserHash},
 		6: {ID: 6, Username: "TestUser", Email: "test@mail.ru", Name: "Test", Surname: "User",
 			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},

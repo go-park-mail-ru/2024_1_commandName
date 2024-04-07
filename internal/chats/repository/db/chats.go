@@ -41,7 +41,7 @@ func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, 
 		return domain.Chat{}, fmt.Errorf("internal error")
 	}
 	chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
-
+	chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 	logger.Debug("GetChat: found chat", "chatID", chatID)
 	return chat, nil
 }
@@ -86,9 +86,11 @@ func (c *Chats) CheckPrivateChatExists(ctx context.Context, userID1, userID2 uin
 	return false, 0, nil
 }
 
-func (c *Chats) CreateChat(ctx context.Context, userIDs ...uint) (chatID uint, err error) {
+func (c *Chats) CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chatType := ""
+	chatName := ""
+	chatDesc := ""
 	if len(userIDs) < 2 {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -100,10 +102,12 @@ func (c *Chats) CreateChat(ctx context.Context, userIDs ...uint) (chatID uint, e
 	} else if len(userIDs) == 2 {
 		chatType = "1"
 	} else {
-		chatType = ""
+		chatType = "2"
+		chatName = name
+		chatDesc = description
 	}
 	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type, name, description, avatar_path, last_action_datetime, creator_id) VALUES ($1, $2, $3, $4, $5, $6) returning id`,
-		chatType, "", "", "", time.Now(), userIDs[0]).Scan(&chatID)
+		chatType, chatName, chatDesc, "", time.Now(), userIDs[0]).Scan(&chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -194,6 +198,7 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 			return nil
 		}
 		chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
+		chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 		chats = append(chats, chat)
 	}
 	if err = rows.Err(); err != nil {

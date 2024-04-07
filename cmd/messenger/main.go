@@ -93,6 +93,7 @@ func Router(cfg config) {
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
+	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)
 	router.HandleFunc("/deleteChat", chatsHandler.DeleteChat)
 
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
