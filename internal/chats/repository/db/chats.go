@@ -139,15 +139,22 @@ func (c *Chats) DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, e
 		return false, fmt.Errorf("internal error")
 	}
 
-	query = `DELETE FROM chat.chat WHERE id = $1`
+	query = `DELETE FROM chat.message WHERE chat_id = $1`
 	res, err = c.db.Exec(query, chatID)
 	if err != nil {
 		logger.Error("DeleteChat: 2", "err", err.Error())
 		return false, fmt.Errorf("internal error")
 	}
-	count, err := res.RowsAffected()
+
+	query = `DELETE FROM chat.chat WHERE id = $1`
+	res, err = c.db.Exec(query, chatID)
 	if err != nil {
 		logger.Error("DeleteChat: 3", "err", err.Error())
+		return false, fmt.Errorf("internal error")
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		logger.Error("DeleteChat: 4", "err", err.Error())
 		return false, fmt.Errorf("internal error")
 	}
 
