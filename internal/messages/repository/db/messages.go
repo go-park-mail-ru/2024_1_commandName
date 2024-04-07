@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -40,7 +41,7 @@ func (m *Messages) ReadMessages(ctx context.Context, connection *websocket.Conn,
 		m.DeleteConnection(userID)
 		connection.Close()
 	}()
-
+	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	for {
 		mt, message, err := connection.ReadMessage()
 
@@ -49,6 +50,7 @@ func (m *Messages) ReadMessages(ctx context.Context, connection *websocket.Conn,
 		}
 
 		userDecodedMessage := DecodeJSON(message)
+		logger.Debug("got ws message", "msg", userDecodedMessage)
 		userDecodedMessage.UserID = userID
 		userDecodedMessage.CreateTimestamp = time.Now()
 		m.SendMessageToUser(userID, []byte(`{"status": 200}`))
@@ -64,10 +66,14 @@ func (m *Messages) SendMessageToUser(userID uint, message []byte) error {
 	return connection.WriteMessage(websocket.TextMessage, message)
 }
 
-func (m *Messages) AddConnection(connection *websocket.Conn, userID uint) {
+func (m *Messages) AddConnection(ctx context.Context, connection *websocket.Conn, userID uint) context.Context {
 	m.mu.Lock()
 	m.Connections[userID] = connection
 	m.mu.Unlock()
+	ctx = context.WithValue(ctx, "ws userID", userID)
+	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
+	logger.Debug("established ws")
+	return ctx
 }
 
 func (m *Messages) DeleteConnection(userID uint) {
@@ -101,12 +107,20 @@ func DecodeJSON(message []byte) domain.Message {
 }
 
 func (m *Messages) SetMessage(ctx context.Context, message domain.Message) {
+	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "INSERT INTO chat.message (user_id, chat_id, message, edited, create_datetime) VALUES($1, $2, $3, $4, $5) "
 	_, err := m.db.ExecContext(ctx, query, message.UserID, message.ChatID, message.Message, message.Edited, message.CreateTimestamp)
 	if err != nil {
-		// TODO
-		fmt.Println(err)
+		logger.Error(err.Error())
+		return
 	}
+	query = `UPDATE chat.chat SET last_action_datetime = $1 WHERE id = $2`
+	_, err = m.db.ExecContext(ctx, query, message.CreateTimestamp, message.ChatID)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+	logger.Debug("SetMessage: success", "msg", message)
 }
 
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
