@@ -609,6 +609,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/updateGroupChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "updates group chat",
+                "operationId": "UpdateGroupChat",
+                "parameters": [
+                    {
+                        "description": "updated chat (если имя или описание не обновлялось, поле не слать вообще)",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.updateChatJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/updateProfileInfo": {
             "post": {
                 "consumes": [
@@ -813,6 +856,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.updateChatJson": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "new_description": {
+                    "type": "string"
+                },
+                "new_name": {
                     "type": "string"
                 }
             }

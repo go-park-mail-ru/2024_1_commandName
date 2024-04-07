@@ -17,6 +17,7 @@ type ChatStore interface {
 	GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error)
 	CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error)
 	DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error)
+	UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (ok bool)
 }
 
 func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {
@@ -30,10 +31,6 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatS
 		logger.Info("GetChatByChatID: user does not belong", "userID", userID, "chatID", chatID)
 		return domain.Chat{}, fmt.Errorf("user does not belong to chat")
 	}
-	/*users := chatStorage.GetChatUsersByChatID(ctx, chatID)
-	for i := range users{
-		chat.Users = append()
-	}*/
 
 	if chat.Type == "1" {
 		name, _ := GetCompanionNameForPrivateChat(ctx, chatID, userID, chatStorage, userStorage)
@@ -126,7 +123,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	return chatID, true, nil
 }
 
-func DeletePrivateChat(ctx context.Context, chatID, deletingUserID uint, chatStorage ChatStore) (wasDeleted bool, err error) {
+func DeletePrivateChat(ctx context.Context, deletingUserID, chatID uint, chatStorage ChatStore) (wasDeleted bool, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("DeleteChat: enter", "userID", deletingUserID, "chatID", chatID)
 
@@ -163,4 +160,34 @@ func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, 
 		return 0, nil
 	}
 	return chatID, nil
+}
+
+func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatStorage ChatStore) (err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	chat, err := chatStorage.GetChatByChatID(ctx, chatID)
+	if err != nil {
+		return fmt.Errorf("internal error")
+	}
+	userWasFound := false
+	for i := range chat.Users {
+		if chat.Users[i].UserID == userID {
+			userWasFound = true
+			break
+		}
+	}
+	if !userWasFound {
+		return fmt.Errorf("user does not belong to chat")
+	}
+	if name != nil {
+		chat.Name = *name
+	}
+	if desc != nil {
+		chat.Description = *desc
+	}
+	ok := chatStorage.UpdateGroupChat(ctx, chat)
+	logger.Info("UpdateGroupChat", "ok", ok)
+	if !ok {
+		return fmt.Errorf("internal error")
+	}
+	return nil
 }

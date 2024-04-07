@@ -284,6 +284,23 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 	return chatMessagesArr
 }
 
+func (c *Chats) UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (ok bool) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	name, desc, chatID := updatedChat.Name, updatedChat.Description, updatedChat.ID
+	query := `UPDATE chat.chat SET name=$1, description=$2 WHERE id=$3`
+	_, err := c.db.ExecContext(ctx, query, name, desc, chatID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetMessagesByChatID, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return false
+	}
+	return true
+}
+
 func addFakeChatUsers(db *sql.DB) {
 	_, err := db.Exec("DELETE FROM chat.chat_user")
 	_, err = db.Exec("DELETE FROM chat.message")

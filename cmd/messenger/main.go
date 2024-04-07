@@ -94,6 +94,7 @@ func Router(cfg config) {
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
 	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)
+	router.HandleFunc("/updateGroupChat", chatsHandler.UpdateGroupChat)
 	router.HandleFunc("/deleteChat", chatsHandler.DeleteChat)
 
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)

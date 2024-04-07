@@ -45,6 +45,12 @@ type deleteChatJsonResponse struct {
 	SuccessfullyDeleted bool `json:"successfully_deleted"`
 }
 
+type updateChatJson struct {
+	ChatID         uint    `json:"chat_id"`
+	NewName        *string `json:"new_name"`
+	NewDescription *string `json:"new_description"`
+}
+
 func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
@@ -100,6 +106,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 	err := decoder.Decode(&chatIDStruct)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
 	}
 
 	chat, err := usecase.GetChatByChatID(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
@@ -144,6 +151,7 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 	err := decoder.Decode(&userIDFromRequest)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
 	}
 
 	chatID, isNewChat, err := usecase.CreatePrivateChat(ctx, userID, userIDFromRequest.ID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
@@ -188,13 +196,14 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 	err := decoder.Decode(&chatIDJson)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
 	}
 	userBelongsToChat := usecase.CheckUserBelongsToChat(ctx, chatIDJson.ChatID, userID, chatsHandler.Chats)
 	if !userBelongsToChat {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "User doesn't belong to chat"})
 		return
 	}
-	success, err := usecase.DeletePrivateChat(ctx, chatIDJson.ChatID, userID, chatsHandler.Chats)
+	success, err := usecase.DeletePrivateChat(ctx, userID, chatIDJson.ChatID, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)
@@ -207,7 +216,7 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 	misc.WriteStatusJson(ctx, w, 200, deleteChatJsonResponse{success})
 }
 
-// CreateGroupChat creates dialogue
+// CreateGroupChat creates group chat
 //
 // @Summary creates group chat
 // @ID CreateGroupChat
@@ -235,6 +244,7 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 	err := decoder.Decode(&groupRequest)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
 	}
 
 	chatID, err := usecase.CreateGroupChat(ctx, userID, groupRequest.Users, groupRequest.GroupName, groupRequest.Description, chatsHandler.Chats)
@@ -249,4 +259,41 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
+}
+
+// UpdateGroupChat updates group chat
+//
+// @Summary updates group chat
+// @ID UpdateGroupChat
+// @Accept json
+// @Produce json
+// @Param user body updateChatJson true "updated chat (если имя или описание не обновлялось, поле не слать вообще)"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /updateGroupChat [post]
+func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
+		return
+	}
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+	updatedChat := updateChatJson{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&updatedChat)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	err = usecase.UpdateGroupChat(ctx, userID, updatedChat.ChatID, updatedChat.NewName, updatedChat.NewDescription, chatsHandler.Chats)
+	if err != nil {
+		misc.WriteInternalErrorJson(ctx, w)
+		return
+	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
