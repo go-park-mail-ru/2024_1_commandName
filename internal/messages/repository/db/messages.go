@@ -150,13 +150,11 @@ func (m *Messages) SendMessageToOtherUsers(ctx context.Context, message domain.M
 func (m *Messages) SetMessage(ctx context.Context, message domain.Message) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "INSERT INTO chat.message (user_id, chat_id, message, edited, create_datetime) VALUES($1, $2, $3, $4, $5) "
-	_, err := m.db.ExecContext(ctx, query, message.UserID, message.ChatID, message.Message, message.Edited, message.CreateTimestamp)
-	if err != nil {
-		logger.Error(err.Error())
-		return
-	}
+	var messageID uint
+	m.db.QueryRowContext(ctx, query, message.UserID, message.ChatID, message.Message, message.Edited, message.CreateTimestamp).Scan(&messageID)
+	message.ID = messageID
 	query = `UPDATE chat.chat SET last_action_datetime = $1 WHERE id = $2`
-	_, err = m.db.ExecContext(ctx, query, message.CreateTimestamp, message.ChatID)
+	_, err := m.db.ExecContext(ctx, query, message.CreateTimestamp, message.ChatID)
 	if err != nil {
 		logger.Error(err.Error())
 		return
