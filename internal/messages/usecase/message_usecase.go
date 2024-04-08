@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"ProjectMessenger/domain"
@@ -53,19 +54,25 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, userID uin
 
 func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStorage WebsocketStore, chatStorage usecase.ChatStore) {
 	chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.UserID)
+	wg := &sync.WaitGroup{}
 	for i := range chatUsers {
-		conn := wsStorage.GetConnection(chatUsers[i].UserID)
-		if conn != nil {
-			messageMarshalled, err := json.Marshal(message)
-			if err != nil {
-				return
+		wg.Add(1)
+		go func(message domain.Message, i int) {
+			conn := wsStorage.GetConnection(chatUsers[i].UserID)
+			if conn != nil {
+				messageMarshalled, err := json.Marshal(message)
+				if err != nil {
+					return
+				}
+				err = wsStorage.SendMessageToUser(chatUsers[i].UserID, messageMarshalled)
+				if err != nil {
+					return
+				}
 			}
-			err = wsStorage.SendMessageToUser(chatUsers[i].UserID, messageMarshalled)
-			if err != nil {
-				return
-			}
-		}
+			wg.Done()
+		}(message, i)
 	}
+	wg.Wait()
 }
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {

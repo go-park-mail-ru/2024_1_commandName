@@ -62,6 +62,7 @@ func (m *Websocket) DeleteConnection(userID uint) {
 
 func (m *Websocket) GetConnection(userID uint) *websocket.Conn {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.Connections[userID]
+	conn := m.Connections[userID]
+	m.mu.RUnlock()
+	return conn
 }
