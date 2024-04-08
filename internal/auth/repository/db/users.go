@@ -169,7 +169,7 @@ func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, f
 	//fmt.Println(extension)
 
 	filename := misc.RandStringRunes(16)
-	filePath := u.pathToAvatar + filename + "." + extension
+	filePath := u.pathToAvatar + "avatars/" + filename + "." + extension
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {

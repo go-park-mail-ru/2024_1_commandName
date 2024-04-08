@@ -113,7 +113,7 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 	if err != nil {
 		return err
 	}
-	user.Avatar = fileName
+	user.Avatar = "avatars/" + fileName
 	ok := userStorage.UpdateUser(ctx, user)
 	if !ok {
 		return fmt.Errorf("internal error")
