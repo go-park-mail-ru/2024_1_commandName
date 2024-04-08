@@ -53,11 +53,11 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, userID uin
 }
 
 func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStorage WebsocketStore, chatStorage usecase.ChatStore) {
-	chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.UserID)
+	chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
 	wg := &sync.WaitGroup{}
 	for i := range chatUsers {
 		wg.Add(1)
-		go func(message domain.Message, i int) {
+		go func(userID uint, i int, message domain.Message) {
 			defer wg.Done()
 			conn := wsStorage.GetConnection(chatUsers[i].UserID)
 			if conn != nil {
@@ -70,7 +70,7 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStor
 					return
 				}
 			}
-		}(message, i)
+		}(chatUsers[i].UserID, i, message)
 	}
 	wg.Wait()
 }
