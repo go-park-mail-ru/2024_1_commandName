@@ -2,7 +2,6 @@ package db
 
 import (
 	chatsdelivery "ProjectMessenger/internal/chats/delivery"
-	"ProjectMessenger/internal/chats/usecase"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -104,16 +103,42 @@ func decodeJSON(message []byte) domain.Message {
 	return mess
 }
 
-func (m *Messages) SendMessageToOtherUsers(ctx context.Context, message domain.Message, chatStorage usecase.ChatStore) {
-	users := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
-	for i := range users {
-		conn := m.GetConnection(users[i].UserID)
+func (m *Messages) SendMessageToOtherUsers(ctx context.Context, message domain.Message) {
+	chatUsers := make([]*domain.ChatUser, 0)
+	rows, err := m.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", message.ChatID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method getChatUsersByChatID, chats.go",
+		}
+		fmt.Println(customErr.Error())
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var chatUser domain.ChatUser
+		if err = rows.Scan(&chatUser.ChatID, &chatUser.UserID); err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method getChatUsersByChatID, chats.go",
+			}
+			fmt.Println(customErr.Error())
+			return
+		}
+		chatUsers = append(chatUsers, &chatUser)
+	}
+
+	for i := range chatUsers {
+		conn := m.GetConnection(chatUsers[i].UserID)
 		if conn != nil {
 			messageMarshalled, err := json.Marshal(message)
 			if err != nil {
 				return
 			}
-			err = m.SendMessageToUser(users[i].UserID, messageMarshalled)
+			err = m.SendMessageToUser(chatUsers[i].UserID, messageMarshalled)
 			if err != nil {
 				return
 			}
@@ -136,6 +161,7 @@ func (m *Messages) SetMessage(ctx context.Context, message domain.Message) {
 		logger.Error(err.Error())
 		return
 	}
+	m.SendMessageToOtherUsers(ctx, message)
 	logger.Debug("SetMessage: success", "msg", message)
 }
 
