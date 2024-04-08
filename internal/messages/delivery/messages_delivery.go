@@ -1,22 +1,18 @@
 package delivery
 
 import (
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/chats/delivery"
+	"ProjectMessenger/internal/misc"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"sync"
-
-	"ProjectMessenger/domain"
-	authdelivery "ProjectMessenger/internal/auth/delivery"
-	"ProjectMessenger/internal/misc"
 
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
-	messageRepository "ProjectMessenger/internal/messages/repository/db"
+	repository "ProjectMessenger/internal/messages/repository/db"
 	"ProjectMessenger/internal/messages/usecase"
-
-	"github.com/gorilla/websocket"
 )
 
 type RequestChatIDBody struct {
@@ -24,17 +20,16 @@ type RequestChatIDBody struct {
 }
 
 type MessageHandler struct {
-	AuthHandler *authdelivery.AuthHandler
-	Messages    usecase.MessageStore
-	Connections map[uint]*websocket.Conn
-	mu          sync.RWMutex
+	ChatsHandler *delivery.ChatsHandler
+	Websocket    usecase.WebsocketStore
+	Messages     *repository.Messages
 }
 
-func NewMessagesHandler(authHandler *authdelivery.AuthHandler, database *sql.DB) *MessageHandler {
+func NewMessagesHandler(chatsHandler *delivery.ChatsHandler, database *sql.DB) *MessageHandler {
 	return &MessageHandler{
-		AuthHandler: authHandler,
-		Connections: make(map[uint]*websocket.Conn),
-		Messages:    messageRepository.NewMessageStorage(database),
+		ChatsHandler: chatsHandler,
+		Websocket:    repository.NewWsStorage(database),
+		Messages:     repository.NewMessageStorage(database),
 	}
 }
 
@@ -52,13 +47,13 @@ func NewMessagesHandler(authHandler *authdelivery.AuthHandler, database *sql.DB)
 func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	authorized, userID := messageHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 	fmt.Println(userID)
 
-	upgrader := messageRepository.UpgradeConnection()
+	upgrader := repository.UpgradeConnection()
 
 	connection, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -67,7 +62,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 		return
 	}
 
-	usecase.GetMessagesByWebSocket(ctx, connection, userID, messageHandler.Messages)
+	usecase.HandleWebSocket(ctx, connection, userID, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats)
 }
 
 // GetChatMessages returns messages of some chat
@@ -77,14 +72,14 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 // @Accept application/json
 // @Produce application/json
 // @Param user body  RequestChatIDBody true "ID of chat"
-// @Success 200 {object}  domain.Response[domain.Messages]
+// @Success 200 {object}  domain.Response[domain.Websocket]
 // @Failure 405 {object}  domain.Response[domain.Error] "use POST"
 // @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChatMessages [post]
 func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	authorized, _ := messageHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	authorized, _ := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}

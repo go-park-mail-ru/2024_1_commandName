@@ -976,7 +976,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Messages": {
+        "domain.Websocket": {
             "type": "object",
             "properties": {
                 "messages": {
@@ -1098,7 +1098,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/domain.Messages"
+                    "$ref": "#/definitions/domain.Websocket"
                 },
                 "status": {
                     "type": "integer",

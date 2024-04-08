@@ -74,15 +74,10 @@ func Router(cfg config) {
 	var profileHandler *profiledelivery.ProfileHandler
 	var messageHandler *messagedelivery.MessageHandler
 
-	if cfg.App.InMemory {
-		authHandler = authdelivery.NewAuthMemoryStorage()
-		//chatsHandler = chatsdelivery.NewChatsHandlerMemory(authHandler)
-	} else {
-		dataBase := database.СreateDatabase()
-		authHandler = authdelivery.NewAuthHandler(dataBase, cfg.App.AvatarPath)
-		chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
-		messageHandler = messagedelivery.NewMessagesHandler(authHandler, dataBase)
-	}
+	dataBase := database.СreateDatabase()
+	authHandler = authdelivery.NewAuthHandler(dataBase, cfg.App.AvatarPath)
+	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
+	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)

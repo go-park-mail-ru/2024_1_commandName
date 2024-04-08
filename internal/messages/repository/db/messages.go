@@ -1,153 +1,23 @@
 package db
 
 import (
-	chatsdelivery "ProjectMessenger/internal/chats/delivery"
 	"context"
 	"database/sql"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
-	"sync"
-	"time"
 
 	"ProjectMessenger/domain"
-
-	"github.com/gorilla/websocket"
 )
 
 type Messages struct {
-	db          *sql.DB
-	Chats       *chatsdelivery.ChatsHandler
-	Connections map[uint]*websocket.Conn
-	mu          sync.RWMutex
-}
-
-func UpgradeConnection() websocket.Upgrader {
-	upgrader := websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			return true // Пропускаем любой запрос
-		},
-	}
-	return upgrader
-}
-
-func (m *Messages) ReadMessages(ctx context.Context, connection *websocket.Conn, userID uint) {
-	defer func() {
-		m.DeleteConnection(userID)
-		connection.Close()
-	}()
-	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	for {
-		mt, message, err := connection.ReadMessage()
-
-		if err != nil || mt == websocket.CloseMessage {
-			break // Выходим из цикла, если клиент пытается закрыть соединение или связь с клиентом прервана
-		}
-
-		userDecodedMessage := decodeJSON(message)
-		logger.Debug("got ws message", "msg", userDecodedMessage)
-		userDecodedMessage.UserID = userID
-		userDecodedMessage.CreateTimestamp = time.Now()
-		m.SendMessageToUser(userID, []byte(`{"status": 200}`))
-		m.SetMessage(ctx, userDecodedMessage)
-	}
-}
-
-func (m *Messages) SendMessageToUser(userID uint, message []byte) error {
-	connection := m.GetConnection(userID)
-	if connection == nil {
-		return errors.New("No connection found for user")
-	}
-	return connection.WriteMessage(websocket.TextMessage, message)
-}
-
-func (m *Messages) AddConnection(ctx context.Context, connection *websocket.Conn, userID uint) context.Context {
-	m.mu.Lock()
-	m.Connections[userID] = connection
-	m.mu.Unlock()
-	ctx = context.WithValue(ctx, "ws userID", userID)
-	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	logger.Debug("established ws")
-	return ctx
-}
-
-func (m *Messages) DeleteConnection(userID uint) {
-	m.mu.Lock()
-	delete(m.Connections, userID)
-	m.mu.Unlock()
-}
-
-func (m *Messages) GetConnection(userID uint) *websocket.Conn {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-	return m.Connections[userID]
+	db *sql.DB
 }
 
 func NewMessageStorage(db *sql.DB) *Messages {
-	return &Messages{
-		db:          db,
-		Connections: make(map[uint]*websocket.Conn),
-	}
+	return &Messages{db: db}
 }
 
-func decodeJSON(message []byte) domain.Message {
-	var mess domain.Message
-	err := json.Unmarshal(message, &mess)
-	if err != nil {
-		// TODO
-		fmt.Println(err)
-		return domain.Message{}
-	}
-	return mess
-}
-
-func (m *Messages) SendMessageToOtherUsers(ctx context.Context, message domain.Message) {
-	chatUsers := make([]*domain.ChatUser, 0)
-	rows, err := m.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", message.ChatID)
-	if err != nil {
-		customErr := &domain.CustomError{
-			Type:    "database",
-			Message: err.Error(),
-			Segment: "method getChatUsersByChatID, chats.go",
-		}
-		fmt.Println(customErr.Error())
-		return
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var chatUser domain.ChatUser
-		if err = rows.Scan(&chatUser.ChatID, &chatUser.UserID); err != nil {
-			customErr := &domain.CustomError{
-				Type:    "database",
-				Message: err.Error(),
-				Segment: "method getChatUsersByChatID, chats.go",
-			}
-			fmt.Println(customErr.Error())
-			return
-		}
-		chatUsers = append(chatUsers, &chatUser)
-	}
-
-	for i := range chatUsers {
-		conn := m.GetConnection(chatUsers[i].UserID)
-		if conn != nil {
-			messageMarshalled, err := json.Marshal(message)
-			if err != nil {
-				return
-			}
-			err = m.SendMessageToUser(chatUsers[i].UserID, messageMarshalled)
-			if err != nil {
-				return
-			}
-		}
-	}
-
-}
-
-func (m *Messages) SetMessage(ctx context.Context, message domain.Message) {
+func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (messageSaved domain.Message) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "INSERT INTO chat.message (user_id, chat_id, message, edited, create_datetime) VALUES($1, $2, $3, $4, $5) returning id"
 	var messageID uint
@@ -159,8 +29,9 @@ func (m *Messages) SetMessage(ctx context.Context, message domain.Message) {
 		logger.Error(err.Error())
 		return
 	}
-	m.SendMessageToOtherUsers(ctx, message)
+	//m.SendMessageToOtherUsers(ctx, message)
 	logger.Debug("SetMessage: success", "msg", message)
+	return message
 }
 
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
