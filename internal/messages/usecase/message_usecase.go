@@ -58,6 +58,7 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStor
 	for i := range chatUsers {
 		wg.Add(1)
 		go func(message domain.Message, i int) {
+			defer wg.Done()
 			conn := wsStorage.GetConnection(chatUsers[i].UserID)
 			if conn != nil {
 				messageMarshalled, err := json.Marshal(message)
@@ -69,7 +70,6 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStor
 					return
 				}
 			}
-			wg.Done()
 		}(message, i)
 	}
 	wg.Wait()
