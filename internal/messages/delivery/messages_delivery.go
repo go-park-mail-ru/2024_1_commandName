@@ -38,13 +38,6 @@ func NewMessagesHandler(authHandler *authdelivery.AuthHandler, database *sql.DB)
 	}
 }
 
-func NewMessagesHandlerMemory(authHandler *authdelivery.AuthHandler) *MessageHandler {
-	return &MessageHandler{
-		AuthHandler: authHandler,
-		//Messages:    chatsInMemoryRepository.NewChatsStorage(),
-	}
-}
-
 // SendMessage method to send messages
 //
 // @Summary SendMessage

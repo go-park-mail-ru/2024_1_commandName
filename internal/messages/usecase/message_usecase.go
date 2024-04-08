@@ -9,7 +9,6 @@ import (
 )
 
 type MessageStore interface {
-	PrintMessage(message []byte)
 	ReadMessages(ctx context.Context, connection *websocket.Conn, userID uint)
 	SendMessageToUser(userID uint, message []byte) error
 	AddConnection(ctx context.Context, connection *websocket.Conn, userID uint) context.Context

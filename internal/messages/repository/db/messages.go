@@ -1,6 +1,8 @@
 package db
 
 import (
+	chatsdelivery "ProjectMessenger/internal/chats/delivery"
+	"ProjectMessenger/internal/chats/usecase"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -18,13 +20,9 @@ import (
 
 type Messages struct {
 	db          *sql.DB
+	Chats       *chatsdelivery.ChatsHandler
 	Connections map[uint]*websocket.Conn
 	mu          sync.RWMutex
-}
-
-func (m *Messages) PrintMessage(message []byte) {
-	fmt.Print("От пользователя пришло сообщение: ")
-	fmt.Println(string(message))
 }
 
 func UpgradeConnection() websocket.Upgrader {
@@ -49,7 +47,7 @@ func (m *Messages) ReadMessages(ctx context.Context, connection *websocket.Conn,
 			break // Выходим из цикла, если клиент пытается закрыть соединение или связь с клиентом прервана
 		}
 
-		userDecodedMessage := DecodeJSON(message)
+		userDecodedMessage := decodeJSON(message)
 		logger.Debug("got ws message", "msg", userDecodedMessage)
 		userDecodedMessage.UserID = userID
 		userDecodedMessage.CreateTimestamp = time.Now()
@@ -95,7 +93,7 @@ func NewMessageStorage(db *sql.DB) *Messages {
 	}
 }
 
-func DecodeJSON(message []byte) domain.Message {
+func decodeJSON(message []byte) domain.Message {
 	var mess domain.Message
 	err := json.Unmarshal(message, &mess)
 	if err != nil {
@@ -104,6 +102,24 @@ func DecodeJSON(message []byte) domain.Message {
 		return domain.Message{}
 	}
 	return mess
+}
+
+func (m *Messages) SendMessageToOtherUsers(ctx context.Context, message domain.Message, chatStorage usecase.ChatStore) {
+	users := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
+	for i := range users {
+		conn := m.GetConnection(users[i].UserID)
+		if conn != nil {
+			messageMarshalled, err := json.Marshal(message)
+			if err != nil {
+				return
+			}
+			err = m.SendMessageToUser(users[i].UserID, messageMarshalled)
+			if err != nil {
+				return
+			}
+		}
+	}
+
 }
 
 func (m *Messages) SetMessage(ctx context.Context, message domain.Message) {
