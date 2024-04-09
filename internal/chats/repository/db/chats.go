@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"ProjectMessenger/domain"
@@ -281,6 +282,9 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 		fmt.Println(customErr.Error())
 		return nil
 	}
+	sort.Slice(chatMessagesArr, func(i, j int) bool {
+		return chatMessagesArr[i].CreateTimestamp.Before(chatMessagesArr[j].CreateTimestamp)
+	})
 	return chatMessagesArr
 }
 
