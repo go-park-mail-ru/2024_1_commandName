@@ -973,10 +973,13 @@ const docTemplate = `{
                 },
                 "message_text": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },
-        "domain.Websocket": {
+        "domain.Messages": {
             "type": "object",
             "properties": {
                 "messages": {
@@ -1098,7 +1101,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/domain.Websocket"
+                    "$ref": "#/definitions/domain.Messages"
                 },
                 "status": {
                     "type": "integer",

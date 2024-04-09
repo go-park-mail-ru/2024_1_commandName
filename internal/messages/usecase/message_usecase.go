@@ -26,10 +26,10 @@ type MessageStore interface {
 	GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, userID uint, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage usecase.ChatStore) {
-	ctx = wsStorage.AddConnection(ctx, connection, userID)
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage usecase.ChatStore) {
+	ctx = wsStorage.AddConnection(ctx, connection, user.ID)
 	defer func() {
-		wsStorage.DeleteConnection(userID)
+		wsStorage.DeleteConnection(user.ID)
 		connection.Close()
 	}()
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
@@ -42,11 +42,12 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, userID uin
 		err = json.Unmarshal(message, &userDecodedMessage)
 		if err != nil {
 			fmt.Println(err)
-			return
+			continue
 		}
 		logger.Debug("got ws message", "msg", userDecodedMessage)
-		userDecodedMessage.UserID = userID
+		userDecodedMessage.UserID = user.ID
 		userDecodedMessage.CreateTimestamp = time.Now()
+		userDecodedMessage.SenderUsername = user.Username
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
 		SendMessageToOtherUsers(ctx, messageSaved, wsStorage, chatStorage)
 	}

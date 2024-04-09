@@ -969,6 +969,9 @@
                 },
                 "message_text": {
                     "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         },

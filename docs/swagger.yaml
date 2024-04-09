@@ -152,6 +152,8 @@ definitions:
         type: integer
       message_text:
         type: string
+      username:
+        type: string
     type: object
   domain.Messages:
     properties:

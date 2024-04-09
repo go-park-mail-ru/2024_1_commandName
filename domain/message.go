@@ -9,4 +9,5 @@ type Message struct {
 	Message         string    `json:"message_text"`
 	Edited          bool      `json:"edited" swaggerignore:"true"`
 	CreateTimestamp time.Time `json:"sent_at" swaggerignore:"true"`
+	SenderUsername  string    `json:"username"`
 }

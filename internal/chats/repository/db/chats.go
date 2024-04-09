@@ -247,7 +247,7 @@ func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain
 func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message {
 	chatMessagesArr := make([]*domain.Message, 0)
 
-	rows, err := c.db.QueryContext(ctx, "SELECT id, user_id, chat_id, message.message, create_datetime, edited FROM chat.message WHERE chat_id = $1", chatID)
+	rows, err := c.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, create_datetime, edited, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = $1", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -261,7 +261,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 
 	for rows.Next() {
 		var mess domain.Message
-		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreateTimestamp, &mess.Edited); err != nil {
+		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreateTimestamp, &mess.Edited, &mess.SenderUsername); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),

@@ -61,8 +61,13 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
 		return
 	}
-
-	usecase.HandleWebSocket(ctx, connection, userID, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats)
+	user, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
+	if !found {
+		logger.Info("could not upgrade connection :user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
+		return
+	}
+	usecase.HandleWebSocket(ctx, connection, user, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats)
 }
 
 // GetChatMessages returns messages of some chat
@@ -72,7 +77,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 // @Accept application/json
 // @Produce application/json
 // @Param user body  RequestChatIDBody true "ID of chat"
-// @Success 200 {object}  domain.Response[domain.Websocket]
+// @Success 200 {object}  domain.Response[domain.Messages]
 // @Failure 405 {object}  domain.Response[domain.Error] "use POST"
 // @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"

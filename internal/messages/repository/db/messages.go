@@ -37,7 +37,7 @@ func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (mess
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
 
-	rows, err := m.db.QueryContext(ctx, "SELECT id, user_id, chat_id, message.message, edited, create_datetime FROM chat.message WHERE chat_id = $1 ORDER BY create_datetime DESC LIMIT $2", chatID, limit)
+	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, create_datetime, edited, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = $1", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -51,7 +51,7 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 
 	for rows.Next() {
 		var mess domain.Message
-		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.Edited, &mess.CreateTimestamp); err != nil {
+		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreateTimestamp, &mess.Edited, &mess.SenderUsername); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
