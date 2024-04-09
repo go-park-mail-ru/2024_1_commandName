@@ -108,7 +108,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		chatDesc = description
 	}
 	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type, name, description, avatar_path, last_action_datetime, creator_id) VALUES ($1, $2, $3, $4, $5, $6) returning id`,
-		chatType, chatName, chatDesc, "", time.Now(), userIDs[0]).Scan(&chatID)
+		chatType, chatName, chatDesc, "", time.Now().UTC(), userIDs[0]).Scan(&chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -392,7 +392,7 @@ func addFakeMessage(user_id, chat_id int, message string, edited bool, db *sql.D
 
 func fillTableChatWithFakeData(chatType, name, description, avatar_path string, creatorID int, db *sql.DB) {
 	query := `INSERT INTO chat.chat (type, name, description, avatar_path, last_action_datetime, creator_id) VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := db.Exec(query, chatType, name, description, avatar_path, time.Now(), creatorID)
+	_, err := db.Exec(query, chatType, name, description, avatar_path, time.Now().UTC(), creatorID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
