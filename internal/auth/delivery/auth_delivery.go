@@ -15,7 +15,6 @@ import (
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/auth/repository/db"
-	"ProjectMessenger/internal/auth/repository/inMemory"
 	"ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
 )
@@ -29,14 +28,6 @@ func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
 		Sessions: db.NewSessionStorage(dataBase),
 		Users:    db.NewUserStorage(dataBase, avatarPath),
-	}
-	return &handler
-}
-
-func NewAuthMemoryStorage() *AuthHandler {
-	handler := AuthHandler{
-		Sessions: inMemory.NewSessionStorage(),
-		Users:    inMemory.NewUserStorage(),
 	}
 	return &handler
 }
@@ -80,8 +71,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var jsonUser domain.Person
 	err = decoder.Decode(&jsonUser)
 	if err != nil {
-		http.Error(w, "wrong json structure", 400)
-		return
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)

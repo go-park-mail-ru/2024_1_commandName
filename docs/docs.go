@@ -136,24 +136,24 @@ const docTemplate = `{
                 }
             }
         },
-        "/createDialogue": {
-            "get": {
+        "/createGroupChat": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "creates dialogue",
-                "operationId": "CreateDialogue",
+                "summary": "creates group chat",
+                "operationId": "CreateGroupChat",
                 "parameters": [
                     {
-                        "description": "Person",
+                        "description": "IDs of users to create group chat with",
                         "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Person"
+                            "$ref": "#/definitions/delivery.createGroupJson"
                         }
                     }
                 ],
@@ -161,11 +161,97 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Chats"
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDStruct"
                         }
                     },
                     "400": {
-                        "description": "Person not authorized",
+                        "description": "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/createPrivateChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "creates dialogue",
+                "operationId": "CreatePrivateChat",
+                "parameters": [
+                    {
+                        "description": "ID of person to create private chat with",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.userIDJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDIsNewJsonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized | Пользователь, с которым вы хотите создать дилаог, не найден | Чат с этим пользователем уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/deleteChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "deletes chat",
+                "operationId": "DeleteChat",
+                "parameters": [
+                    {
+                        "description": "ID of chat to delete",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.chatIDStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_deleteChatJsonResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized | User doesn't belong to chat",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -196,7 +282,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/delivery.getChatStruct"
+                            "$ref": "#/definitions/delivery.chatIDStruct"
                         }
                     }
                 ],
@@ -204,11 +290,60 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Response-delivery_chatJson"
+                            "$ref": "#/definitions/domain.Response-delivery_chatJsonResponse"
                         }
                     },
                     "400": {
                         "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getChatMessages": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "GetChatMessages",
+                "operationId": "getChatMessages",
+                "parameters": [
+                    {
+                        "description": "ID of chat",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.RequestChatIDBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Messages"
+                        }
+                    },
+                    "400": {
+                        "description": "wrong json structure",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "405": {
+                        "description": "use POST",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -436,6 +571,87 @@ const docTemplate = `{
                 }
             }
         },
+        "/sendMessage": {
+            "post": {
+                "description": "Сначала по этому URL надо произвести upgrade до вебсокета, потом слать json сообщений",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "SendMessage",
+                "operationId": "sendMessage",
+                "parameters": [
+                    {
+                        "description": "message that was sent",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Message"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error | could not upgrade connection",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/updateGroupChat": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "updates group chat",
+                "operationId": "UpdateGroupChat",
+                "parameters": [
+                    {
+                        "description": "updated chat (если имя или описание не обновлялось, поле не слать вообще)",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.updateChatJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/updateProfileInfo": {
             "post": {
                 "consumes": [
@@ -522,6 +738,14 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "delivery.RequestChatIDBody": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "type": "integer"
+                }
+            }
+        },
         "delivery.addContactStruct": {
             "type": "object",
             "properties": {
@@ -541,11 +765,55 @@ const docTemplate = `{
                 }
             }
         },
-        "delivery.chatJson": {
+        "delivery.chatIDIsNewJsonResponse": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "is_new_chat": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "delivery.chatIDStruct": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "delivery.chatJsonResponse": {
             "type": "object",
             "properties": {
                 "chat": {
                     "$ref": "#/definitions/domain.Chat"
+                }
+            }
+        },
+        "delivery.createGroupJson": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "group_name": {
+                    "type": "string"
+                },
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "delivery.deleteChatJsonResponse": {
+            "type": "object",
+            "properties": {
+                "successfully_deleted": {
+                    "type": "boolean"
                 }
             }
         },
@@ -592,11 +860,17 @@ const docTemplate = `{
                 }
             }
         },
-        "delivery.getChatStruct": {
+        "delivery.updateChatJson": {
             "type": "object",
             "properties": {
                 "chat_id": {
                     "type": "integer"
+                },
+                "new_description": {
+                    "type": "string"
+                },
+                "new_name": {
+                    "type": "string"
                 }
             }
         },
@@ -611,6 +885,14 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.userIDJson": {
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "domain.Chat": {
             "type": "object",
             "properties": {
@@ -618,13 +900,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "creator": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
+                },
+                "last_action_date_time": {
+                    "type": "string"
                 },
                 "last_message": {
                     "$ref": "#/definitions/domain.Message"
@@ -686,20 +971,22 @@ const docTemplate = `{
                 "chat_id": {
                     "type": "integer"
                 },
-                "edited": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "integer"
-                },
                 "message_text": {
                     "type": "string"
                 },
-                "sent_at": {
+                "username": {
                     "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
+                }
+            }
+        },
+        "domain.Messages": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Message"
+                    }
                 }
             }
         },
@@ -714,11 +1001,47 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Response-delivery_chatJson": {
+        "domain.Response-delivery_chatIDIsNewJsonResponse": {
             "type": "object",
             "properties": {
                 "body": {
-                    "$ref": "#/definitions/delivery.chatJson"
+                    "$ref": "#/definitions/delivery.chatIDIsNewJsonResponse"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_chatIDStruct": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.chatIDStruct"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_chatJsonResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.chatJsonResponse"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_deleteChatJsonResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.deleteChatJsonResponse"
                 },
                 "status": {
                     "type": "integer",
@@ -767,6 +1090,18 @@ const docTemplate = `{
             "properties": {
                 "body": {
                     "$ref": "#/definitions/domain.Error"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-domain_Messages": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/domain.Messages"
                 },
                 "status": {
                     "type": "integer",
