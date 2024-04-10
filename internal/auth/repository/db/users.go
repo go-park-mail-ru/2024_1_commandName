@@ -34,7 +34,7 @@ func NewUserStorage(db *sql.DB, pathToAvatar string) *Users {
 func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	userIDs = make([]uint, 0)
-	rows, err := u.db.QueryContext(ctx, "SELECT id FROM auth.go.person")
+	rows, err := u.db.QueryContext(ctx, "SELECT id FROM auth.person")
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetAllUserIDs: no IDs")
@@ -71,7 +71,7 @@ func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("GetByUsername", "username", username)
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.go.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetByUsername didn't found user", "username", username)
@@ -92,7 +92,7 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 
 func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.go.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
+	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
 		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt).Scan(&userID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -137,7 +137,7 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 		return false
 	}
 
-	_, err := u.db.ExecContext(ctx, "UPDATE auth.go.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, create_date = $7, lastseen_datetime = $8, avatar = $9, password_salt = $10 where id = $11",
+	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, create_date = $7, lastseen_datetime = $8, avatar = $9, password_salt = $10 where id = $11",
 		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.Avatar, userUpdated.PasswordSalt, oldUser.ID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -196,7 +196,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
     SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, 
              ap.lastseen_datetime, ap.avatar
     FROM chat.contacts cc
-    JOIN auth.go.person ap ON 
+    JOIN auth.person ap ON 
       (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
     OR (cc.user1_id = ap.id AND cc.user2_id = $1)  -- user is user1_id
     WHERE cc.state = $2;
@@ -263,9 +263,9 @@ func (u *Users) GetAvatarStoragePath() string {
 
 func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	counter := 0
-	_ = db.QueryRow("SELECT count(id) FROM auth.go.person").Scan(&counter)
+	_ = db.QueryRow("SELECT count(id) FROM auth.person").Scan(&counter)
 	if counter == 0 {
-		_, err := db.Exec("ALTER SEQUENCE auth.go.person_id_seq RESTART WITH 1")
+		_, err := db.Exec("ALTER SEQUENCE auth.person_id_seq RESTART WITH 1")
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -274,7 +274,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 			}
 			slog.Error(customErr.Error())
 		}
-		_, err = db.Exec("ALTER SEQUENCE auth.go.session_id_seq RESTART WITH 1")
+		_, err = db.Exec("ALTER SEQUENCE auth.session_id_seq RESTART WITH 1")
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -283,7 +283,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 			}
 			slog.Error(customErr.Error())
 		}
-		_, err = db.Exec("DELETE FROM auth.go.person")
+		_, err = db.Exec("DELETE FROM auth.person")
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -293,7 +293,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 			slog.Error(customErr.Error())
 		}
 
-		_, err = db.Exec("DELETE FROM auth.go.session")
+		_, err = db.Exec("DELETE FROM auth.session")
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -304,7 +304,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 		}
 
 		for i := 0; i < countOfUsers; i++ {
-			query := `INSERT INTO auth.go.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+			query := `INSERT INTO auth.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 			user := getFakeUser(i + 1)
 			_, err := db.Exec(query, user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt)
 			if err != nil {
