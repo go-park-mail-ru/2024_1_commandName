@@ -1,0 +1,7 @@
+app:
+  isDebug: false
+  inMemory: false
+  avatarPath: "./uploads/"
+server:
+  host: ""
+  port: 8080
