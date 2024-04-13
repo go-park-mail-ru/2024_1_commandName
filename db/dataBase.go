@@ -48,3 +48,6 @@ func СreateDatabase() *sql.DB {
 	fmt.Println("Migration successful")
 	return dataBase
 }
+
+//GOOSE_DBSTRING=postgresql://chatme_user:EasyPassword(@127.0.0.1:8888/chatme?sslmode=disable
+// goose -dir C:\Users\m2907\GolandProjects\VK_Education_Go\2024_1_commandName\db\migrations postgres "postgresql://chatme_user:EasyPassword(@127.0.0.1:8888/chatme?sslmode=disable" up
