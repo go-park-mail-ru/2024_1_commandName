@@ -1,6 +1,7 @@
+# ER диаграмма
+
 ```mermaid
 erDiagram
-    
     person {
         type id
         type username
@@ -49,5 +50,12 @@ erDiagram
         type id
         type sessionid
         type userid
-    }    
+    }
+    
+     person ||--|| chat_user : ""
+     chat_user ||--|| chat : ""
+     message ||--|| chat : ""
+     message ||--|| person : ""
+     person ||--|| contacts : ""
+     person ||--|| session : ""
 ```
