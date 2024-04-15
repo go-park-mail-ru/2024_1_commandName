@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS auth.person
     password_hash     TEXT NOT NULL,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     lastseen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    avatar            TEXT DEFAULT '',
+    avatar_path            TEXT DEFAULT '',
     password_salt     TEXT NOT NULL
 );
 

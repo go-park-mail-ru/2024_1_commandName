@@ -71,7 +71,7 @@ func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("GetByUsername", "username", username)
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.AvatarPath, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetByUsername didn't found user", "username", username)
@@ -92,8 +92,8 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 
 func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
-		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt).Scan(&userID)
+	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
+		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.AvatarPath, user.PasswordSalt).Scan(&userID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -110,7 +110,7 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 
 func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.AvatarPath, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetByUserID didn't found user", "userID", userID)
@@ -137,8 +137,8 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 		return false
 	}
 
-	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, created_at = $7, lastseen_at = $8, avatar = $9, password_salt = $10 where id = $11",
-		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.Avatar, userUpdated.PasswordSalt, oldUser.ID)
+	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, created_at = $7, lastseen_at = $8, avatar_path = $9, password_salt = $10 where id = $11",
+		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.AvatarPath, userUpdated.PasswordSalt, oldUser.ID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -194,7 +194,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	rows, err := u.db.QueryContext(ctx,
 		`
     SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, 
-             ap.lastseen_at, ap.avatar
+             ap.lastseen_at, ap.avatar_path
     FROM chat.contacts cc
     JOIN auth.person ap ON 
       (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
@@ -221,7 +221,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 		var userContact domain.Person
 		err = rows.Scan(&userContact.ID, &userContact.Username, &userContact.Email,
 			&userContact.Name, &userContact.Surname, &userContact.About,
-			&userContact.LastSeenDate, &userContact.Avatar)
+			&userContact.LastSeenDate, &userContact.AvatarPath)
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -304,9 +304,9 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 		}
 
 		for i := 0; i < countOfUsers; i++ {
-			query := `INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatfar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+			query := `INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 			user := getFakeUser(i + 1)
-			_, err := db.Exec(query, user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt)
+			_, err := db.Exec(query, user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.AvatarPath, user.PasswordSalt)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -355,22 +355,22 @@ func getFakeUser(number int) domain.Person {
 	testUserHash, testUserSalt := misc.GenerateHashAndSalt("Demouser123!")
 	users := map[int]domain.Person{
 		1: {ID: 1, Username: "IvanNaumov", Email: "ivan@mail.ru", Name: "Ivan", Surname: "Naumov",
-			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
+			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), AvatarPath: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 		2: {ID: 2, Username: "ArtemkaChernikov", Email: "artem@mail.ru", Name: "Artem", Surname: "Chernikov",
-			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
+			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), AvatarPath: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 		3: {ID: 3, Username: "ArtemZhuk", Email: "artemZhuk@mail.ru", Name: "Artem", Surname: "Zhuk",
-			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
+			About: "Backend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), AvatarPath: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 		4: {ID: 4, Username: "AlexanderVolohov", Email: "Volohov@mail.ru", Name: "Alexander", Surname: "Volohov",
-			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
+			About: "Frontend Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), AvatarPath: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 		5: {ID: 5, Username: "mentor", Email: "mentor@mail.ru", Name: "Mentor", Surname: "Mentor",
-			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
+			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), AvatarPath: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 		6: {ID: 6, Username: "TestUser", Email: "test@mail.ru", Name: "Test", Surname: "User",
-			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), Avatar: "",
+			About: "Developer", CreateDate: time.Now(), LastSeenDate: time.Now(), AvatarPath: "",
 			PasswordSalt: testUserSalt, Password: testUserHash},
 	}
 	return users[number]
