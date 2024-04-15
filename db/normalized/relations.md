@@ -22,59 +22,59 @@
 ```mermaid
 erDiagram
     person {
-        type id
-        type username
-        type email
-        type name
-        type surname
-        type about
-        type password_hash
-        type create_date
-        type lastseen_datetime
-        type avatar
-        type password_salt
+        INT id
+        TEXT username
+        TEXT email
+        TEXT name
+        TEXT surname
+        TEXT about
+        TEXT password_hash
+        TIMESTAMP create_date
+        TIMESTAMP lastseen_datetime
+        TEXT avatar
+        TEXT password_salt
     }
     
     chat {
-        type id
-        type type
-        type name
-        type description
-        type avatar_path
-        type last_action_datetime
-        type creator_id
+        INT id          
+        varchar type        
+        TEXT name        
+        TEXT description 
+        TEXT avatar_path 
+        TIMESTAMP last_action_datetime 
+        INT creator_id  
     }
     
     chat_user {
-        type chat_id
-        type user_id
+        INT chat_id
+        INT user_id
     }
     
     message {
-        type id  
-        type user_id
-        type chat_id
-        type message
-        type edited
-        type create_datetime
+        INT id
+        INT user_id
+        INT chat_id
+        TEXT message
+        BOOLEAN edited
+        TIMESTAMP create_datetime
     }
     contacts {
-        type id
-        type user1_id
-        type user2_id
-        type state
+        INT id              
+        INT user1_id 
+        INT user2_id 
+        INT state 
     }
     
     session {
-        type id
-        type sessionid
-        type userid
+        INT id
+        TEXT sessionid
+        INT userid
     }
     
-     person ||--|| chat_user : ""
-     chat_user ||--|| chat : ""
-     message ||--|| chat : ""
+     person ||--|{ chat_user : ""
+     chat_user }|--|| chat : ""
+     message }|--|| chat : ""
      message ||--|| person : ""
-     person ||--|| contacts : ""
+     person }|--|{ contacts : ""
      person ||--|| session : ""
 ```
