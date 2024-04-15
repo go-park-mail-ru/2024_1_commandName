@@ -25,8 +25,8 @@ func NewChatsStorage(db *sql.DB) *Chats {
 func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chat := domain.Chat{}
-	err := c.db.QueryRowContext(ctx, `SELECT id, type, name, description, avatar_path, edited_at,creator_id 
-		FROM chat.chat WHERE id  = $1`, chatID).Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.LastActionDateTime, &chat.CreatorID)
+	err := c.db.QueryRowContext(ctx, `SELECT id, type, name, description, avatar_path, created_at, edited_at,creator_id 
+		FROM chat.chat WHERE id  = $1`, chatID).Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.CreatedAt, &chat.LastActionDateTime, &chat.CreatorID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetChat didn't found chat", "chatID", chatID)
@@ -107,8 +107,8 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		chatName = name
 		chatDesc = description
 	}
-	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type, name, description, avatar_path, edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6) returning id`,
-		chatType, chatName, chatDesc, "", time.Now().UTC(), userIDs[0]).Scan(&chatID)
+	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type, name, description, avatar_path, created_at,edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7) returning id`,
+		chatType, chatName, chatDesc, "", time.Now().UTC(), time.Now().UTC(), userIDs[0]).Scan(&chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -175,7 +175,7 @@ func (c *Chats) DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, e
 
 func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat {
 	chats := make([]domain.Chat, 0)
-	rows, err := c.db.QueryContext(ctx, "SELECT id, type, name, description, avatar_path, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
+	rows, err := c.db.QueryContext(ctx, "SELECT id, type, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -189,7 +189,7 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 
 	for rows.Next() {
 		var chat domain.Chat
-		if err = rows.Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.LastActionDateTime, &chat.CreatorID); err != nil {
+		if err = rows.Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.CreatedAt, &chat.LastActionDateTime, &chat.CreatorID); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
