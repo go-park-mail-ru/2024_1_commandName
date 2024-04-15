@@ -61,7 +61,7 @@ erDiagram
         INT user_id
         INT chat_id
         TEXT message
-        BOOLEAN edited_at
+        TIMESTAMPTZ edited_at
         TIMESTAMPTZ created_at
     }
     

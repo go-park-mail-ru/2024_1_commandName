@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS chat.message
     user_id    INT REFERENCES auth.person (id),
     chat_id    INT REFERENCES chat.chat (id),
     message    TEXT CHECK (length(message) <= 1000) DEFAULT '',
-    edited_at  BOOLEAN     NOT NULL                 DEFAULT false,
+    edited_at  TIMESTAMPTZ NOT NULL                 DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL                 DEFAULT current_TIMESTAMP
 );
 
