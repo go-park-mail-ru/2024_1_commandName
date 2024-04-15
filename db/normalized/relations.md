@@ -29,20 +29,26 @@ erDiagram
         TEXT surname
         TEXT about
         TEXT password_hash
-        TIMESTAMP create_date
-        TIMESTAMP lastseen_datetime
-        TEXT avatar
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ lastseen_at
+        TEXT avatar_path
         TEXT password_salt
     }
     
     chat {
-        INT id          
-        varchar type        
-        TEXT name        
-        TEXT description 
-        TEXT avatar_path 
-        TIMESTAMP last_action_datetime 
-        INT creator_id  
+        INT id
+        TEXT type_id
+        TEXT name
+        TEXT description
+        TEXT avatar_path
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ edited_at
+        INT creator_id
+    }
+    
+    chat_type {
+        TEXT id   
+        TEXT name 
     }
     
     chat_user {
@@ -55,14 +61,20 @@ erDiagram
         INT user_id
         INT chat_id
         TEXT message
-        BOOLEAN edited
-        TIMESTAMP create_datetime
+        BOOLEAN edited_at
+        TIMESTAMPTZ created_at
     }
+    
     contacts {
-        INT id              
-        INT user1_id 
-        INT user2_id 
-        INT state 
+         INT id
+         INT user1_id
+         INT user2_id
+         INT state
+    }
+    
+    contact_type {
+        INT id
+        TEXT name
     }
     
     session {
@@ -73,8 +85,10 @@ erDiagram
     
      person ||--|{ chat_user : ""
      chat_user }|--|| chat : ""
+     chat ||--|| chat_type : ""
      message }|--|| chat : ""
      message ||--|| person : ""
      person }|--|{ contacts : ""
+     contacts ||--|| contact_type : ""
      person ||--|| session : ""
 ```
