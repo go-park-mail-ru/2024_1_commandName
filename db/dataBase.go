@@ -3,11 +3,8 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
-	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
@@ -27,25 +24,26 @@ func СreateDatabase() *sql.DB {
 		return nil
 	}
 
-	driver, err := postgres.WithInstance(dataBase, &postgres.Config{})
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		driver, err := postgres.WithInstance(dataBase, &postgres.Config{})
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
-		"postgres", driver)
-	if err != nil {
-		log.Fatal(err)
-	}
-	//ProjectMessenger/db/migrations
-	//file://migrations
+		m, err := migrate.NewWithDatabaseInstance(
+			"file://migrations",
+			"postgres", driver)
+		if err != nil {
+			log.Fatal(err)
+		}
+		//ProjectMessenger/db/migrations
+		//file://migrations
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal(err)
-	}
+		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			log.Fatal(err)
+		}
 
-	fmt.Println("Migration successful")
+		fmt.Println("Migration successful")*/
 	return dataBase
 }
 
