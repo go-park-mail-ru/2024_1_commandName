@@ -321,6 +321,9 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	counter = 0
 	_ = db.QueryRow("SELECT count(id) FROM chat.contacts").Scan(&counter)
 	if counter == 0 {
+
+		fillTableContactState(db)
+
 		_, err := db.Exec("ALTER SEQUENCE chat.contacts_id_seq RESTART WITH 1")
 		if err != nil {
 			customErr := &domain.CustomError{
@@ -349,6 +352,13 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	}
 	slog.Info("created fake users")
 	return db
+}
+
+func fillTableContactState(db *sql.DB) {
+	_, err := db.Exec("INSERT INTO chat.contact_state (name) VALUES ('request_from'), ('request_to'), ('friend')")
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func getFakeUser(number int) domain.Person {
