@@ -71,7 +71,7 @@ func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
 func (u *Users) GetByUsername(ctx context.Context, username string) (user domain.Person, found bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("GetByUsername", "username", username)
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar, password_salt FROM auth.person WHERE username = $1", username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetByUsername didn't found user", "username", username)
@@ -92,7 +92,7 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 
 func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
+	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
 		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt).Scan(&userID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -110,7 +110,7 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 
 func (u *Users) GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
+	err := u.db.QueryRowContext(ctx, "SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar, password_salt FROM auth.person WHERE id = $1", userID).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Surname, &user.About, &user.Password, &user.CreateDate, &user.LastSeenDate, &user.Avatar, &user.PasswordSalt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("GetByUserID didn't found user", "userID", userID)
@@ -137,7 +137,7 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 		return false
 	}
 
-	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, create_date = $7, lastseen_datetime = $8, avatar = $9, password_salt = $10 where id = $11",
+	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, created_at = $7, lastseen_at = $8, avatar = $9, password_salt = $10 where id = $11",
 		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.Avatar, userUpdated.PasswordSalt, oldUser.ID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -194,7 +194,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	rows, err := u.db.QueryContext(ctx,
 		`
     SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, 
-             ap.lastseen_datetime, ap.avatar
+             ap.lastseen_at, ap.avatar
     FROM chat.contacts cc
     JOIN auth.person ap ON 
       (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
@@ -304,7 +304,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 		}
 
 		for i := 0; i < countOfUsers; i++ {
-			query := `INSERT INTO auth.person (username, email, name, surname, about, password_hash, create_date, lastseen_datetime, avatar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+			query := `INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatfar, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 			user := getFakeUser(i + 1)
 			_, err := db.Exec(query, user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.Avatar, user.PasswordSalt)
 			if err != nil {
