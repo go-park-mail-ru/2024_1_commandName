@@ -25,7 +25,7 @@ func NewChatsStorage(db *sql.DB) *Chats {
 func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chat := domain.Chat{}
-	err := c.db.QueryRowContext(ctx, `SELECT id, type, name, description, avatar_path, created_at, edited_at,creator_id 
+	err := c.db.QueryRowContext(ctx, `SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id 
 		FROM chat.chat WHERE id  = $1`, chatID).Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.CreatedAt, &chat.LastActionDateTime, &chat.CreatorID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -41,6 +41,7 @@ func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, 
 		//fmt.Println(customErr.Error())
 		return domain.Chat{}, fmt.Errorf("internal error")
 	}
+	fmt.Println("here", err)
 	chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
 	chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 	logger.Debug("GetChat: found chat", "chatID", chatID)
@@ -107,7 +108,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		chatName = name
 		chatDesc = description
 	}
-	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type, name, description, avatar_path, created_at,edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7) returning id`,
+	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type_id, name, description, avatar_path, created_at,edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7) returning id`,
 		chatType, chatName, chatDesc, "", time.Now().UTC(), time.Now().UTC(), userIDs[0]).Scan(&chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -175,7 +176,7 @@ func (c *Chats) DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, e
 
 func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat {
 	chats := make([]domain.Chat, 0)
-	rows, err := c.db.QueryContext(ctx, "SELECT id, type, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
+	rows, err := c.db.QueryContext(ctx, "SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -391,7 +392,7 @@ func addFakeMessage(user_id, chat_id int, message string, edited bool, db *sql.D
 }
 
 func fillTableChatWithFakeData(chatType, name, description, avatar_path string, creatorID int, db *sql.DB) {
-	query := `INSERT INTO chat.chat (type, name, description, avatar_path, edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6)`
+	query := `INSERT INTO chat.chat (type_id, name, description, avatar_path, edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := db.Exec(query, chatType, name, description, avatar_path, time.Now().UTC(), creatorID)
 	if err != nil {
 		customErr := &domain.CustomError{

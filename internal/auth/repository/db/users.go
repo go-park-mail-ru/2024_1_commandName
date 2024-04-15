@@ -199,7 +199,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
     JOIN auth.person ap ON 
       (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
     OR (cc.user1_id = ap.id AND cc.user2_id = $1)  -- user is user1_id
-    WHERE cc.state = $2;
+    WHERE cc.state_id = $2;
   `,
 		userID, 3)
 	if err != nil {
@@ -242,7 +242,7 @@ func (u *Users) AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	entryID := 0
 	// TODO проверять на существование пары
-	err := u.db.QueryRowContext(ctx, "INSERT INTO chat.contacts (user1_id, user2_id, state) VALUES ($1, $2, $3) returning id",
+	err := u.db.QueryRowContext(ctx, "INSERT INTO chat.contacts (user1_id, user2_id, state_id) VALUES ($1, $2, $3) returning id",
 		userID1, userID2, 3).Scan(&entryID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -330,7 +330,7 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 			}
 			slog.Error(customErr.Error())
 		}
-		query := `INSERT INTO chat.contacts (user1_id, user2_id, state) VALUES ($1, $2, $3)`
+		query := `INSERT INTO chat.contacts (user1_id, user2_id, state_id) VALUES ($1, $2, $3)`
 		_, err = db.Exec(query, 1, 2, 3) // Naumov to Chernikov -- friends
 		_, err = db.Exec(query, 2, 3, 3) // Chernikov to Zhuk -- friends
 		_, err = db.Exec(query, 6, 5, 3) // mentor to TestUser -- no answer
