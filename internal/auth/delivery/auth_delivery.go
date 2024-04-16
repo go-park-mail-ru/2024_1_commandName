@@ -15,7 +15,6 @@ import (
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/auth/repository/db"
-	"ProjectMessenger/internal/auth/repository/inMemory"
 	"ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
 )
@@ -29,14 +28,6 @@ func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
 		Sessions: db.NewSessionStorage(dataBase),
 		Users:    db.NewUserStorage(dataBase, avatarPath),
-	}
-	return &handler
-}
-
-func NewAuthMemoryStorage() *AuthHandler {
-	handler := AuthHandler{
-		Sessions: inMemory.NewSessionStorage(),
-		Users:    inMemory.NewUserStorage(),
 	}
 	return &handler
 }

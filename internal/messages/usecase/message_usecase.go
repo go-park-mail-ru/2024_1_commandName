@@ -46,7 +46,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		}
 		logger.Debug("got ws message", "msg", userDecodedMessage)
 		userDecodedMessage.UserID = user.ID
-		userDecodedMessage.CreateTimestamp = time.Now().UTC()
+		userDecodedMessage.CreatedAt = time.Now().UTC()
 		userDecodedMessage.SenderUsername = user.Username
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
 		SendMessageToOtherUsers(ctx, messageSaved, wsStorage, chatStorage)

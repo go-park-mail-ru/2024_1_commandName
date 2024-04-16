@@ -11,6 +11,7 @@ type Chat struct {
 	CreatorID          uint        `json:"creator"`
 	Messages           []*Message  `json:"messages"`
 	Users              []*ChatUser `json:"users"`
+	CreatedAt          time.Time   `json:"created_at"`
 	LastActionDateTime time.Time   `json:"last_action_date_time"`
 	LastMessage        Message     `json:"last_message"`
 }
