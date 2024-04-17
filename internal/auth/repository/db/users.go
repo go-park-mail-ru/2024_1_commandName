@@ -207,7 +207,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	rows, err := u.db.QueryContext(ctx,
 		`
     SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, 
-             ap.lastseen_datetime, ap.avatar
+             ap.lastseen_at, ap.avatar_path
     FROM chat.contacts cc
     JOIN auth.person ap ON 
       (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
