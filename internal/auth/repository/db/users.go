@@ -101,8 +101,10 @@ func (u *Users) GetByUsername(ctx context.Context, username string) (user domain
 
 func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id",
-		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.AvatarPath, user.PasswordSalt).Scan(&userID)
+
+	err = u.db.QueryRowContext(ctx, "INSERT INTO auth.person (username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
+		user.Username, user.Email, user.Name, user.Surname, user.About, user.Password, user.CreateDate, user.LastSeenDate, user.AvatarPath, user.PasswordSalt).
+		Scan(&userID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -112,6 +114,7 @@ func (u *Users) CreateUser(ctx context.Context, user domain.Person) (userID uint
 		logger.Error(customErr.Error())
 		return 0, err
 	}
+
 	logger.Info("created user", "userID", user)
 	u.countOfUsers++
 	return userID, nil
