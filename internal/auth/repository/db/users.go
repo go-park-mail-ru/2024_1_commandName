@@ -255,7 +255,7 @@ func (u *Users) AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	entryID := 0
 	// TODO проверять на существование пары
-	err := u.db.QueryRowContext(ctx, "INSERT INTO chat.contacts (user1_id, user2_id, state_id) VALUES ($1, $2, $3) returning id",
+	err := u.db.QueryRowContext(ctx, "INSERT INTO chat.contacts (user1_id, user2_id, state_id) VALUES ($1, $2, $3) RETURNING id",
 		userID1, userID2, 3).Scan(&entryID)
 	if err != nil {
 		customErr := &domain.CustomError{

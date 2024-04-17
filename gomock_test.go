@@ -51,7 +51,7 @@ func TestUserRepo(t *testing.T) {
 
 	mock.
 		ExpectExec("INSERT INTO chat.contacts (user1_id, user2_id, state_id) VALUES ($1, $2, $3)").
-		WithArgs("test_username1", "test_email1@example.com", "Test", "User", "About", "hashed_password", time.Now(), time.Now(), "avatar_url", "password_salt").
+		WithArgs(1, 2, 3).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	mock.
@@ -253,7 +253,9 @@ func TestUserRepo_AddContact(t *testing.T) {
 
 	ctx := context.Background()
 
-	mock.ExpectQuery(`INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES \(.+\) RETURNING id`).
+	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
+
+	mock.ExpectQuery(`INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`).
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
