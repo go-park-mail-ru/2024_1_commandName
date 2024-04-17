@@ -31,6 +31,15 @@ func NewUserStorage(db *sql.DB, pathToAvatar string) *Users {
 	}
 }
 
+func NewRawUserStorage(db *sql.DB, pathToAvatar string) *Users {
+	slog.Info("created user storage")
+	return &Users{
+		db:           db,
+		countOfUsers: 6,
+		pathToAvatar: pathToAvatar,
+	}
+}
+
 func (u *Users) GetAllUserIDs(ctx context.Context) (userIDs []uint) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	userIDs = make([]uint, 0)
@@ -194,7 +203,7 @@ func (u *Users) GetContacts(ctx context.Context, userID uint) []domain.Person {
 	rows, err := u.db.QueryContext(ctx,
 		`
     SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, 
-             ap.lastseen_at, ap.avatar_path
+             ap.lastseen_datetime, ap.avatar
     FROM chat.contacts cc
     JOIN auth.person ap ON 
       (cc.user2_id = ap.id AND cc.user1_id = $1)  -- user is user2_id
@@ -321,9 +330,6 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	counter = 0
 	_ = db.QueryRow("SELECT count(id) FROM chat.contacts").Scan(&counter)
 	if counter == 0 {
-
-		fillTableContactState(db)
-
 		_, err := db.Exec("ALTER SEQUENCE chat.contacts_id_seq RESTART WITH 1")
 		if err != nil {
 			customErr := &domain.CustomError{
@@ -333,7 +339,13 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 			}
 			slog.Error(customErr.Error())
 		}
-		query := `INSERT INTO chat.contacts (user1_id, user2_id, state_id) VALUES ($1, $2, $3)`
+
+		query := `INSERT INTO chat.contact_state (id, name) VALUES ($1, $2)`
+		_, err = db.Exec(query, 1, "request_from")
+		_, err = db.Exec(query, 2, "request_to")
+		_, err = db.Exec(query, 3, "friend")
+
+		query = `INSERT INTO chat.contacts (user1_id, user2_id, state_id) VALUES ($1, $2, $3)`
 		_, err = db.Exec(query, 1, 2, 3) // Naumov to Chernikov -- friends
 		_, err = db.Exec(query, 2, 3, 3) // Chernikov to Zhuk -- friends
 		_, err = db.Exec(query, 6, 5, 3) // mentor to TestUser -- no answer
@@ -352,13 +364,6 @@ func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	}
 	slog.Info("created fake users")
 	return db
-}
-
-func fillTableContactState(db *sql.DB) {
-	_, err := db.Exec("INSERT INTO chat.contact_state (name) VALUES ('request_from'), ('request_to'), ('friend')")
-	if err != nil {
-		fmt.Println(err)
-	}
 }
 
 func getFakeUser(number int) domain.Person {
