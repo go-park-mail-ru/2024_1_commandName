@@ -146,10 +146,11 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 	oldUser, found := u.GetByUserID(ctx, userUpdated.ID)
 	if !found {
 		logger.Debug("UpdateUser didn't found user(via GetByUserID)", "userID", userUpdated.ID)
+		fmt.Println("found:", found, userUpdated)
 		return false
 	}
 
-	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, created_at = $7, lastseen_at = $8, avatar_path = $9, password_salt = $10 where id = $11",
+	_, err := u.db.ExecContext(ctx, "UPDATE auth.person SET username = $1, email = $2, name = $3, surname = $4, about = $5, password_hash = $6, created_at = $7, lastseen_at = $8, avatar_path = $9, password_salt = $10 WHERE id = $11",
 		userUpdated.Username, userUpdated.Email, userUpdated.Name, userUpdated.Surname, userUpdated.About, userUpdated.Password, userUpdated.CreateDate, userUpdated.LastSeenDate, userUpdated.AvatarPath, userUpdated.PasswordSalt, oldUser.ID)
 	if err != nil {
 		customErr := &domain.CustomError{
