@@ -269,3 +269,85 @@ func TestUserRepo_AddContact(t *testing.T) {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
+
+func TestSessionRepo_GetUserIDbySessionID(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	sessionRepo := database.NewSessionStorage(db)
+
+	ctx := context.Background()
+
+	mock.ExpectQuery("SELECT userid, sessionid FROM auth.session WHERE sessionid = ?").
+		WithArgs("abcd").
+		WillReturnRows(sqlmock.NewRows([]string{"userid", "sessionid"}).
+			AddRow(123, "abcd"))
+
+	_, sessionExists := sessionRepo.GetUserIDbySessionID(ctx, "abcd")
+	if !sessionExists {
+		t.Error("err: session not exist")
+	}
+
+	// Проверка выполнения всех ожиданий
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestSessionRepo_CreateSession(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	sessionRepo := database.NewSessionStorage(db)
+	ctx := context.Background()
+
+	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
+	//INSERT INTO auth.\session \(sessionid, userid\) VALUES (.+)
+	result := sqlmock.NewResult(1, 1)
+	mock.ExpectExec(`INSERT INTO auth\.session \(sessionid, userid\) VALUES \(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	sessionID := sessionRepo.CreateSession(ctx, 123)
+	if sessionID == "" {
+		t.Error("err:", err)
+	}
+
+	// Проверка выполнения всех ожиданий
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestSessionRepo_DeleteSession(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	sessionRepo := database.NewSessionStorage(db)
+	ctx := context.Background()
+
+	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
+	//INSERT INTO auth.\session \(sessionid, userid\) VALUES (.+)
+	mock.ExpectExec("DELETE FROM auth.session WHERE sessionID = ?").
+		WithArgs("abcd").
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	sessionRepo.DeleteSession(ctx, "abcd")
+	if err != nil {
+		t.Error("err:", err)
+	}
+
+	// Проверка выполнения всех ожиданий
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
