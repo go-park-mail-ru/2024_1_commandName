@@ -93,11 +93,11 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 	chatType := ""
 	chatName := ""
 	chatDesc := ""
+	fmt.Println("here")
 	if len(userIDs) < 2 {
-		fmt.Println("here")
 		customErr := &domain.CustomError{
 			Type:    "database",
-			Message: err.Error(),
+			Message: "len < 2!",
 			Segment: "method CreateСhat, chats.go",
 		}
 		logger.Error(customErr.Error())

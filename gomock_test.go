@@ -998,3 +998,143 @@ func TestChatRepo_CreateChat(t *testing.T) {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
+
+func TestChatRepo_CreateChat_LengthErr(t *testing.T) {
+	// Создание mock базы данных
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	// Создание userRepo с mock базы данных
+	chatRepo := chat.NewChatsStorage(db)
+
+	ctx := context.Background()
+	arrOfUserIDs := make([]uint, 0)
+	arrOfUserIDs = append(arrOfUserIDs, uint(1))
+	_, err = chatRepo.CreateChat(ctx, "chat1", "desc", arrOfUserIDs...)
+	if err == nil {
+		t.Error("err == nil, must be not nil")
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestChatRepo_CreateChat_Group(t *testing.T) {
+	// Создание mock базы данных
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	// Создание userRepo с mock базы данных
+	chatRepo := chat.NewChatsStorage(db)
+
+	// Утверждение ожидания запроса к базе данных
+	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	fmt.Println("here")
+	result := sqlmock.NewResult(1, 1)
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	ctx := context.Background()
+	arrOfUserIDs := make([]uint, 0)
+	arrOfUserIDs = append(arrOfUserIDs, uint(1))
+	arrOfUserIDs = append(arrOfUserIDs, uint(2))
+	arrOfUserIDs = append(arrOfUserIDs, uint(3))
+	_, err = chatRepo.CreateChat(ctx, "chat1", "desc", arrOfUserIDs...)
+	if err != nil {
+		t.Error("err:", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestChatRepo_CreateChat_CustomErrorByFirst(t *testing.T) {
+	// Создание mock базы данных
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	// Создание userRepo с mock базы данных
+	chatRepo := chat.NewChatsStorage(db)
+
+	// Утверждение ожидания запроса к базе данных
+	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnError(errors.New("some err"))
+
+	// Создание контекста и вызов функции
+	ctx := context.Background()
+	arrOfUserIDs := []uint{1, 2, 3} // Используем сразу инициализированный срез
+	_, err = chatRepo.CreateChat(ctx, "chat1", "desc", arrOfUserIDs...)
+
+	// Проверка наличия ошибки
+	if err == nil {
+		t.Error("Expected an error but got nil")
+	} else {
+		// Тут можно добавить дополнительные проверки, если нужно
+	}
+
+	// Проверка выполнения ожиданий mock объекта
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestChatRepo_CreateChat_CustomErrorSecond(t *testing.T) {
+	// Создание mock базы данных
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	// Создание userRepo с mock базы данных
+	chatRepo := chat.NewChatsStorage(db)
+
+	// Утверждение ожидания запроса к базе данных
+	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	fmt.Println("here")
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnError(errors.New("some err"))
+
+	ctx := context.Background()
+	arrOfUserIDs := []uint{1, 2, 3} // Используем сразу инициализированный срез
+	_, err = chatRepo.CreateChat(ctx, "chat1", "desc", arrOfUserIDs...)
+
+	// Проверка наличия ошибки
+	if err == nil {
+		t.Error("Expected an error but got nil")
+	} else {
+		// Тут можно добавить дополнительные проверки, если нужно
+	}
+
+	// Проверка выполнения ожиданий mock объекта
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
