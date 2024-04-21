@@ -960,7 +960,7 @@ func TestChatRepo_GetChatByChatID_CustomError(t *testing.T) {
 	}
 }
 
-func TestChatRepo_CheckPrivateChatExists_Succes(t *testing.T) {
+func TestChatRepo_CreateChat(t *testing.T) {
 	// Создание mock базы данных
 	db, mock, err := sqlmock.New()
 	if err != nil {
@@ -971,19 +971,29 @@ func TestChatRepo_CheckPrivateChatExists_Succes(t *testing.T) {
 	// Создание userRepo с mock базы данных
 	chatRepo := chat.NewChatsStorage(db)
 
-	mock.ExpectQuery(`SELECT cu1.chat_id FROM chat.chat_user cu1 INNER JOIN chat.chat_user cu2 ON cu1.chat_id = cu2.chat_id WHERE cu1.user_id = ? AND cu2.user_id = ? AND cu1.user_id <> cu2.user_id`).
-		WithArgs(uint(1), uint(2)).
-		WillReturnRows(sqlmock.NewRows([]string{"chat_id"}).AddRow(1))
+	// Утверждение ожидания запроса к базе данных
+	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	fmt.Println("here")
+	result := sqlmock.NewResult(1, 1)
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
 
 	ctx := context.Background()
-	exists, chatID, err := chatRepo.CheckPrivateChatExists(ctx, uint(1), uint(2))
+	arrOfUserIDs := make([]uint, 0)
+	arrOfUserIDs = append(arrOfUserIDs, uint(1))
+	arrOfUserIDs = append(arrOfUserIDs, uint(2))
+	_, err = chatRepo.CreateChat(ctx, "chat1", "desc", arrOfUserIDs...)
 	if err != nil {
 		t.Error("err:", err)
 	}
-	if !exists {
-		t.Error("not exists", err)
-	}
-	fmt.Println(chatID)
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}

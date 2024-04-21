@@ -94,6 +94,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 	chatName := ""
 	chatDesc := ""
 	if len(userIDs) < 2 {
+		fmt.Println("here")
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
@@ -108,7 +109,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		chatName = name
 		chatDesc = description
 	}
-	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type_id, name, description, avatar_path, created_at,edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7) returning id`,
+	err = c.db.QueryRowContext(ctx, `INSERT INTO chat.chat (type_id, name, description, avatar_path, created_at,edited_at, creator_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
 		chatType, chatName, chatDesc, "", time.Now().UTC(), time.Now().UTC(), userIDs[0]).Scan(&chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -124,6 +125,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 	for i := range userIDs {
 		_, err = c.db.Exec(query, chatID, userIDs[i])
 		if err != nil {
+			fmt.Println("here")
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
