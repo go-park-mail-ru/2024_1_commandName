@@ -1138,3 +1138,41 @@ func TestChatRepo_CreateChat_CustomErrorSecond(t *testing.T) {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
+
+func TestChatRepo_DeleteChat(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	chatRepo := chat.NewChatsStorage(db)
+
+	mock.ExpectExec("DELETE FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("DELETE FROM chat.message WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("DELETE FROM chat.chat WHERE id = ?").
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	ctx := context.Background()
+	ok, err := chatRepo.DeleteChat(ctx, 1)
+
+	// Проверка наличия ошибки
+	if err != nil {
+		t.Error("Expected an error but got nil")
+	}
+	if !ok {
+		t.Error("Expected ok, got false")
+	}
+
+	// Проверка выполнения ожиданий mock объекта
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
