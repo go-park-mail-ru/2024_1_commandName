@@ -202,8 +202,14 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 			return nil
 		}
 		chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
-		chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
-		chats = append(chats, chat)
+		if chat.Messages != nil {
+			chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
+		}
+		fmt.Println("chatMessages: ", chat.Messages)
+		fmt.Println("chat.ID: ", chat.ID)
+		if chat.Users != nil {
+			chats = append(chats, chat)
+		}
 	}
 	if err = rows.Err(); err != nil {
 		customErr := &domain.CustomError{
@@ -222,6 +228,7 @@ func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain
 	chatUsers := make([]*domain.ChatUser, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {
+		fmt.Println("ERROR in GetChatUsersByChatID:", err)
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
@@ -251,8 +258,9 @@ func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain
 func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message {
 	chatMessagesArr := make([]*domain.Message, 0)
 
-	rows, err := c.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, create_datetime, edited, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = $1", chatID)
+	rows, err := c.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = $1", chatID)
 	if err != nil {
+		fmt.Println("ERROR IN GetMessagesByChatID", err)
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
@@ -266,6 +274,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 	for rows.Next() {
 		var mess domain.Message
 		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.EditedAt, &mess.SenderUsername); err != nil {
+			fmt.Println("ERROR: ", err)
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
@@ -288,6 +297,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 	sort.Slice(chatMessagesArr, func(i, j int) bool {
 		return chatMessagesArr[i].CreatedAt.Before(chatMessagesArr[j].CreatedAt)
 	})
+	fmt.Println("Messages: ", chatMessagesArr)
 	return chatMessagesArr
 }
 

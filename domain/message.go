@@ -7,7 +7,8 @@ type Message struct {
 	ChatID         uint      `json:"chat_id"`
 	UserID         uint      `json:"user_id" swaggerignore:"true"`
 	Message        string    `json:"message_text"`
-	EditedAt       bool      `json:"edited" swaggerignore:"true"`
+	Edited         bool      `json:"edited" swaggerignore:"true"` //TODO
+	EditedAt       time.Time `json:"edited_at" swaggerignore:"true"`
 	CreatedAt      time.Time `json:"sent_at" swaggerignore:"true"`
 	SenderUsername string    `json:"username"`
 }
