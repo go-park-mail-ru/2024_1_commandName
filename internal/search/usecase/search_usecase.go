@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"mime/multipart"
 	"regexp"
 	"time"
 
@@ -11,22 +10,10 @@ import (
 	"ProjectMessenger/internal/misc"
 )
 
-type SessionStore interface {
+type SearchStore interface {
 	GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool)
 	CreateSession(ctx context.Context, userID uint) (sessionID string)
 	DeleteSession(ctx context.Context, sessionID string)
-}
-
-type UserStore interface {
-	GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool)
-	UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool)
-	StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
-	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
-	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
-	GetContacts(ctx context.Context, userID uint) []domain.Person
-	AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
-	GetAllUserIDs(ctx context.Context) (userIDs []uint)
-	GetAvatarStoragePath() string
 }
 
 func CheckAuthorized(ctx context.Context, sessionID string, storage SessionStore) (authorized bool, userID uint) {

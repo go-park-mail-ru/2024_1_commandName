@@ -11,11 +11,11 @@ import (
 	"ProjectMessenger/internal/misc"
 )
 
-type Sessions struct {
+type Search struct {
 	db *sql.DB
 }
 
-func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool) {
+func (s *Search) GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	var userIDInt int
 	var sid string
