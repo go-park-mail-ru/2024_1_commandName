@@ -12,6 +12,7 @@ type Chat struct {
 	Messages           []*Message  `json:"messages"`
 	Users              []*ChatUser `json:"users"`
 	CreatedAt          time.Time   `json:"created_at"`
+	EditedAt           time.Time   `json:"edited_at"`
 	LastActionDateTime time.Time   `json:"last_action_date_time"`
 	LastMessage        Message     `json:"last_message"`
 }

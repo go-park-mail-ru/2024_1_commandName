@@ -4,12 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
 
 	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/chats/repository/db"
+	"ProjectMessenger/internal/chats/usecase"
+	chats "ProjectMessenger/internal/messages/usecase"
 	"github.com/gorilla/websocket"
 )
 
@@ -17,6 +21,8 @@ type Search struct {
 	db          *sql.DB
 	Connections map[uint]*websocket.Conn
 	mu          sync.RWMutex
+	Chats       usecase.ChatStore
+	WebSocket   chats.WebsocketStore
 }
 
 func (s *Search) GetUserIDbySessionID(ctx context.Context, sessionID string) {
@@ -55,19 +61,76 @@ func (s *Search) GetConnection(userID uint) *websocket.Conn {
 	return conn
 }
 
-func (s *Search) HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person) {
-	ctx = s.AddConnection(ctx, connection, user.ID)
-	defer func() {
-		s.DeleteConnection(user.ID)
-		err := connection.Close()
-		if err != nil {
-			fmt.Println("err:", err)
-			//TODO
-			return
-		}
-	}()
+func (s *Search) SendMessageToUser(userID uint, message []byte) error {
+	connection := s.GetConnection(userID)
+	if connection == nil {
+		return errors.New("No connection found for user")
+	}
+	return connection.WriteMessage(websocket.TextMessage, message)
+}
 
-	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
+func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id 
+				FROM chat.chat c
+				JOIN chat.chat_user cu ON c.id = cu.chat_id 
+				WHERE name LIKE '%' || $1 AND cu.user_id = $2`, word, userID)
+	if err != nil {
+		//TODO
+		fmt.Println("err:", err)
+	}
+	matchedChats := make([]domain.Chat, 0)
+	for rows.Next() {
+		var mChat domain.Chat
+		err = rows.Scan(&mChat.ID, &mChat.Type, mChat.Name, mChat.Description, mChat.AvatarPath, mChat.CreatedAt, mChat.LastActionDateTime, mChat.CreatorID)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method searchChats, search.go",
+			}
+			fmt.Println(customErr.Error())
+			return foundChatsStructure
+		}
+		mChat.Messages = s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+		if mChat.Messages != nil {
+			mChat.Users = s.Chats.GetChatUsersByChatID(ctx, mChat.ID)
+		}
+		fmt.Println("chatMessages: ", mChat.Messages)
+		fmt.Println("chat.ID: ", mChat.ID)
+		if mChat.Users != nil {
+			matchedChats = append(matchedChats, mChat)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method searchChats, search.go",
+		}
+		fmt.Println(customErr.Error())
+		return foundChatsStructure
+	}
+
+	var chatSearchResponse domain.ChatSearchResponse
+	chatSearchResponse.Chats = matchedChats
+	chatSearchResponse.UserID = userID
+
+	return chatSearchResponse
+}
+
+func ConvertToJSONResponse(chats []domain.Chat, userID uint) (jsonResponse []byte) {
+	var chatSearchResponse domain.ChatSearchResponse
+	chatSearchResponse.Chats = chats
+	chatSearchResponse.UserID = userID
+	jsonResponse, err := json.Marshal(chatSearchResponse)
+	if err != nil {
+		fmt.Println("err encoding JSON:", err)
+	}
+	return jsonResponse
+}
+
+func (s *Search) AddSearchIndexes(ctx context.Context) {
 	_, err := s.db.ExecContext(ctx, "CREATE INDEX IF NOT EXISTS idx_chat_id_c ON chat.chat (id)")
 	if err != nil {
 		fmt.Println("err:", err)
@@ -83,57 +146,36 @@ func (s *Search) HandleWebSocket(ctx context.Context, connection *websocket.Conn
 		fmt.Println("err:", err)
 		//TODO
 	}
-	for {
-		mt, wordToSearch, err := connection.ReadMessage()
-		if err != nil || mt == websocket.CloseMessage {
-			break
-		}
-		var decodedWordToSearch string
-		err = json.Unmarshal(wordToSearch, &decodedWordToSearch)
-		if err != nil {
-			fmt.Println("err decoding JSON:", err)
-			continue
-		}
-		logger.Debug("got ws message", "msg", decodedWordToSearch)
-		//TODO: валидация
-		messageSaved := messageStorage.SetMessage(ctx, decodedWordToSearch)
-	}
-	_, err = s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_chat_id_c RESTRICT")
+}
+
+func (s *Search) DeleteSearchIndexes(ctx context.Context) {
+	_, err := s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_chat_id_c CASCADE")
 	if err != nil {
 		fmt.Println("err:", err)
 		//TODO
 	}
-	_, err = s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_user_id RESTRICT")
+	_, err = s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_user_id CASCADE")
 	if err != nil {
 		fmt.Println("err:", err)
 		//TODO
 	}
-	_, err = s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_chat_id_cu RESTRICT")
+	_, err = s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_chat_id_cu CASCADE")
 	if err != nil {
 		fmt.Println("err:", err)
 		//TODO
 	}
 }
 
-func (s *Search) searchChats(ctx context.Context, word string, userID uint) (matchedChats []*domain.Chat) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id 
-				FROM chat.chat c
-				JOIN chat.chat_user cu ON c.id = cu.chat_id 
-				WHERE name LIKE '%' || $1 AND cu.user_id = $2`, word, userID)
-	if err != nil {
-		//TODO
-		fmt.Println("err:", err)
-	}
-	for rows.Next() {
-
-	}
+func (s *Search) SendMatchedSearchResponse(response domain.ChatSearchResponse) {
+	jsonResp := ConvertToJSONResponse(response.Chats, response.UserID)
+	s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
 }
 
-func NewSearchStorage(db *sql.DB) *Search {
+func NewSearchStorage(database *sql.DB) *Search {
 	slog.Info("created search storage")
 	return &Search{
-		db:          db,
+		db:          database,
 		Connections: make(map[uint]*websocket.Conn),
+		Chats:       db.NewChatsStorage(database),
 	}
 }
