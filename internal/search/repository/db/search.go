@@ -13,7 +13,7 @@ import (
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
-	chats "ProjectMessenger/internal/messages/usecase"
+	ws "ProjectMessenger/internal/messages/repository/db"
 	"github.com/gorilla/websocket"
 )
 
@@ -22,7 +22,7 @@ type Search struct {
 	Connections map[uint]*websocket.Conn
 	mu          sync.RWMutex
 	Chats       usecase.ChatStore
-	WebSocket   chats.WebsocketStore
+	WebSocket   *ws.Websocket
 }
 
 func (s *Search) GetUserIDbySessionID(ctx context.Context, sessionID string) {
@@ -40,7 +40,7 @@ func UpgradeConnection() websocket.Upgrader {
 
 func (s *Search) AddConnection(ctx context.Context, connection *websocket.Conn, userID uint) context.Context {
 	s.mu.Lock()
-	s.Connections[userID] = connection
+	s.WebSocket.Connections[userID] = connection
 	s.mu.Unlock()
 	ctx = context.WithValue(ctx, "ws userID", userID)
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
@@ -50,13 +50,13 @@ func (s *Search) AddConnection(ctx context.Context, connection *websocket.Conn, 
 
 func (s *Search) DeleteConnection(userID uint) {
 	s.mu.Lock()
-	delete(s.Connections, userID)
+	delete(s.WebSocket.Connections, userID)
 	s.mu.Unlock()
 }
 
 func (s *Search) GetConnection(userID uint) *websocket.Conn {
 	s.mu.RLock()
-	conn := s.Connections[userID]
+	conn := s.WebSocket.Connections[userID]
 	s.mu.RUnlock()
 	return conn
 }
@@ -74,15 +74,16 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id 
 				FROM chat.chat c
 				JOIN chat.chat_user cu ON c.id = cu.chat_id 
-				WHERE name LIKE '%' || $1 AND cu.user_id = $2`, word, userID)
+				WHERE name LIKE $1 || '%' AND cu.user_id = $2`, word, userID)
 	if err != nil {
 		//TODO
 		fmt.Println("err:", err)
 	}
 	matchedChats := make([]domain.Chat, 0)
 	for rows.Next() {
+		fmt.Println("here")
 		var mChat domain.Chat
-		err = rows.Scan(&mChat.ID, &mChat.Type, mChat.Name, mChat.Description, mChat.AvatarPath, mChat.CreatedAt, mChat.LastActionDateTime, mChat.CreatorID)
+		err = rows.Scan(&mChat.ID, &mChat.Type, &mChat.Name, &mChat.Description, &mChat.AvatarPath, &mChat.CreatedAt, &mChat.LastActionDateTime, &mChat.CreatorID)
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -108,7 +109,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 			Message: err.Error(),
 			Segment: "method searchChats, search.go",
 		}
-		fmt.Println(customErr.Error())
+		fmt.Println("ERROR: ", customErr.Error())
 		return foundChatsStructure
 	}
 
@@ -116,6 +117,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 	chatSearchResponse.Chats = matchedChats
 	chatSearchResponse.UserID = userID
 
+	fmt.Println("FROM SEARCHCHATS:", chatSearchResponse)
 	return chatSearchResponse
 }
 
@@ -167,8 +169,17 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 }
 
 func (s *Search) SendMatchedSearchResponse(response domain.ChatSearchResponse) {
+	fmt.Println(response.UserID)
 	jsonResp := ConvertToJSONResponse(response.Chats, response.UserID)
-	s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("jsonRESPONSE:", jsonResp)
+	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
+	if err != nil {
+		//TODO
+		fmt.Println("ERROR:", err)
+	}
 }
 
 func NewSearchStorage(database *sql.DB) *Search {
@@ -177,5 +188,6 @@ func NewSearchStorage(database *sql.DB) *Search {
 		db:          database,
 		Connections: make(map[uint]*websocket.Conn),
 		Chats:       db.NewChatsStorage(database),
+		WebSocket:   ws.NewWsStorage(database),
 	}
 }

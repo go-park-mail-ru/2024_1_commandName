@@ -24,6 +24,7 @@ type SearchStore interface {
 }
 
 func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person) {
+	fmt.Println("USER IN HANDLE:", user)
 	ctx = s.AddConnection(ctx, connection, user.ID)
 	defer func() {
 		s.DeleteConnection(user.ID)
@@ -51,6 +52,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		logger.Debug("got ws message", "msg", decodedChatSearchRequest)
 		//TODO: валидация
 		matchedChatsStructure := s.SearchChats(ctx, decodedChatSearchRequest.Word, decodedChatSearchRequest.UserID)
+		fmt.Println(matchedChatsStructure)
 		s.SendMatchedSearchResponse(matchedChatsStructure)
 	}
 	s.DeleteSearchIndexes(ctx)
