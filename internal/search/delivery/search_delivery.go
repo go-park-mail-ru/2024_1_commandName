@@ -14,10 +14,6 @@ import (
 	"ProjectMessenger/internal/search/usecase"
 )
 
-type RequestChatIDBody struct {
-	ChatID uint `json:"chatID"`
-}
-
 type SearchHandler struct {
 	ChatsHandler *delivery.ChatsHandler
 	Search       usecase.SearchStore

@@ -16,6 +16,7 @@ import (
 	"ProjectMessenger/internal/middleware"
 	profiledelivery "ProjectMessenger/internal/profile/delivery"
 	searchdelivery "ProjectMessenger/internal/search/delivery"
+	translatedelivery "ProjectMessenger/internal/translate/delivery"
 
 	database "ProjectMessenger/db"
 )
@@ -75,6 +76,7 @@ func Router(cfg config) {
 	var profileHandler *profiledelivery.ProfileHandler
 	var messageHandler *messagedelivery.MessageHandler
 	var searchHandler *searchdelivery.SearchHandler
+	var translateHandler *translatedelivery.TranslateHandler
 
 	dataBase := database.СreateDatabase()
 	authHandler = authdelivery.NewAuthHandler(dataBase, cfg.App.AvatarPath)
@@ -82,6 +84,7 @@ func Router(cfg config) {
 	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
+	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
@@ -106,6 +109,7 @@ func Router(cfg config) {
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
 
 	router.HandleFunc("/searchChats", searchHandler.SearchChats)
+	router.HandleFunc("/translate", translateHandler.TranslateMessage)
 
 	// middleware
 	if cfg.App.IsDebug {

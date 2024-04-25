@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS auth.person
     created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     lastseen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     avatar_path            TEXT DEFAULT '',
-    password_salt     TEXT NOT NULL
+    password_salt     TEXT NOT NULL,
+    language TEXT DEFAULT 'ru'
 );
 
 CREATE SCHEMA IF NOT EXISTS chat;
