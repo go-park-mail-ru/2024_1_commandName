@@ -70,18 +70,19 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 }
 
 func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse) {
+	enWord := word
+
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id 
 				FROM chat.chat c
 				JOIN chat.chat_user cu ON c.id = cu.chat_id 
-				WHERE name LIKE $1 || '%' AND cu.user_id = $2`, word, userID)
+				WHERE name ILIKE $1 || '%' AND cu.user_id = $2`, enWord, userID)
 	if err != nil {
 		//TODO
 		fmt.Println("err:", err)
 	}
 	matchedChats := make([]domain.Chat, 0)
 	for rows.Next() {
-		fmt.Println("here")
 		var mChat domain.Chat
 		err = rows.Scan(&mChat.ID, &mChat.Type, &mChat.Name, &mChat.Description, &mChat.AvatarPath, &mChat.CreatedAt, &mChat.LastActionDateTime, &mChat.CreatorID)
 		if err != nil {
@@ -97,8 +98,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 		if mChat.Messages != nil {
 			mChat.Users = s.Chats.GetChatUsersByChatID(ctx, mChat.ID)
 		}
-		fmt.Println("chatMessages: ", mChat.Messages)
-		fmt.Println("chat.ID: ", mChat.ID)
+
 		if mChat.Users != nil {
 			matchedChats = append(matchedChats, mChat)
 		}
@@ -117,7 +117,6 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 	chatSearchResponse.Chats = matchedChats
 	chatSearchResponse.UserID = userID
 
-	fmt.Println("FROM SEARCHCHATS:", chatSearchResponse)
 	return chatSearchResponse
 }
 
@@ -169,12 +168,8 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 }
 
 func (s *Search) SendMatchedSearchResponse(response domain.ChatSearchResponse) {
-	fmt.Println(response.UserID)
+
 	jsonResp := ConvertToJSONResponse(response.Chats, response.UserID)
-	fmt.Println()
-	fmt.Println()
-	fmt.Println()
-	fmt.Println("jsonRESPONSE:", jsonResp)
 	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
 	if err != nil {
 		//TODO

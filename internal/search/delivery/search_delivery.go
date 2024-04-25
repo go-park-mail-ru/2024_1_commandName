@@ -30,17 +30,6 @@ func NewSearchHandler(chatsHandler *delivery.ChatsHandler, database *sql.DB) *Se
 	}
 }
 
-// SendMessage method to send messages
-//
-// @Summary SendMessage
-// @Description Сначала по этому URL надо произвести upgrade до вебсокета, потом слать json сообщений
-// @ID sendMessage
-// @Accept application/json
-// @Produce application/json
-// @Param user body  domain.Message true "message that was sent"
-// @Success 200 {object}  domain.Response[int]
-// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error | could not upgrade connection"
-// @Router /sendMessage [post]
 func (SearchHandler *SearchHandler) SearchChats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))

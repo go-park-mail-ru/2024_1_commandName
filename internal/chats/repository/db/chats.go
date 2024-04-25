@@ -272,7 +272,6 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 		return nil
 	}
 	defer rows.Close()
-	fmt.Println("go to rows.Next")
 	for rows.Next() {
 		var mess domain.Message
 		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.Edited, &mess.SenderUsername); err != nil {
@@ -299,7 +298,6 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 	sort.Slice(chatMessagesArr, func(i, j int) bool {
 		return chatMessagesArr[i].CreatedAt.Before(chatMessagesArr[j].CreatedAt)
 	})
-	fmt.Println("Messages: ", chatMessagesArr)
 	return chatMessagesArr
 }
 
