@@ -23,7 +23,7 @@ type TranslateHandler struct {
 
 func NewTranslateHandler(database *sql.DB, chatsHandler *delivery.ChatsHandler) *TranslateHandler {
 	var YandexConfig domain.YandexConfig
-	YandexConfig.TranslateKey = "Bearer t1.9euelZqSjI3ImYmRmJGXjZyRmI-YmO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl9PdNQFhO-e86AQfv3fT3DW9VTvnvOgEH783n9euelZrPkZGTxovOlcqOyozGi8mNme_8xeuelZrPkZGTxovOlcqOyozGi8mNmQ.O4GVYAf7g3v5xPfzw4qACh4IOxnioX_fBrPl-8h0uCCGbAi6bbc4TcQ4CsT2lWNsVgAkyhk8zV4w0dyhBh7bCg"
+	YandexConfig.TranslateKey = "Bearer t1.9euelZqelYrMyciLnJDHj5PKzpyclO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_dlHlBO-e80ShNo_d3z9yVNTU757zRKE2j9zef1656VmozOzZPGlMidmZTHjcjNk86e7_zF656VmozOzZPGlMidmZTHjcjNk86e.dbhRbkheLJfmVeunG45CqjxpeIosd9qEl3g0HlRvQSQBnn3QvPOBklVEm5GxoOUKTBWvWJIxBTsOXvRb9fOIDA"
 	YandexConfig.Url = "https://translate.api.cloud.yandex.net/translate/v2/translate"
 	YandexConfig.FolderID = "b1gq4i9e5unl47m0kj5f"
 	YandexConfig.Header = "application/json"

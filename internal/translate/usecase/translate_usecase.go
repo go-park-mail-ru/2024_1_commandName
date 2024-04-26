@@ -12,6 +12,7 @@ import (
 
 type TranslateStore interface {
 	Translate(request domain.TranslateRequest) (response domain.TranslateResponse)
+	GetFolderID() string
 }
 
 func HandleTranslate(ts TranslateStore, request domain.TranslateRequest) (response domain.TranslateResponse) {

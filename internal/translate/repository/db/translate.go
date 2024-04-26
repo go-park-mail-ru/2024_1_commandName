@@ -58,6 +58,10 @@ func ParseTranslateResponse(jsonResponse []byte) (response domain.TranslateRespo
 	return response
 }
 
+func (t *Translate) GetFolderID() string {
+	return t.Config.FolderID
+}
+
 func NewTranslateStorage(database *sql.DB, YandexConfig domain.YandexConfig) *Translate {
 	slog.Info("created search storage")
 	return &Translate{

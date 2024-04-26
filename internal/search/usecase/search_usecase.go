@@ -13,7 +13,6 @@ import (
 )
 
 type SearchStore interface {
-	GetUserIDbySessionID(ctx context.Context, sessionID string)
 	AddConnection(ctx context.Context, connection *websocket.Conn, userID uint) context.Context
 	DeleteConnection(userID uint)
 	GetConnection(userID uint) *websocket.Conn
