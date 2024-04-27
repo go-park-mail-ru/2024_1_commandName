@@ -29,6 +29,10 @@ type GetQuestionsRequest struct {
 	UserID uint `json:"user_id"`
 }
 
+type SetQuestionRequest struct {
+	QuestionId uint `json:"question_id"`
+}
+
 type FeedbackHandler struct {
 	Feedback     *feedbackrepo.Feedback
 	ChatsHandler *delivery.ChatsHandler
@@ -79,20 +83,20 @@ func (FeedbackHandler *FeedbackHandler) GetQuestions(w http.ResponseWriter, r *h
 	misc.WriteStatusJson(ctx, w, 200, QuestionsResponse{Questions: questions})
 }
 
-func (FeedbackHandler *FeedbackHandler) Set(w http.ResponseWriter, r *http.Request) {
+func (FeedbackHandler *FeedbackHandler) SetAnswer(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	authorized, userID := FeedbackHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	authorized, _ := FeedbackHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 	decoder := json.NewDecoder(r.Body)
-	request := GetQuestionsRequest{}
-	err := decoder.Decode(&request)
+	feedbackAnswer := domain.FeedbackAnswer{}
+	err := decoder.Decode(&feedbackAnswer)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
 
-	questions := usecase.ReturnQuestions(ctx, FeedbackHandler.Feedback, userID)
-	misc.WriteStatusJson(ctx, w, 200, QuestionsResponse{Questions: questions})
+	usecase.SetQuestion(ctx, feedbackAnswer, FeedbackHandler.Feedback)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }

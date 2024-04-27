@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"ProjectMessenger/domain"
 )
@@ -14,8 +15,6 @@ type Feedback struct {
 }
 
 func (f *Feedback) CheckNeedReturnQuestion(ctx context.Context, userID uint, question_id int) (needReturn bool) {
-	// 1 - global
-	// 2 - <какая то фича>
 	counter := 0
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "SELECT COUNT(*) FROM feedback.survey_answers WHERE user_id = $1 and question_id = $2"
@@ -29,7 +28,7 @@ func (f *Feedback) CheckNeedReturnQuestion(ctx context.Context, userID uint, que
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method CheckNeedCSAT, feedback.go",
+			Segment: "method CheckNeedReturnQuestion, feedback.go",
 		}
 		logger.Error(customErr.Error())
 		return false
@@ -43,12 +42,12 @@ func (f *Feedback) GetQuestions(ctx context.Context, userID uint) []domain.Quest
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "SELECT sq.id, sq.questiontype, sq.question_text FROM feedback.survey_questions sq LEFT JOIN feedback.survey_answers sa ON sq.id = sa.question_id AND sa.user_id = $1 WHERE sa.user_id IS NULL;"
 	rows, err := f.db.QueryContext(ctx, query, userID)
-	logger.Debug("CheckNeedReturnQuestion", "userID", userID)
+	logger.Debug("GetQuestions", "userID", userID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method CheckNeedCSAT, feedback.go",
+			Segment: "method GetQuestions, feedback.go",
 		}
 		logger.Error(customErr.Error())
 		return questions
@@ -63,13 +62,29 @@ func (f *Feedback) GetQuestions(ctx context.Context, userID uint) []domain.Quest
 		questions = append(questions, question)
 	}
 
-	logger.Debug("CheckNeedReturnQuestion: success", "needReturn", false)
+	logger.Debug("GetQuestions: success", "questions to return", questions)
 	return questions
 }
 
 func NewFeedbackStorage(db *sql.DB) *Feedback {
 	fillFake(db)
 	return &Feedback{db: db}
+}
+
+func (f *Feedback) SetAnswer(ctx context.Context, answer domain.FeedbackAnswer) {
+	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
+	query := "INSERT INTO feedback.survey_answers (user_id, question_id, grade, answered_at) VALUES ($1, $2, $3, $4)"
+	_, err := f.db.ExecContext(ctx, query, answer.UserID, answer.QuestionID, answer.Grade, time.Now())
+	logger.Debug("SetAnswer", "answer", answer)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method SetAnswer, feedback.go",
+		}
+		logger.Error(customErr.Error())
+	}
+	logger.Debug("SetAnswer: success", "adding answer", true)
 }
 
 func fillFake(db *sql.DB) {

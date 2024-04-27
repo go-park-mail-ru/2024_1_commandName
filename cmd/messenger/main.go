@@ -105,8 +105,8 @@ func Router(cfg config) {
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
 
-	router.HandleFunc("/checkAccess", feedbackHandler.CheckAccess)
 	router.HandleFunc("/getQuestions", feedbackHandler.GetQuestions)
+	router.HandleFunc("/setAnswer", feedbackHandler.SetAnswer)
 
 	// middleware
 	if cfg.App.IsDebug {
