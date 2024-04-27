@@ -41,8 +41,8 @@ func (f *Feedback) CheckNeedReturnQuestion(ctx context.Context, userID uint, que
 func (f *Feedback) GetQuestions(ctx context.Context, userID uint) []domain.Question {
 	questions := make([]domain.Question, 0)
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	query := "SELECT id, questiontype, question_text FROM feedback.survey_questions"
-	rows, err := f.db.QueryContext(ctx, query)
+	query := "SELECT sq.id, sq.questiontype, sq.question_text FROM feedback.survey_questions sq LEFT JOIN feedback.survey_answers sa ON sq.id = sa.question_id AND sa.user_id = $1 WHERE sa.user_id IS NULL;"
+	rows, err := f.db.QueryContext(ctx, query, userID)
 	logger.Debug("CheckNeedReturnQuestion", "userID", userID)
 	if err != nil {
 		customErr := &domain.CustomError{

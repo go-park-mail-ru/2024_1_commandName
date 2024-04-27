@@ -14,7 +14,7 @@ import (
 )
 
 type GetFeedbackResponse struct {
-	IsAnswered bool `json:"isAnswered"`
+	IsNeededToShow bool `json:"isNeeded"`
 }
 
 type QuestionsResponse struct {
@@ -55,8 +55,8 @@ func (FeedbackHandler *FeedbackHandler) CheckAccess(w http.ResponseWriter, r *ht
 		return
 	}
 
-	isAnswered := usecase.IsReturnNeeded(ctx, FeedbackHandler.Feedback, userID, request.QuestionID)
-	misc.WriteStatusJson(ctx, w, 200, GetFeedbackResponse{IsAnswered: isAnswered})
+	isNeededToShow := usecase.IsReturnNeeded(ctx, FeedbackHandler.Feedback, userID, request.QuestionID)
+	misc.WriteStatusJson(ctx, w, 200, GetFeedbackResponse{IsNeededToShow: isNeededToShow})
 }
 
 func (FeedbackHandler *FeedbackHandler) GetQuestions(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +74,23 @@ func (FeedbackHandler *FeedbackHandler) GetQuestions(w http.ResponseWriter, r *h
 	}
 
 	questions := usecase.ReturnQuestions(ctx, FeedbackHandler.Feedback, userID)
+	misc.WriteStatusJson(ctx, w, 200, QuestionsResponse{Questions: questions})
+}
 
+func (FeedbackHandler *FeedbackHandler) Set(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := FeedbackHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+	decoder := json.NewDecoder(r.Body)
+	request := GetQuestionsRequest{}
+	err := decoder.Decode(&request)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	questions := usecase.ReturnQuestions(ctx, FeedbackHandler.Feedback, userID)
 	misc.WriteStatusJson(ctx, w, 200, QuestionsResponse{Questions: questions})
 }
