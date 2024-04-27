@@ -59,15 +59,6 @@ func (FeedbackHandler *FeedbackHandler) CheckAccess(w http.ResponseWriter, r *ht
 	misc.WriteStatusJson(ctx, w, 200, GetFeedbackResponse{IsNeededToShow: isNeededToShow})
 }
 
-// GetQuestions получает список доступных опросов для пользователя
-//
-// @Summary
-// @ID GetQuestions
-// @Produce json
-// @Success 200 {object}  domain.Response[QuestionsResponse]
-// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
-// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
-// @Router /getQuestions [get]
 func (FeedbackHandler *FeedbackHandler) GetQuestions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authorized, userID := FeedbackHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
@@ -105,4 +96,16 @@ func (FeedbackHandler *FeedbackHandler) SetAnswer(w http.ResponseWriter, r *http
 	}
 	usecase.SetQuestion(ctx, userID, userAnswer.QuestionID, userAnswer.Grade, FeedbackHandler.Feedback)
 	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+func (FeedbackHandler *FeedbackHandler) GetStatistic(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, _ := FeedbackHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	statistic := usecase.GetAllStatistic(ctx, FeedbackHandler.Feedback)
+
+	misc.WriteStatusJson(ctx, w, 200, statistic)
 }
