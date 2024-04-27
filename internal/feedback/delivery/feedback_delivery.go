@@ -65,13 +65,6 @@ func (FeedbackHandler *FeedbackHandler) GetQuestions(w http.ResponseWriter, r *h
 	if !authorized {
 		return
 	}
-	decoder := json.NewDecoder(r.Body)
-	request := GetQuestionsRequest{}
-	err := decoder.Decode(&request)
-	if err != nil {
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
-		return
-	}
 
 	questions := usecase.ReturnQuestions(ctx, FeedbackHandler.Feedback, userID)
 	misc.WriteStatusJson(ctx, w, 200, QuestionsResponse{Questions: questions})
