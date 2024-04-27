@@ -87,7 +87,7 @@ func (f *Feedback) SetAnswer(ctx context.Context, userID uint, questionID int, g
 	logger.Debug("SetAnswer: success", "adding answer", true)
 }
 
-func (f *Feedback) GetStatisticForCSAT(ctx context.Context) (statistic domain.FeedbackStatisticCSAT) {
+func (f *Feedback) GetStatisticForCSAT(ctx context.Context) (statistic []int) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "SELECT grade FROM feedback.survey_answers sa JOIN feedback.survey_questions sq ON sa.question_id = sq.id WHERE sq.questiontype = $1"
 	rows, err := f.db.QueryContext(ctx, query, "CSAT")
@@ -102,29 +102,19 @@ func (f *Feedback) GetStatisticForCSAT(ctx context.Context) (statistic domain.Fe
 		return statistic
 	}
 
+	statistic = make([]int, 5)
 	for rows.Next() {
 		currGrade := 0
 		err = rows.Scan(&currGrade)
 		if err != nil {
 			fmt.Println("ERROR:", err)
 		}
-		switch currGrade {
-		case 1:
-			statistic.OneStarsCount++
-		case 2:
-			statistic.TwoStarsCount++
-		case 3:
-			statistic.ThreeStarsCount++
-		case 4:
-			statistic.FourStarsCount++
-		case 5:
-			statistic.FiveStarsCount++
-		}
+		statistic[currGrade-1]++
 	}
 	return statistic
 }
 
-func (f *Feedback) GetStatisticForNSP(ctx context.Context) (statistic domain.FeedbackStatisticNSP) {
+func (f *Feedback) GetStatisticForNSP(ctx context.Context) (statistic []int) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "SELECT grade FROM feedback.survey_answers sa JOIN feedback.survey_questions sq ON sa.question_id = sq.id WHERE sq.questiontype = $1"
 	rows, err := f.db.QueryContext(ctx, query, "NSP")
@@ -139,34 +129,14 @@ func (f *Feedback) GetStatisticForNSP(ctx context.Context) (statistic domain.Fee
 		return statistic
 	}
 
+	statistic = make([]int, 10)
 	for rows.Next() {
 		currGrade := 0
 		err = rows.Scan(&currGrade)
 		if err != nil {
 			fmt.Println("ERROR:", err)
 		}
-		switch currGrade {
-		case 1:
-			statistic.OneStarsCount++
-		case 2:
-			statistic.TwoStarsCount++
-		case 3:
-			statistic.ThreeStarsCount++
-		case 4:
-			statistic.FourStarsCount++
-		case 5:
-			statistic.FiveStarsCount++
-		case 6:
-			statistic.SixStarsCount++
-		case 7:
-			statistic.SevenStarsCount++
-		case 8:
-			statistic.EightStarsCount++
-		case 9:
-			statistic.NineStarsCount++
-		case 10:
-			statistic.TenStarsCount++
-		}
+		statistic[currGrade-1]++
 	}
 	return statistic
 }
