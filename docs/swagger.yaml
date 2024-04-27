@@ -85,6 +85,13 @@ definitions:
       username:
         type: string
     type: object
+  delivery.getQuestionsRequest:
+    properties:
+      grade:
+        type: integer
+      question_id:
+        type: integer
+    type: object
   delivery.updateChatJson:
     properties:
       chat_id:
@@ -688,6 +695,33 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: SendMessage
+  /setAnswer:
+    get:
+      consumes:
+      - application/json
+      operationId: SetAnswer
+      parameters:
+      - description: user answer to question
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.getQuestionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
   /updateGroupChat:
     post:
       consumes:

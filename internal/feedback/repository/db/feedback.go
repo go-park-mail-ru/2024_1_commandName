@@ -71,11 +71,11 @@ func NewFeedbackStorage(db *sql.DB) *Feedback {
 	return &Feedback{db: db}
 }
 
-func (f *Feedback) SetAnswer(ctx context.Context, answer domain.FeedbackAnswer) {
+func (f *Feedback) SetAnswer(ctx context.Context, userID uint, questionID int, grade int) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "INSERT INTO feedback.survey_answers (user_id, question_id, grade, answered_at) VALUES ($1, $2, $3, $4)"
-	_, err := f.db.ExecContext(ctx, query, answer.UserID, answer.QuestionID, answer.Grade, time.Now())
-	logger.Debug("SetAnswer", "answer", answer)
+	_, err := f.db.ExecContext(ctx, query, userID, questionID, grade, time.Now())
+	//logger.Debug("SetAnswer", "answer", answer)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",

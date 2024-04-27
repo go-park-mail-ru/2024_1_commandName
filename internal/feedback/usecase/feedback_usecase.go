@@ -9,7 +9,7 @@ import (
 type FeedbackStore interface {
 	CheckNeedReturnQuestion(ctx context.Context, userID uint, question_id int) (needReturn bool)
 	GetQuestions(ctx context.Context, userID uint) []domain.Question
-	SetAnswer(ctx context.Context, answer domain.FeedbackAnswer)
+	SetAnswer(ctx context.Context, userID uint, questionID int, grade int)
 }
 
 func IsReturnNeeded(ctx context.Context, fs FeedbackStore, userID uint, typeOfQuestion int) (isNeeded bool) {
@@ -22,6 +22,6 @@ func ReturnQuestions(ctx context.Context, fs FeedbackStore, userID uint) []domai
 	return questions
 }
 
-func SetQuestion(ctx context.Context, answer domain.FeedbackAnswer, fs FeedbackStore) {
-	fs.SetAnswer(ctx, answer)
+func SetQuestion(ctx context.Context, userID uint, questionID int, grade int, fs FeedbackStore) {
+	fs.SetAnswer(ctx, userID, questionID, grade)
 }
