@@ -24,7 +24,7 @@ func ReturnQuestions(ctx context.Context, fs FeedbackStore, userID uint) []domai
 	return questions
 }
 
-func SetQuestion(ctx context.Context, userID uint, questionID int, grade int, fs FeedbackStore) {
+func SetAnswer(ctx context.Context, userID uint, questionID int, grade int, fs FeedbackStore) {
 	fs.SetAnswer(ctx, userID, questionID, grade)
 }
 

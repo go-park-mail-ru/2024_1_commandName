@@ -94,7 +94,7 @@ func (FeedbackHandler *FeedbackHandler) SetAnswer(w http.ResponseWriter, r *http
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	usecase.SetQuestion(ctx, userID, userAnswer.QuestionID, userAnswer.Grade, FeedbackHandler.Feedback)
+	usecase.SetAnswer(ctx, userID, userAnswer.QuestionID, userAnswer.Grade, FeedbackHandler.Feedback)
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
