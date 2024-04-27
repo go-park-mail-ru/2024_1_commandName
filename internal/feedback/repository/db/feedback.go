@@ -251,24 +251,22 @@ func fillFake(db *sql.DB) {
 		fmt.Println(err)
 	}
 	query = `INSERT INTO feedback.survey_answers (user_id, question_id, grade, answered_at) VALUES ($1, $2, $3, $4)`
-	for i := 0; i < 1; i++ {
-		addFakeGrades(db, query, uint(1), 1, 5, time.Now())
-		addFakeGrades(db, query, uint(2), 1, 4, time.Now())
-		addFakeGrades(db, query, uint(3), 1, 3, time.Now())
-		addFakeGrades(db, query, uint(4), 1, 4, time.Now())
-		addFakeGrades(db, query, uint(5), 1, 5, time.Now())
-		addFakeGrades(db, query, uint(1), 2, 5, time.Now())
-		addFakeGrades(db, query, uint(2), 2, 4, time.Now())
-		addFakeGrades(db, query, uint(3), 2, 3, time.Now())
-		addFakeGrades(db, query, uint(4), 2, 4, time.Now())
-		addFakeGrades(db, query, uint(5), 2, 5, time.Now())
-		addFakeGrades(db, query, uint(1), 3, 5, time.Now())
-		addFakeGrades(db, query, uint(2), 3, 4, time.Now())
-		addFakeGrades(db, query, uint(3), 3, 3, time.Now())
-		addFakeGrades(db, query, uint(4), 3, 4, time.Now())
-		addFakeGrades(db, query, uint(5), 3, 5, time.Now())
-		addFakeGrades(db, query, uint(6), 3, 4, time.Now())
-	}
+	addFakeGrades(db, query, uint(1), 1, 5, time.Now())
+	addFakeGrades(db, query, uint(2), 1, 4, time.Now())
+	addFakeGrades(db, query, uint(3), 1, 3, time.Now())
+	addFakeGrades(db, query, uint(4), 1, 4, time.Now())
+	addFakeGrades(db, query, uint(5), 1, 5, time.Now())
+	addFakeGrades(db, query, uint(1), 2, 5, time.Now())
+	addFakeGrades(db, query, uint(2), 2, 4, time.Now())
+	addFakeGrades(db, query, uint(3), 2, 3, time.Now())
+	addFakeGrades(db, query, uint(4), 2, 4, time.Now())
+	addFakeGrades(db, query, uint(5), 2, 5, time.Now())
+	addFakeGrades(db, query, uint(1), 3, 5, time.Now())
+	addFakeGrades(db, query, uint(2), 3, 4, time.Now())
+	addFakeGrades(db, query, uint(3), 3, 3, time.Now())
+	addFakeGrades(db, query, uint(4), 3, 4, time.Now())
+	addFakeGrades(db, query, uint(5), 3, 5, time.Now())
+	addFakeGrades(db, query, uint(6), 3, 4, time.Now())
 
 }
 
