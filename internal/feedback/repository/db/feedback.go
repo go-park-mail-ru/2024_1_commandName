@@ -71,11 +71,10 @@ func NewFeedbackStorage(db *sql.DB) *Feedback {
 	return &Feedback{db: db}
 }
 
-func (f *Feedback) SetAnswer(ctx context.Context, userID uint, questionID int, grade int) {
+func (f *Feedback) SetAnswer(ctx context.Context, userID uint, questionID int, grade int) bool {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	query := "INSERT INTO feedback.survey_answers (user_id, question_id, grade, answered_at) VALUES ($1, $2, $3, $4)"
 	_, err := f.db.ExecContext(ctx, query, userID, questionID, grade, time.Now())
-	//logger.Debug("SetAnswer", "answer", answer)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -83,8 +82,10 @@ func (f *Feedback) SetAnswer(ctx context.Context, userID uint, questionID int, g
 			Segment: "method SetAnswer, feedback.go",
 		}
 		logger.Error(customErr.Error())
+		return false
 	}
 	logger.Debug("SetAnswer: success", "adding answer", true)
+	return true
 }
 
 func (f *Feedback) GetStatisticForCSAT(ctx context.Context) (statistic []int) {
@@ -129,7 +130,7 @@ func (f *Feedback) GetStatisticForNSP(ctx context.Context) (statistic []int) {
 		return statistic
 	}
 
-	statistic = make([]int, 10)
+	statistic = make([]int, 11)
 	for rows.Next() {
 		currGrade := 0
 		err = rows.Scan(&currGrade)
@@ -139,6 +140,55 @@ func (f *Feedback) GetStatisticForNSP(ctx context.Context) (statistic []int) {
 		statistic[currGrade-1]++
 	}
 	return statistic
+}
+
+func CalculateNPS(statistic []int) (percentNPS int) {
+	generalGrades := 0
+	promoters := 0
+	detractors := 0
+	for i := 0; i < len(statistic); i++ {
+		generalGrades += statistic[i]
+		if statistic[i] == 9 || statistic[i] == 10 {
+			promoters++
+		}
+		if statistic[i] < 7 {
+			detractors++
+		}
+	}
+
+	promotersPercent := promoters / generalGrades
+	detractorsPercent := detractors / generalGrades
+	return promotersPercent - detractorsPercent
+}
+
+func (f *Feedback) AddQuestion(ctx context.Context, question domain.Question) {
+	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
+	query := "INSERT INTO feedback.survey_questions (question_text, questiontype) VALUES ($1, $2)"
+	_, err := f.db.ExecContext(ctx, query, question.QuestionText, question.QuestionType)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddQuestion, feedback.go",
+		}
+		logger.Error(customErr.Error())
+	}
+	logger.Debug("AddQuestion: success", "adding question", true)
+}
+
+func (f *Feedback) UpdateQuestion(ctx context.Context, question domain.Question) {
+	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
+	query := "UPDATE feedback.survey_questions SET question_text = $1, questiontype = $2 WHERE id = $3"
+	_, err := f.db.ExecContext(ctx, query, question.QuestionText, question.QuestionType, question.Id)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddQuestion, feedback.go",
+		}
+		logger.Error(customErr.Error())
+	}
+	logger.Debug("AddQuestion: success", "adding question", true)
 }
 
 func fillFake(db *sql.DB) {

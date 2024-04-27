@@ -1,12 +1,13 @@
 package delivery
 
 import (
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/chats/delivery"
-	"ProjectMessenger/internal/misc"
 	"database/sql"
 	"encoding/json"
 	"net/http"
+
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/chats/delivery"
+	"ProjectMessenger/internal/misc"
 
 	feedbackrepo "ProjectMessenger/internal/feedback/repository/db"
 	usecase "ProjectMessenger/internal/feedback/usecase"
@@ -94,7 +95,10 @@ func (FeedbackHandler *FeedbackHandler) SetAnswer(w http.ResponseWriter, r *http
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	usecase.SetAnswer(ctx, userID, userAnswer.QuestionID, userAnswer.Grade, FeedbackHandler.Feedback)
+	ok := usecase.SetAnswer(ctx, userID, userAnswer.QuestionID, userAnswer.Grade, FeedbackHandler.Feedback)
+	if !ok {
+		misc.WriteInternalErrorJson(ctx, w)
+	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
@@ -108,4 +112,22 @@ func (FeedbackHandler *FeedbackHandler) GetStatistic(w http.ResponseWriter, r *h
 	statistic := usecase.GetAllStatistic(ctx, FeedbackHandler.Feedback)
 
 	misc.WriteStatusJson(ctx, w, 200, statistic)
+}
+
+// admin
+func (FeedbackHandler *FeedbackHandler) AddQuestion(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, _ := FeedbackHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+	decoder := json.NewDecoder(r.Body)
+	question := domain.Question{}
+	err := decoder.Decode(&question)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	usecase.AddQuestion(ctx, FeedbackHandler.Feedback, question)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
