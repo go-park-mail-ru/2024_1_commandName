@@ -226,5 +226,11 @@ func fillFake(db *sql.DB) {
 		return
 	}
 	query := `INSERT INTO feedback.survey_questions (question_text, questiontype) VALUES ($1, $2)`
-	db.Exec(query, "Как вам наш сервис?", "CSAT")
+	addRealQuestions(db, query, "Насколько Вам нравиться пользоваться ChatMe?", "CSAP")
+	addRealQuestions(db, query, "Насколько Вы готовы рекомендовать наш мессенджер своих друзьям?", "NPS")
+	addRealQuestions(db, query, "Довольны ли Вы скоростью работы ChatMe?", "NPS")
+}
+
+func addRealQuestions(db *sql.DB, query string, quest_text string, questiontype string) {
+	db.Exec(query, quest_text, questiontype)
 }
