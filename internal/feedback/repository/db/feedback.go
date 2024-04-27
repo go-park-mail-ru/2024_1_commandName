@@ -90,7 +90,7 @@ func (f *Feedback) SetAnswer(ctx context.Context, userID uint, questionID int, g
 
 func (f *Feedback) GetStatisticForOneQuestion(ctx context.Context, questionID int, questionType string) (statistic []int) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	query := "SELECT grade, sq.questiontype FROM feedback.survey_answers sa JOIN feedback.survey_questions sq ON sa.question_id = sq.id WHERE sq.id= $1"
+	query := "SELECT grade FROM feedback.survey_answers sa JOIN feedback.survey_questions sq ON sa.question_id = sq.id WHERE sq.id= $1"
 	rows, err := f.db.QueryContext(ctx, query, questionID)
 	logger.Debug("getStatisticForCSAT", "questionID", questionID)
 	if err != nil {
@@ -152,7 +152,7 @@ func (f *Feedback) GetAllQuestionStatistic(ctx context.Context) (statistic domai
 			if questionType == "NPS" {
 				oneQuestionStat.NSP = CalculateNPS(oneQuestionStat.Grades)
 			} else {
-				oneQuestionStat.CSAP = CalculateCSAP(oneQuestionStat.Grades)
+				oneQuestionStat.CSAT = CalculateCSAT(oneQuestionStat.Grades)
 			}
 		}
 		allStat.AllQuestionStatistic = append(allStat.AllQuestionStatistic, oneQuestionStat)
@@ -182,7 +182,7 @@ func CalculateNPS(statistic []int) (percentNPS int) {
 	return promotersPercent - detractorsPercent
 }
 
-func CalculateCSAP(statistic []int) (percentNPS int) {
+func CalculateCSAT(statistic []int) (percentNPS int) {
 	generalGrades := 0
 	for i := 0; i < len(statistic); i++ {
 		generalGrades += statistic[i]
@@ -221,21 +221,32 @@ func (f *Feedback) UpdateQuestion(ctx context.Context, question domain.Question)
 }
 
 func fillFake(db *sql.DB) {
+	_, err := db.Exec("DELETE FROM feedback.survey_answers")
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = db.Exec("DELETE FROM feedback.survey_questions")
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = db.Exec("ALTER SEQUENCE feedback.survey_questions_id_seq RESTART WITH 1")
+	if err != nil {
+		fmt.Println(err)
+	}
 	counter := 0
 	_ = db.QueryRow("SELECT count(id) FROM feedback.survey_questions").Scan(&counter)
 	if counter != 0 {
 		return
 	}
 	query := `INSERT INTO feedback.survey_questions (question_text, questiontype) VALUES ($1, $2)`
-	addRealQuestions(db, query, "Насколько Вам нравиться пользоваться ChatMe?", "CSAP")
+	addRealQuestions(db, query, "Насколько Вам нравиться пользоваться ChatMe?", "CSAT")
 	addRealQuestions(db, query, "Насколько Вы готовы рекомендовать наш мессенджер своих друзьям?", "NPS")
 	addRealQuestions(db, query, "Довольны ли Вы скоростью работы ChatMe?", "NPS")
 
-	_, err := db.Exec("ALTER SEQUENCE feedback.survey_answers_id_seq RESTART WITH 1")
+	_, err = db.Exec("ALTER SEQUENCE feedback.survey_answers_id_seq RESTART WITH 1")
 	if err != nil {
 		fmt.Println(err)
 	}
-	_, err = db.Exec("ALTER SEQUENCE feedback.survey_questions_id_seq RESTART WITH 1")
 	if err != nil {
 		fmt.Println(err)
 	}

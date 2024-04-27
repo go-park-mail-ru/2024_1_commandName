@@ -9,6 +9,6 @@ type OneQuestionStat struct {
 	QuestionID    int    `json:"question_id"`
 	NSP           int    `json:"nsp,omitempty"`
 	Type          string `json:"question_type"`
-	CSAP          int    `json:"csap,omitempty"`
+	CSAT          int    `json:"csap,omitempty"`
 	QuestionTitle string `json:"title"`
 }
