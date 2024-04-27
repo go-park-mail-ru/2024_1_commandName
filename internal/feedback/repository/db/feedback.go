@@ -88,11 +88,11 @@ func (f *Feedback) SetAnswer(ctx context.Context, userID uint, questionID int, g
 	return true
 }
 
-func (f *Feedback) GetStatisticForCSAT(ctx context.Context) (statistic []int) {
+func (f *Feedback) GetStatisticForOneQuestion(ctx context.Context, questionID int, questionType string) (statistic []int) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	query := "SELECT grade FROM feedback.survey_answers sa JOIN feedback.survey_questions sq ON sa.question_id = sq.id WHERE sq.questiontype = $1"
-	rows, err := f.db.QueryContext(ctx, query, "CSAT")
-	logger.Debug("getStatisticForCSAT", "type", "CSAT")
+	query := "SELECT grade, sq.questiontype FROM feedback.survey_answers sa JOIN feedback.survey_questions sq ON sa.question_id = sq.id WHERE sq.id= $1"
+	rows, err := f.db.QueryContext(ctx, query, questionID)
+	logger.Debug("getStatisticForCSAT", "questionID", questionID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -103,7 +103,11 @@ func (f *Feedback) GetStatisticForCSAT(ctx context.Context) (statistic []int) {
 		return statistic
 	}
 
-	statistic = make([]int, 5)
+	if questionType == "NSP" {
+		statistic = make([]int, 10)
+	} else {
+		statistic = make([]int, 5)
+	}
 	for rows.Next() {
 		currGrade := 0
 		err = rows.Scan(&currGrade)
@@ -115,31 +119,44 @@ func (f *Feedback) GetStatisticForCSAT(ctx context.Context) (statistic []int) {
 	return statistic
 }
 
-func (f *Feedback) GetStatisticForNSP(ctx context.Context) (statistic []int) {
+func (f *Feedback) GetAllQuestionStatistic(ctx context.Context) (statistic domain.AllStatistic) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	query := "SELECT grade FROM feedback.survey_answers sa JOIN feedback.survey_questions sq ON sa.question_id = sq.id WHERE sq.questiontype = $1"
-	rows, err := f.db.QueryContext(ctx, query, "NSP")
-	logger.Debug("getStatisticForNSP", "type", "NSP")
+	query := "SELECT id, question_text, questiontype FROM feedback.survey_questions"
+	rows, err := f.db.QueryContext(ctx, query)
+	logger.Debug("getStatisticForCSAT", "questionID", nil)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method getStatisticForNSP, feedback.go",
+			Segment: "method getStatisticForCSAT, feedback.go",
 		}
 		logger.Error(customErr.Error())
 		return statistic
 	}
 
-	statistic = make([]int, 11)
+	allStat := domain.AllStatistic{}
 	for rows.Next() {
-		currGrade := 0
-		err = rows.Scan(&currGrade)
+		questionId := 0
+		questionType := ""
+		questionText := ""
+		err = rows.Scan(&questionId, &questionText, &questionType)
 		if err != nil {
 			fmt.Println("ERROR:", err)
 		}
-		statistic[currGrade-1]++
+		oneQuestionStat := domain.OneQuestionStat{}
+		oneQuestionStat.Grades = f.GetStatisticForOneQuestion(ctx, questionId, questionType)
+		oneQuestionStat.QuestionID = questionId
+		oneQuestionStat.QuestionTitle = questionText
+		if len(oneQuestionStat.Grades) > 0 {
+			if questionType == "NPS" {
+				oneQuestionStat.NSP = CalculateNPS(oneQuestionStat.Grades)
+			} else {
+				oneQuestionStat.CSAP = CalculateCSAP(oneQuestionStat.Grades)
+			}
+		}
+		allStat.AllQuestionStatistic = append(allStat.AllQuestionStatistic, oneQuestionStat)
 	}
-	return statistic
+	return allStat
 }
 
 func CalculateNPS(statistic []int) (percentNPS int) {
@@ -155,10 +172,21 @@ func CalculateNPS(statistic []int) (percentNPS int) {
 			detractors++
 		}
 	}
-
+	if generalGrades == 0 {
+		return -1
+	}
+	fmt.Println("generalGrades:", generalGrades)
 	promotersPercent := promoters / generalGrades
 	detractorsPercent := detractors / generalGrades
 	return promotersPercent - detractorsPercent
+}
+
+func CalculateCSAP(statistic []int) (percentNPS int) {
+	generalGrades := 0
+	for i := 0; i < len(statistic); i++ {
+		generalGrades += statistic[i]
+	}
+	return generalGrades / len(statistic)
 }
 
 func (f *Feedback) AddQuestion(ctx context.Context, question domain.Question) {
