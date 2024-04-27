@@ -10,8 +10,8 @@ type FeedbackStore interface {
 	CheckNeedReturnQuestion(ctx context.Context, userID uint, question_id int) (needReturn bool)
 	GetQuestions(ctx context.Context, userID uint) []domain.Question
 	SetAnswer(ctx context.Context, userID uint, questionID int, grade int)
-	GetStatisticForCSAT(ctx context.Context) (statistic domain.FeedbackStatisticCSAT)
-	GetStatisticForNSP(ctx context.Context) (statistic domain.FeedbackStatisticNSP)
+	GetStatisticForCSAT(ctx context.Context) (statistic []int)
+	GetStatisticForNSP(ctx context.Context) (statistic []int)
 }
 
 func IsReturnNeeded(ctx context.Context, fs FeedbackStore, userID uint, typeOfQuestion int) (isNeeded bool) {
