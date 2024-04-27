@@ -107,6 +107,7 @@ func Router(cfg config) {
 
 	router.HandleFunc("/getQuestions", feedbackHandler.GetQuestions)
 	router.HandleFunc("/setAnswer", feedbackHandler.SetAnswer)
+	router.HandleFunc("/getStatistic", feedbackHandler.GetStatistic)
 
 	// middleware
 	if cfg.App.IsDebug {
