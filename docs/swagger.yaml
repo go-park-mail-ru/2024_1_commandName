@@ -1,5 +1,12 @@
 basePath: /
 definitions:
+  delivery.QuestionsResponse:
+    properties:
+      questions:
+        items:
+          $ref: '#/definitions/domain.Question'
+        type: array
+    type: object
   delivery.RequestChatIDBody:
     properties:
       chatID:
@@ -168,6 +175,23 @@ definitions:
         type: string
       username:
         type: string
+    type: object
+  domain.Question:
+    properties:
+      question_id:
+        type: integer
+      question_text:
+        type: string
+      question_type:
+        type: string
+    type: object
+  domain.Response-delivery_QuestionsResponse:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.QuestionsResponse'
+      status:
+        example: 200
+        type: integer
     type: object
   domain.Response-delivery_chatIDIsNewJsonResponse:
     properties:
@@ -537,6 +561,24 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: gets profile info
+  /getQuestions:
+    get:
+      operationId: GetQuestions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_QuestionsResponse'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
   /login:
     post:
       consumes:

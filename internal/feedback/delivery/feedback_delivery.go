@@ -18,7 +18,7 @@ type GetFeedbackResponse struct {
 }
 
 type QuestionsResponse struct {
-	Questions []domain.Question `json:"Questions"`
+	Questions []domain.Question `json:"questions"`
 }
 
 type OneQuestionRequest struct {
@@ -59,6 +59,15 @@ func (FeedbackHandler *FeedbackHandler) CheckAccess(w http.ResponseWriter, r *ht
 	misc.WriteStatusJson(ctx, w, 200, GetFeedbackResponse{IsNeededToShow: isNeededToShow})
 }
 
+// GetQuestions получает список доступных опросов для пользователя
+//
+// @Summary
+// @ID GetQuestions
+// @Produce json
+// @Success 200 {object}  domain.Response[QuestionsResponse]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /getQuestions [get]
 func (FeedbackHandler *FeedbackHandler) GetQuestions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	authorized, userID := FeedbackHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)

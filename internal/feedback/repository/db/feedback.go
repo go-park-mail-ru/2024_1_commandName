@@ -68,5 +68,16 @@ func (f *Feedback) GetQuestions(ctx context.Context, userID uint) []domain.Quest
 }
 
 func NewFeedbackStorage(db *sql.DB) *Feedback {
+	fillFake(db)
 	return &Feedback{db: db}
+}
+
+func fillFake(db *sql.DB) {
+	counter := 0
+	_ = db.QueryRow("SELECT count(id) FROM feedback.survey_questions").Scan(&counter)
+	if counter != 0 {
+		return
+	}
+	query := `INSERT INTO feedback.survey_questions (question_text, questiontype) VALUES ($1, $2)`
+	db.Exec(query, "Как вам наш сервис?", "CSAT")
 }

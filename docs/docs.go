@@ -444,6 +444,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/getQuestions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "operationId": "GetQuestions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_QuestionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/login": {
             "post": {
                 "consumes": [
@@ -738,6 +766,17 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "delivery.QuestionsResponse": {
+            "type": "object",
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Question"
+                    }
+                }
+            }
+        },
         "delivery.RequestChatIDBody": {
             "type": "object",
             "properties": {
@@ -998,6 +1037,32 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.Question": {
+            "type": "object",
+            "properties": {
+                "question_id": {
+                    "type": "integer"
+                },
+                "question_text": {
+                    "type": "string"
+                },
+                "question_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.Response-delivery_QuestionsResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.QuestionsResponse"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
                 }
             }
         },
