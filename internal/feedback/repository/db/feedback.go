@@ -146,6 +146,7 @@ func (f *Feedback) GetAllQuestionStatistic(ctx context.Context) (statistic domai
 		oneQuestionStat := domain.OneQuestionStat{}
 		oneQuestionStat.Grades = f.GetStatisticForOneQuestion(ctx, questionId, questionType)
 		oneQuestionStat.QuestionID = questionId
+		oneQuestionStat.Type = questionType
 		oneQuestionStat.QuestionTitle = questionText
 		if len(oneQuestionStat.Grades) > 0 {
 			if questionType == "NPS" {

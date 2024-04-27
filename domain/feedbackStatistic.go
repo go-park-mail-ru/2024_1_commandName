@@ -8,6 +8,7 @@ type OneQuestionStat struct {
 	Grades        []int  `json:"grades"`
 	QuestionID    int    `json:"question_id"`
 	NSP           int    `json:"nsp,omitempty"`
+	Type          string `json:"question_type"`
 	CSAP          int    `json:"csap,omitempty"`
 	QuestionTitle string `json:"title"`
 }
