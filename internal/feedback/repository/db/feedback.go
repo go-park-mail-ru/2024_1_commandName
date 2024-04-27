@@ -230,8 +230,31 @@ func fillFake(db *sql.DB) {
 	addRealQuestions(db, query, "Насколько Вам нравиться пользоваться ChatMe?", "CSAP")
 	addRealQuestions(db, query, "Насколько Вы готовы рекомендовать наш мессенджер своих друзьям?", "NPS")
 	addRealQuestions(db, query, "Довольны ли Вы скоростью работы ChatMe?", "NPS")
+
+	_, err := db.Exec("ALTER SEQUENCE feedback.survey_answers_id_seq RESTART WITH 1")
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = db.Exec("ALTER SEQUENCE feedback.survey_questions_id_seq RESTART WITH 1")
+	if err != nil {
+		fmt.Println(err)
+	}
+	query = `INSERT INTO feedback.survey_answers (user_id, question_id, grade, answered_at) VALUES ($1, $2, $3, $4)`
+	addFakeGrades(db, query, uint(1), 1, 5, time.Now())
+	addFakeGrades(db, query, uint(2), 1, 4, time.Now())
+	addFakeGrades(db, query, uint(3), 1, 3, time.Now())
+	addFakeGrades(db, query, uint(4), 1, 4, time.Now())
+	addFakeGrades(db, query, uint(5), 1, 5, time.Now())
+	addFakeGrades(db, query, uint(6), 1, 4, time.Now())
 }
 
 func addRealQuestions(db *sql.DB, query string, quest_text string, questiontype string) {
 	db.Exec(query, quest_text, questiontype)
+}
+
+func addFakeGrades(db *sql.DB, query string, user_id uint, question_id int, grade int, answered_at time.Time) {
+	_, err := db.Exec(query, user_id, question_id, grade, answered_at)
+	if err != nil {
+		fmt.Println(err)
+	}
 }

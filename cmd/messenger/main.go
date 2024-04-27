@@ -110,6 +110,8 @@ func Router(cfg config) {
 	router.HandleFunc("/getStatistic", feedbackHandler.GetStatistic)
 	router.HandleFunc("/setQuestion", feedbackHandler.AddQuestion)
 
+	router.HandleFunc("/addQuestion", feedbackHandler.AddQuestion)
+
 	// middleware
 	if cfg.App.IsDebug {
 		router.Use(middleware.CORS)
