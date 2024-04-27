@@ -257,6 +257,18 @@ func fillFake(db *sql.DB) {
 	addFakeGrades(db, query, uint(4), 1, 4, time.Now())
 	addFakeGrades(db, query, uint(5), 1, 5, time.Now())
 	addFakeGrades(db, query, uint(6), 1, 4, time.Now())
+	addFakeGrades(db, query, uint(1), 2, 5, time.Now())
+	addFakeGrades(db, query, uint(2), 2, 4, time.Now())
+	addFakeGrades(db, query, uint(3), 2, 3, time.Now())
+	addFakeGrades(db, query, uint(4), 2, 4, time.Now())
+	addFakeGrades(db, query, uint(5), 2, 5, time.Now())
+	addFakeGrades(db, query, uint(6), 2, 4, time.Now())
+	addFakeGrades(db, query, uint(1), 3, 5, time.Now())
+	addFakeGrades(db, query, uint(2), 3, 4, time.Now())
+	addFakeGrades(db, query, uint(3), 3, 3, time.Now())
+	addFakeGrades(db, query, uint(4), 3, 4, time.Now())
+	addFakeGrades(db, query, uint(5), 3, 5, time.Now())
+	addFakeGrades(db, query, uint(6), 3, 4, time.Now())
 }
 
 func addRealQuestions(db *sql.DB, query string, quest_text string, questiontype string) {
