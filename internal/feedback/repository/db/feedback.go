@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"ProjectMessenger/domain"
 )
@@ -70,6 +71,22 @@ func (f *Feedback) GetQuestions(ctx context.Context, userID uint) []domain.Quest
 func NewFeedbackStorage(db *sql.DB) *Feedback {
 	fillFake(db)
 	return &Feedback{db: db}
+}
+
+func (f *Feedback) SetAnswer(ctx context.Context, answer domain.FeedbackAnswer) {
+	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
+	query := "INSERT INTO feedback.survey_answers (user_id, question_id, grade, answered_at) VALUES ($1, $2, $3, $4)"
+	_, err := f.db.ExecContext(ctx, query, answer.UserID, answer.QuestionID, answer.Grade, time.Now())
+	logger.Debug("SetAnswer", "answer", answer)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method CheckNeedCSAT, feedback.go",
+		}
+		logger.Error(customErr.Error())
+	}
+	logger.Debug("CheckNeedReturnQuestion: success", "needReturn", false)
 }
 
 func fillFake(db *sql.DB) {
