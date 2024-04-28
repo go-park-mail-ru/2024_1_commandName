@@ -65,7 +65,13 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 	fmt.Println("GET CONN FOR USER ", userID)
 	connection := s.GetConnection(userID)
 	if connection == nil {
-		return errors.New("No connection found for user")
+		err := errors.New("no connection found for user")
+		customErr := &domain.CustomError{
+			Type:    "websocket",
+			Message: err.Error(),
+			Segment: "method SendMessageToUser, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	return connection.WriteMessage(websocket.TextMessage, message)
 }
@@ -106,8 +112,13 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 					JOIN chat.chat_user cu ON c.id = cu.chat_id
 					WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') AND cu.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
 			if err != nil {
-				//TODO
-				fmt.Println("err:", err)
+				customErr := &domain.CustomError{
+					Type:    "database",
+					Message: err.Error(),
+					Segment: "method searchChats, search.go",
+				}
+				fmt.Println(customErr.Error())
+				return foundChatsStructure
 			}
 			matchedChats := make([]domain.Chat, 0)
 			for rows.Next() {
@@ -132,7 +143,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 					Message: err.Error(),
 					Segment: "method searchChats, search.go",
 				}
-				fmt.Println("ERROR: ", customErr.Error())
+				fmt.Println(customErr.Error())
 				return foundChatsStructure
 			}
 		}
@@ -147,7 +158,12 @@ func ConvertToJSONResponse(chats []domain.Chat, userID uint) (jsonResponse []byt
 	chatSearchResponse.UserID = userID
 	jsonResponse, err := json.Marshal(chatSearchResponse)
 	if err != nil {
-		fmt.Println("err encoding JSON:", err)
+		customErr := &domain.CustomError{
+			Type:    "json",
+			Message: err.Error(),
+			Segment: "method ConvertToJSONResponse, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	return jsonResponse
 }
@@ -155,46 +171,73 @@ func ConvertToJSONResponse(chats []domain.Chat, userID uint) (jsonResponse []byt
 func (s *Search) AddSearchIndexes(ctx context.Context) {
 	_, err := s.db.ExecContext(ctx, "CREATE INDEX IF NOT EXISTS idx_chat_id_c ON chat.chat (id)")
 	if err != nil {
-		fmt.Println("err:", err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddSearchIndexes, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	_, err = s.db.ExecContext(ctx, "CREATE INDEX IF NOT EXISTS idx_user_id ON chat.chat_user (user_id)")
 	if err != nil {
-		fmt.Println("err:", err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddSearchIndexes, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	_, err = s.db.ExecContext(ctx, "CREATE INDEX IF NOT EXISTS idx_chat_id_cu ON chat.chat_user (chat_id);")
 	if err != nil {
-		fmt.Println("err:", err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddSearchIndexes, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 }
 
 func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 	_, err := s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_chat_id_c CASCADE")
 	if err != nil {
-		fmt.Println("err:", err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddSearchIndexes, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	_, err = s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_user_id CASCADE")
 	if err != nil {
-		fmt.Println("err:", err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddSearchIndexes, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	_, err = s.db.ExecContext(ctx, "DROP INDEX IF EXISTS idx_chat_id_cu CASCADE")
 	if err != nil {
-		fmt.Println("err:", err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddSearchIndexes, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 }
 
 func (s *Search) SendMatchedSearchResponse(response domain.ChatSearchResponse) {
-	fmt.Println(response)
 	jsonResp := ConvertToJSONResponse(response.Chats, response.UserID)
 	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
 	if err != nil {
-		//TODO
-		fmt.Println("ERROR:", err)
+		customErr := &domain.CustomError{
+			Type:    ".WebSocket.SendMessageToUser",
+			Message: err.Error(),
+			Segment: "method SendMatchedSearchResponse, search.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 }
 
@@ -269,12 +312,15 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 	counterOfLetters := 0
 	counterOfVowels := 0
 	currCount := 0
-	syllToTranslate := make([]string, 0)
+	magicNumber := int32(100000) // char
 
+	syllToTranslate := make([]string, 0)
 	for _, word := range words {
 		for _, char := range word {
 			counterOfLetters++
-			fmt.Println(string(char))
+			if char == magicNumber {
+				fmt.Println(char)
+			}
 		}
 
 		for _, char := range word {
@@ -283,7 +329,6 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 				counterOfVowels++
 			}
 			if counterOfVowels < 2 {
-				fmt.Println("add", string(char))
 				currSyllable += string(char)
 			} else {
 				syllToTranslate = append(syllToTranslate, currSyllable)
@@ -292,7 +337,6 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 				counterOfVowels = 1
 			}
 			if counterOfLetters == currCount {
-				fmt.Println(len(word), counterOfLetters)
 				syllToTranslate = append(syllToTranslate, currSyllable)
 			}
 		}

@@ -30,8 +30,12 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		s.DeleteConnection(user.ID)
 		err := connection.Close()
 		if err != nil {
-			fmt.Println("err:", err)
-			//TODO
+			customErr := &domain.CustomError{
+				Type:    "websocket close connection",
+				Message: err.Error(),
+				Segment: "method HandleWebSocket, search_usecase.go",
+			}
+			fmt.Println(customErr.Error())
 			return
 		}
 	}()
@@ -46,7 +50,12 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		}
 		err = json.Unmarshal(request, &decodedChatSearchRequest)
 		if err != nil {
-			fmt.Println("err decoding JSON:", err)
+			customErr := &domain.CustomError{
+				Type:    "json Unmarshal",
+				Message: err.Error(),
+				Segment: "method HandleWebSocket, search_usecase.go",
+			}
+			fmt.Println(customErr.Error())
 			continue
 		}
 		decodedChatSearchRequest.UserID = user.ID

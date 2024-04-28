@@ -25,35 +25,48 @@ func (t *Translate) Translate(request domain.TranslateRequest) (response domain.
 	}
 	client := &http.Client{}
 	req, err := http.NewRequest(t.Config.Method, t.Config.Url, bytes.NewBuffer(jsonRequest))
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "http new request",
+			Message: err.Error(),
+			Segment: "method Translate, translate.go",
+		}
+		fmt.Println(customErr.Error())
+	}
 	req.Header.Add("Content-Type", t.Config.Header)
 	req.Header.Add("Authorization", t.Config.TranslateKey)
-	if err != nil {
-		//TODO
-		fmt.Println(err)
-	}
 	resp, err := client.Do(req)
-	fmt.Println(resp)
 	if err != nil {
-		fmt.Println(err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "http do request",
+			Message: err.Error(),
+			Segment: "method Translate, translate.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(body))
 	if err != nil {
-		fmt.Println(err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "read response",
+			Message: err.Error(),
+			Segment: "method Translate, translate.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	response = ParseTranslateResponse(body)
-	fmt.Println(response)
 	return response
 }
 
 func ParseTranslateResponse(jsonResponse []byte) (response domain.TranslateResponse) {
 	err := json.Unmarshal(jsonResponse, &response)
 	if err != nil {
-		//TODO
-		fmt.Println(err)
+		customErr := &domain.CustomError{
+			Type:    "json Unmarshal",
+			Message: err.Error(),
+			Segment: "method ParseTranslateResponse, translate.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	return response
 }
@@ -63,7 +76,7 @@ func (t *Translate) GetFolderID() string {
 }
 
 func NewTranslateStorage(database *sql.DB, YandexConfig domain.YandexConfig) *Translate {
-	slog.Info("created search storage")
+	slog.Info("created translate storage")
 	return &Translate{
 		db:     database,
 		Config: YandexConfig,
