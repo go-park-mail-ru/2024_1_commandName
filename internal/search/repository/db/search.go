@@ -62,6 +62,7 @@ func (s *Search) GetConnection(userID uint) *websocket.Conn {
 }
 
 func (s *Search) SendMessageToUser(userID uint, message []byte) error {
+	fmt.Println("GET CONN FOR USER ", userID)
 	connection := s.GetConnection(userID)
 	if connection == nil {
 		return errors.New("No connection found for user")
@@ -72,16 +73,38 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse) {
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
+	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
+	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
-	/*
-		requestToSearch := ""
-		for i:=0; i < len(translatedWordsArr); i++{
-			requestToSearch += translatedWordsArr[i]
+	minLength := len(wordsArr)
+	if len(translatedWordsArr) < minLength {
+		minLength = len(translatedWordsArr)
+	}
+	if len(translatedWordsWithRuneArr) < minLength {
+		minLength = len(translatedWordsWithRuneArr)
+	}
+	if len(translatedWordsWithSyllableArr) < minLength {
+		minLength = len(translatedWordsWithSyllableArr)
+	}
+
+	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr)
+	if len(translatedWordsArr) > 0 {
+		requestToSearchTranslator := ""
+		requestToSearchOriginal := ""
+		requestToSearchRune := ""
+		requestToSearchSyllable := ""
+
+		for i := 0; i < minLength; i++ {
+			requestToSearchTranslator += translatedWordsArr[i]
+			requestToSearchOriginal += wordsArr[i]
+			requestToSearchRune += translatedWordsWithRuneArr[i]
+			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
 					FROM chat.chat c
 					JOIN chat.chat_user cu ON c.id = cu.chat_id
-					WHERE name ILIKE $1 || '%' AND cu.user_id = $2`, requestToSearch, userID)
+					WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') AND cu.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
 			if err != nil {
 				//TODO
 				fmt.Println("err:", err)
@@ -99,14 +122,9 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 					fmt.Println(customErr.Error())
 					return foundChatsStructure
 				}
-				mChat.Messages = s.Chats.GetMessagesByChatID(ctx, mChat.ID)
-				if mChat.Messages != nil {
-					mChat.Users = s.Chats.GetChatUsersByChatID(ctx, mChat.ID)
-				}
-
-				if mChat.Users != nil {
-					matchedChats = append(matchedChats, mChat)
-				}
+				mChat.Messages = append(mChat.Messages, s.Chats.GetMessagesByChatID(ctx, mChat.ID)...)
+				matchedChats = append(matchedChats, mChat)
+				foundChatsStructure.Chats = append(foundChatsStructure.Chats, mChat)
 			}
 			if err = rows.Err(); err != nil {
 				customErr := &domain.CustomError{
@@ -118,54 +136,9 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 				return foundChatsStructure
 			}
 		}
-	*/
-
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id 
-				FROM chat.chat c
-				JOIN chat.chat_user cu ON c.id = cu.chat_id 
-				WHERE name ILIKE $1 || '%' AND cu.user_id = $2`, word, userID)
-	if err != nil {
-		//TODO
-		fmt.Println("err:", err)
 	}
-	matchedChats := make([]domain.Chat, 0)
-	for rows.Next() {
-		var mChat domain.Chat
-		err = rows.Scan(&mChat.ID, &mChat.Type, &mChat.Name, &mChat.Description, &mChat.AvatarPath, &mChat.CreatedAt, &mChat.LastActionDateTime, &mChat.CreatorID)
-		if err != nil {
-			customErr := &domain.CustomError{
-				Type:    "database",
-				Message: err.Error(),
-				Segment: "method searchChats, search.go",
-			}
-			fmt.Println(customErr.Error())
-			return foundChatsStructure
-		}
-		mChat.Messages = s.Chats.GetMessagesByChatID(ctx, mChat.ID)
-		if mChat.Messages != nil {
-			mChat.Users = s.Chats.GetChatUsersByChatID(ctx, mChat.ID)
-		}
-
-		if mChat.Users != nil {
-			matchedChats = append(matchedChats, mChat)
-		}
-	}
-	if err = rows.Err(); err != nil {
-		customErr := &domain.CustomError{
-			Type:    "database",
-			Message: err.Error(),
-			Segment: "method searchChats, search.go",
-		}
-		fmt.Println("ERROR: ", customErr.Error())
-		return foundChatsStructure
-	}
-
-	var chatSearchResponse domain.ChatSearchResponse
-	chatSearchResponse.Chats = matchedChats
-	chatSearchResponse.UserID = userID
-
-	return chatSearchResponse
+	foundChatsStructure.UserID = userID
+	return foundChatsStructure
 }
 
 func ConvertToJSONResponse(chats []domain.Chat, userID uint) (jsonResponse []byte) {
@@ -216,7 +189,7 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 }
 
 func (s *Search) SendMatchedSearchResponse(response domain.ChatSearchResponse) {
-
+	fmt.Println(response)
 	jsonResp := ConvertToJSONResponse(response.Chats, response.UserID)
 	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
 	if err != nil {
@@ -332,7 +305,7 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 func NewSearchStorage(database *sql.DB) *Search {
 	slog.Info("created search storage")
 	var YandexConfig domain.YandexConfig
-	YandexConfig.TranslateKey = "Bearer t1.9euelZqelYrMyciLnJDHj5PKzpyclO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_dlHlBO-e80ShNo_d3z9yVNTU757zRKE2j9zef1656VmozOzZPGlMidmZTHjcjNk86e7_zF656VmozOzZPGlMidmZTHjcjNk86e.dbhRbkheLJfmVeunG45CqjxpeIosd9qEl3g0HlRvQSQBnn3QvPOBklVEm5GxoOUKTBWvWJIxBTsOXvRb9fOIDA"
+	YandexConfig.TranslateKey = "Bearer t1.9euelZrJyJLOxsbGz8-LjpKejpHNzO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_cIUUhO-e9hHS1M_t3z90h_RU7572EdLUz-zef1656VmsjLnMielonJlpuYjpuZm42W7_zF656VmsjLnMielonJlpuYjpuZm42W.iPQb5uK9StcUYyZioMcsyl4-0D2JnPTpJ1BUjDTpbf6pUleDTHbe65VZSJwILJx3nkX2v0UcUuHXcmAX0gRNCw"
 	YandexConfig.Url = "https://translate.api.cloud.yandex.net/translate/v2/translate"
 	YandexConfig.FolderID = "b1gq4i9e5unl47m0kj5f"
 	YandexConfig.Header = "application/json"

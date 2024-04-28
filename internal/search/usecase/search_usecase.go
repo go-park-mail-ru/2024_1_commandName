@@ -23,8 +23,10 @@ type SearchStore interface {
 }
 
 func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person) {
+	fmt.Println("add conn for", user.ID)
 	ctx = s.AddConnection(ctx, connection, user.ID)
 	defer func() {
+		fmt.Println("del conn for", user.ID)
 		s.DeleteConnection(user.ID)
 		err := connection.Close()
 		if err != nil {
@@ -47,6 +49,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 			fmt.Println("err decoding JSON:", err)
 			continue
 		}
+		decodedChatSearchRequest.UserID = user.ID
 		logger.Debug("got ws message", "msg", decodedChatSearchRequest)
 		//TODO: валидация
 		matchedChatsStructure := s.SearchChats(ctx, decodedChatSearchRequest.Word, decodedChatSearchRequest.UserID)
