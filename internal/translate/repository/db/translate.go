@@ -36,6 +36,8 @@ func (t *Translate) Translate(request domain.TranslateRequest) (response domain.
 	req.Header.Add("Content-Type", t.Config.Header)
 	req.Header.Add("Authorization", t.Config.TranslateKey)
 	resp, err := client.Do(req)
+	fmt.Println("Config:", t.Config)
+	fmt.Println("Request:", req)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "http do request",
