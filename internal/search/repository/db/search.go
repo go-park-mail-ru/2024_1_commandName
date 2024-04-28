@@ -15,6 +15,7 @@ import (
 	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	ws "ProjectMessenger/internal/messages/repository/db"
+	translatedelivery "ProjectMessenger/internal/translate/delivery"
 	translaterepo "ProjectMessenger/internal/translate/repository/db"
 	tl "ProjectMessenger/internal/translate/usecase"
 	"github.com/gorilla/websocket"
@@ -432,12 +433,13 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 
 func NewSearchStorage(database *sql.DB) *Search {
 	slog.Info("created search storage")
+	cfg := translatedelivery.LoadConfig()
 	var YandexConfig domain.YandexConfig
-	YandexConfig.TranslateKey = "Bearer t1.9euelZrJyJLOxsbGz8-LjpKejpHNzO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_cIUUhO-e9hHS1M_t3z90h_RU7572EdLUz-zef1656VmsjLnMielonJlpuYjpuZm42W7_zF656VmsjLnMielonJlpuYjpuZm42W.iPQb5uK9StcUYyZioMcsyl4-0D2JnPTpJ1BUjDTpbf6pUleDTHbe65VZSJwILJx3nkX2v0UcUuHXcmAX0gRNCw"
-	YandexConfig.Url = "https://translate.api.cloud.yandex.net/translate/v2/translate"
-	YandexConfig.FolderID = "b1gq4i9e5unl47m0kj5f"
-	YandexConfig.Header = "application/json"
-	YandexConfig.Method = "POST"
+	YandexConfig.TranslateKey = cfg.Yandex.TranslateKey
+	YandexConfig.Url = cfg.Yandex.Url
+	YandexConfig.FolderID = cfg.Yandex.FolderID
+	YandexConfig.Header = cfg.Yandex.Header
+	YandexConfig.Method = cfg.Yandex.Method
 	return &Search{
 		db:          database,
 		Connections: make(map[uint]*websocket.Conn),

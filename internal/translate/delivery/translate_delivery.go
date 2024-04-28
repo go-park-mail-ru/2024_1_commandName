@@ -25,7 +25,7 @@ type TranslateHandler struct {
 	Config       domain.YandexConfig
 }
 
-func loadConfig() domain.Config {
+func LoadConfig() domain.Config {
 	envPath := os.Getenv("GOCHATME_HOME")
 	slog.Debug("env home =" + envPath)
 	f, err := os.Open(envPath + "config.yml")
@@ -47,7 +47,7 @@ func loadConfig() domain.Config {
 
 func NewTranslateHandler(database *sql.DB, chatsHandler *delivery.ChatsHandler) *TranslateHandler {
 	var YandexConfig domain.YandexConfig
-	cfg := loadConfig()
+	cfg := LoadConfig()
 	YandexConfig.TranslateKey = cfg.Yandex.TranslateKey
 	YandexConfig.Url = cfg.Yandex.Url
 	YandexConfig.FolderID = cfg.Yandex.FolderID

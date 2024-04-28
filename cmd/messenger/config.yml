@@ -6,7 +6,7 @@ server:
   host: ""
   port: 8080
 yandex:
-  trKey: "Bearer t1.9euelZqelYrMyciLnJDHj5PKzpyclO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_dlHlBO-e80ShNo_d3z9yVNTU757zRKE2j9zef1656VmozOzZPGlMidmZTHjcjNk86e7_zF656VmozOzZPGlMidmZTHjcjNk86e.dbhRbkheLJfmVeunG45CqjxpeIosd9qEl3g0HlRvQSQBnn3QvPOBklVEm5GxoOUKTBWvWJIxBTsOXvRb9fOIDA"
+  trKey: "Bearer t1.9euelZrJyJLOxsbGz8-LjpKejpHNzO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_cIUUhO-e9hHS1M_t3z90h_RU7572EdLUz-zef1656VmsjLnMielonJlpuYjpuZm42W7_zF656VmsjLnMielonJlpuYjpuZm42W.iPQb5uK9StcUYyZioMcsyl4-0D2JnPTpJ1BUjDTpbf6pUleDTHbe65VZSJwILJx3nkX2v0UcUuHXcmAX0gRNCw"
   url: "https://translate.api.cloud.yandex.net/translate/v2/translate"
   folderId: "b1gq4i9e5unl47m0kj5f"
   header: "application/json"
