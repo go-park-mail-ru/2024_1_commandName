@@ -254,7 +254,7 @@ func (s *Search) TranslateWordWithRune(words []string) (translatedWords []string
 		"з": "z",
 		"и": "i",
 		"й": "y",
-		"к": "k",
+		"к": "c",
 		"л": "l",
 		"м": "m",
 		"н": "n",
@@ -281,7 +281,7 @@ func (s *Search) TranslateWordWithRune(words []string) (translatedWords []string
 	for _, word := range words {
 		enWord := ""
 		for _, char := range word {
-			enLetter := letterMap[string(char)]
+			enLetter := letterMap[strings.ToLower(string(char))]
 			if enLetter == "" {
 				enWord += string(char)
 			} else {
