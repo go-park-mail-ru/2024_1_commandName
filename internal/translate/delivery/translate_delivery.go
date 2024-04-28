@@ -48,6 +48,8 @@ func LoadConfig() domain.Config {
 func NewTranslateHandler(database *sql.DB, chatsHandler *delivery.ChatsHandler) *TranslateHandler {
 	var YandexConfig domain.YandexConfig
 	cfg := LoadConfig()
+	fmt.Println()
+	fmt.Println("loaded config:", cfg)
 	YandexConfig.TranslateKey = cfg.Yandex.TranslateKey
 	YandexConfig.Url = cfg.Yandex.Url
 	YandexConfig.FolderID = cfg.Yandex.FolderID
