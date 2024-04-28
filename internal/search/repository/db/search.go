@@ -94,7 +94,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr)
+	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	if len(translatedWordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""

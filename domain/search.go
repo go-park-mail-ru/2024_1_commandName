@@ -26,3 +26,9 @@ type ContactsSearchRequest struct {
 type ContactsSearchResponse struct {
 	Contacts []Person `json:"contacts"`
 }
+
+type SearchRequest struct {
+	Word   string `json:"word"`
+	UserID uint   `json:"user_id"`
+	Type   string `json:"search_type"`
+}
