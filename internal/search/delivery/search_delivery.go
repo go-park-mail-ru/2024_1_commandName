@@ -61,5 +61,6 @@ func (SearchHandler *SearchHandler) SearchChats(w http.ResponseWriter, r *http.R
 		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
 		return
 	}
-	usecase.HandleWebSocket(ctx, connection, SearchHandler.Search, user)
+	typeToSearch := r.Header.Get("toSearch")
+	usecase.HandleWebSocket(ctx, connection, SearchHandler.Search, user, typeToSearch)
 }

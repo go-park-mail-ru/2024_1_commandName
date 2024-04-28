@@ -152,11 +152,82 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 	return foundChatsStructure
 }
 
-func ConvertToJSONResponse(chats []domain.Chat, userID uint) (jsonResponse []byte) {
-	var chatSearchResponse domain.ChatSearchResponse
-	chatSearchResponse.Chats = chats
-	chatSearchResponse.UserID = userID
-	jsonResponse, err := json.Marshal(chatSearchResponse)
+func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse) {
+	wordsArr := strings.Split(word, " ")
+	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
+	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
+	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
+
+	minLength := len(wordsArr)
+	if len(translatedWordsArr) < minLength {
+		minLength = len(translatedWordsArr)
+	}
+	if len(translatedWordsWithRuneArr) < minLength {
+		minLength = len(translatedWordsWithRuneArr)
+	}
+	if len(translatedWordsWithSyllableArr) < minLength {
+		minLength = len(translatedWordsWithSyllableArr)
+	}
+
+	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
+	if len(translatedWordsArr) > 0 {
+		requestToSearchTranslator := ""
+		requestToSearchOriginal := ""
+		requestToSearchRune := ""
+		requestToSearchSyllable := ""
+
+		for i := 0; i < minLength; i++ {
+			requestToSearchTranslator += translatedWordsArr[i]
+			requestToSearchOriginal += wordsArr[i]
+			requestToSearchRune += translatedWordsWithRuneArr[i]
+			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+
+			rows, err := s.db.QueryContext(ctx,
+				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at
+					FROM chat.message m
+					WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%') AND m.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+			if err != nil {
+				customErr := &domain.CustomError{
+					Type:    "database",
+					Message: err.Error(),
+					Segment: "method searchMessages, search.go",
+				}
+				fmt.Println(customErr.Error())
+				return foundMessagesStructure
+			}
+			matchedMessages := make([]domain.Message, 0)
+			for rows.Next() {
+				var mMesssage domain.Message
+				err = rows.Scan(&mMesssage.ID, &mMesssage.UserID, &mMesssage.ChatID, &mMesssage.Message, &mMesssage.Edited, &mMesssage.CreatedAt)
+				if err != nil {
+					customErr := &domain.CustomError{
+						Type:    "database",
+						Message: err.Error(),
+						Segment: "method searchChats, search.go",
+					}
+					fmt.Println(customErr.Error())
+					return foundMessagesStructure
+				}
+				matchedMessages = append(matchedMessages, mMesssage)
+				foundMessagesStructure.Messages = append(foundMessagesStructure.Messages, matchedMessages...)
+			}
+			if err = rows.Err(); err != nil {
+				customErr := &domain.CustomError{
+					Type:    "database",
+					Message: err.Error(),
+					Segment: "method searchChats, search.go",
+				}
+				fmt.Println(customErr.Error())
+				return foundMessagesStructure
+			}
+		}
+	}
+	foundMessagesStructure.UserID = userID
+	return foundMessagesStructure
+}
+
+func ConvertToJSONResponse(data interface{}) (jsonResponse []byte) {
+	jsonResponse, err := json.Marshal(data)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "json",
@@ -228,8 +299,21 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 	}
 }
 
-func (s *Search) SendMatchedSearchResponse(response domain.ChatSearchResponse) {
-	jsonResp := ConvertToJSONResponse(response.Chats, response.UserID)
+func (s *Search) SendMatchedChatsSearchResponse(response domain.ChatSearchResponse) {
+	jsonResp := ConvertToJSONResponse(response)
+	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    ".WebSocket.SendMessageToUser",
+			Message: err.Error(),
+			Segment: "method SendMatchedSearchResponse, search.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+}
+
+func (s *Search) SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse) {
+	jsonResp := ConvertToJSONResponse(response)
 	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
 	if err != nil {
 		customErr := &domain.CustomError{

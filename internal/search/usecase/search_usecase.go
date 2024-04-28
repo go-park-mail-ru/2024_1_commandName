@@ -19,10 +19,12 @@ type SearchStore interface {
 	AddSearchIndexes(ctx context.Context)
 	DeleteSearchIndexes(ctx context.Context)
 	SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse)
-	SendMatchedSearchResponse(response domain.ChatSearchResponse)
+	SendMatchedChatsSearchResponse(response domain.ChatSearchResponse)
+	SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse)
+	SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse)
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person) {
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person, typeToSearch string) {
 	fmt.Println("add conn for", user.ID)
 	ctx = s.AddConnection(ctx, connection, user.ID)
 	defer func() {
@@ -41,6 +43,15 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 	}()
 
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
+	if typeToSearch == "chat" {
+		SearchChats(ctx, connection, s, user, logger)
+	}
+	if typeToSearch == "message" {
+		SearchMessages(ctx, connection, s, user, logger)
+	}
+}
+
+func SearchChats(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person, logger *slog.Logger) {
 	s.AddSearchIndexes(ctx)
 	for {
 		var decodedChatSearchRequest domain.ChatSearchRequest
@@ -62,7 +73,34 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		logger.Debug("got ws message", "msg", decodedChatSearchRequest)
 		//TODO: валидация
 		matchedChatsStructure := s.SearchChats(ctx, decodedChatSearchRequest.Word, decodedChatSearchRequest.UserID)
-		s.SendMatchedSearchResponse(matchedChatsStructure)
+		s.SendMatchedChatsSearchResponse(matchedChatsStructure)
+	}
+	s.DeleteSearchIndexes(ctx)
+}
+
+func SearchMessages(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person, logger *slog.Logger) {
+	s.AddSearchIndexes(ctx)
+	for {
+		var decodedMessageSearchRequest domain.MessagesSearchRequest
+		mt, request, err := connection.ReadMessage()
+		if err != nil || mt == websocket.CloseMessage {
+			break
+		}
+		err = json.Unmarshal(request, &decodedMessageSearchRequest)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "json Unmarshal",
+				Message: err.Error(),
+				Segment: "method HandleWebSocket, search_usecase.go",
+			}
+			fmt.Println(customErr.Error())
+			continue
+		}
+		decodedMessageSearchRequest.UserID = user.ID
+		logger.Debug("got ws message", "msg", decodedMessageSearchRequest)
+		//TODO: валидация
+		matchedMessagesStructure := s.SearchMessages(ctx, decodedMessageSearchRequest.Word, decodedMessageSearchRequest.UserID)
+		s.SendMatchedMessagesSearchResponse(matchedMessagesStructure)
 	}
 	s.DeleteSearchIndexes(ctx)
 }
