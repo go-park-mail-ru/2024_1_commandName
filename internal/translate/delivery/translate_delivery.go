@@ -6,13 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/misc"
 	repo "ProjectMessenger/internal/translate/repository/db"
 	"ProjectMessenger/internal/translate/usecase"
+	"gopkg.in/yaml.v3"
 )
 
 type TranslateHandler struct {
@@ -22,13 +25,34 @@ type TranslateHandler struct {
 	Config       domain.YandexConfig
 }
 
+func loadConfig() domain.Config {
+	envPath := os.Getenv("GOCHATME_HOME")
+	slog.Debug("env home =" + envPath)
+	f, err := os.Open(envPath + "config.yml")
+	slog.Debug("trying to open " + envPath + "config.yml")
+	if err != nil {
+		slog.Error("load config failed", "err", err)
+		panic(err)
+	}
+	defer f.Close()
+
+	var cfg domain.Config
+	decoder := yaml.NewDecoder(f)
+	err = decoder.Decode(&cfg)
+	if err != nil {
+		panic(err)
+	}
+	return cfg
+}
+
 func NewTranslateHandler(database *sql.DB, chatsHandler *delivery.ChatsHandler) *TranslateHandler {
 	var YandexConfig domain.YandexConfig
-	YandexConfig.TranslateKey = "Bearer t1.9euelZqelYrMyciLnJDHj5PKzpyclO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_dlHlBO-e80ShNo_d3z9yVNTU757zRKE2j9zef1656VmozOzZPGlMidmZTHjcjNk86e7_zF656VmozOzZPGlMidmZTHjcjNk86e.dbhRbkheLJfmVeunG45CqjxpeIosd9qEl3g0HlRvQSQBnn3QvPOBklVEm5GxoOUKTBWvWJIxBTsOXvRb9fOIDA"
-	YandexConfig.Url = "https://translate.api.cloud.yandex.net/translate/v2/translate"
-	YandexConfig.FolderID = "b1gq4i9e5unl47m0kj5f"
-	YandexConfig.Header = "application/json"
-	YandexConfig.Method = "POST"
+	cfg := loadConfig()
+	YandexConfig.TranslateKey = cfg.Yandex.TranslateKey
+	YandexConfig.Url = cfg.Yandex.Url
+	YandexConfig.FolderID = cfg.Yandex.FolderID
+	YandexConfig.Header = cfg.Yandex.Header
+	YandexConfig.Method = cfg.Yandex.Method
 	return &TranslateHandler{
 		Database:     database,
 		Config:       YandexConfig,
