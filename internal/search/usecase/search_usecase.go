@@ -19,11 +19,11 @@ type SearchStore interface {
 	AddSearchIndexes(ctx context.Context)
 	DeleteSearchIndexes(ctx context.Context)
 	SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse)
-	SendMatchedChatsSearchResponse(response domain.ChatSearchResponse)
+	SendMatchedChatsSearchResponse(response domain.ChatSearchResponse, userID uint)
 	SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse)
-	SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse)
+	SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse, userID uint)
 	SearchContacts(ctx context.Context, word string, userID uint) (foundContactsStructure domain.ContactsSearchResponse)
-	SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse)
+	SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse, userID uint)
 }
 
 func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person, typeToSearch string) {
@@ -78,7 +78,7 @@ func SearchChats(ctx context.Context, connection *websocket.Conn, s SearchStore,
 		logger.Debug("got ws message", "msg", decodedChatSearchRequest)
 		//TODO: валидация
 		matchedChatsStructure := s.SearchChats(ctx, decodedChatSearchRequest.Word, decodedChatSearchRequest.UserID)
-		s.SendMatchedChatsSearchResponse(matchedChatsStructure)
+		s.SendMatchedChatsSearchResponse(matchedChatsStructure, user.ID)
 	}
 	s.DeleteSearchIndexes(ctx)
 }
@@ -105,7 +105,7 @@ func SearchMessages(ctx context.Context, connection *websocket.Conn, s SearchSto
 		logger.Debug("got ws message", "msg", decodedMessageSearchRequest)
 		//TODO: валидация
 		matchedMessagesStructure := s.SearchMessages(ctx, decodedMessageSearchRequest.Word, decodedMessageSearchRequest.UserID)
-		s.SendMatchedMessagesSearchResponse(matchedMessagesStructure)
+		s.SendMatchedMessagesSearchResponse(matchedMessagesStructure, user.ID)
 	}
 	s.DeleteSearchIndexes(ctx)
 }
@@ -132,7 +132,7 @@ func SearchContacts(ctx context.Context, connection *websocket.Conn, s SearchSto
 		logger.Debug("got ws message", "msg", decodedContactSearchRequest)
 		//TODO: валидация
 		matchedContactsStructure := s.SearchContacts(ctx, decodedContactSearchRequest.Word, decodedContactSearchRequest.UserID)
-		s.SendMatchedContactsSearchResponse(matchedContactsStructure)
+		s.SendMatchedContactsSearchResponse(matchedContactsStructure, user.ID)
 	}
 	s.DeleteSearchIndexes(ctx)
 }

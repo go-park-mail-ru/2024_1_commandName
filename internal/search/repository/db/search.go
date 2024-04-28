@@ -149,7 +149,6 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 			}
 		}
 	}
-	foundChatsStructure.UserID = userID
 	foundChatsStructure.Chats = DeleteDuplicatesChats(foundChatsStructure.Chats)
 	return foundChatsStructure
 }
@@ -224,8 +223,6 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			}
 		}
 	}
-	foundMessagesStructure.UserID = userID
-	fmt.Println(foundMessagesStructure)
 	foundMessagesStructure.Messages = DeleteDuplicatesMessages(foundMessagesStructure.Messages)
 	return foundMessagesStructure
 }
@@ -302,7 +299,6 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 			}
 		}
 	}
-	foundContactsStructure.UserID = userID
 	foundContactsStructure.Contacts = DeleteDuplicatesContacts(foundContactsStructure.Contacts)
 	return foundContactsStructure
 }
@@ -420,40 +416,52 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 	}
 }
 
-func (s *Search) SendMatchedChatsSearchResponse(response domain.ChatSearchResponse) {
-	jsonResp := ConvertToJSONResponse(response)
-	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
+func (s *Search) SendMatchedChatsSearchResponse(response domain.ChatSearchResponse, userID uint) {
+	jsonResponse := map[string]interface{}{
+		"status": 200,
+		"body":   response,
+	}
+	jsonResp := ConvertToJSONResponse(jsonResponse)
+	err := s.WebSocket.SendMessageToUser(userID, jsonResp)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    ".WebSocket.SendMessageToUser",
 			Message: err.Error(),
-			Segment: "method SendMatchedSearchResponse, search.go",
+			Segment: "method SendMatchedChatsSearchResponse, search.go",
 		}
 		fmt.Println(customErr.Error())
 	}
 }
 
-func (s *Search) SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse) {
-	jsonResp := ConvertToJSONResponse(response)
-	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
+func (s *Search) SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse, userID uint) {
+	jsonResponse := map[string]interface{}{
+		"status": 200,
+		"body":   response,
+	}
+	jsonResp := ConvertToJSONResponse(jsonResponse)
+	err := s.WebSocket.SendMessageToUser(userID, jsonResp)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    ".WebSocket.SendMessageToUser",
 			Message: err.Error(),
-			Segment: "method SendMatchedSearchResponse, search.go",
+			Segment: "method SendMatchedMessagesSearchResponse, search.go",
 		}
 		fmt.Println(customErr.Error())
 	}
 }
 
-func (s *Search) SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse) {
-	jsonResp := ConvertToJSONResponse(response)
-	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
+func (s *Search) SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse, userID uint) {
+	jsonResponse := map[string]interface{}{
+		"status": 200,
+		"body":   response,
+	}
+	newJson := ConvertToJSONResponse(jsonResponse)
+	err := s.WebSocket.SendMessageToUser(userID, newJson)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    ".WebSocket.SendMessageToUser",
 			Message: err.Error(),
-			Segment: "method SendMatchedSearchResponse, search.go",
+			Segment: "method SendMatchedContactsSearchResponse, search.go",
 		}
 		fmt.Println(customErr.Error())
 	}

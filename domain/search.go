@@ -6,8 +6,7 @@ type ChatSearchRequest struct {
 }
 
 type ChatSearchResponse struct {
-	Chats  []Chat `json:"chats"`
-	UserID uint   `json:"user_id"`
+	Chats []Chat `json:"chats"`
 }
 
 type MessagesSearchRequest struct {
@@ -17,7 +16,6 @@ type MessagesSearchRequest struct {
 
 type MessagesSearchResponse struct {
 	Messages []Message `json:"messages"`
-	UserID   uint      `json:"user_id"`
 }
 
 type ContactsSearchRequest struct {
@@ -27,5 +25,4 @@ type ContactsSearchRequest struct {
 
 type ContactsSearchResponse struct {
 	Contacts []Person `json:"contacts"`
-	UserID   uint     `json:"user_id"`
 }
