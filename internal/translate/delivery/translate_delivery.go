@@ -3,6 +3,7 @@ package delivery
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -40,23 +41,36 @@ func (ts *TranslateHandler) TranslateMessage(w http.ResponseWriter, r *http.Requ
 	ctx := r.Context()
 	authorized, userID := ts.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
-		fmt.Println("not auth")
+		err := errors.New("person not authorized")
+		customErr := &domain.CustomError{
+			Type:    "http new request",
+			Message: err.Error(),
+			Segment: "method TranslateMessage, translate_delivery.go",
+		}
+		fmt.Println(customErr.Error())
+		return
 	}
 	var request domain.TranslateRequest
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println(err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "http read response",
+			Message: err.Error(),
+			Segment: "method TranslateMessage, translate_delivery.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	err = json.Unmarshal(reqBody, &request)
 	if err != nil {
-		fmt.Println(err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "json Unmarshal",
+			Message: err.Error(),
+			Segment: "method TranslateMessage, translate_delivery.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	request.FolderID = ts.Config.FolderID
 	request.TargetLanguageCode = usecase.GetUserLanguageByID(ctx, ts.Database, userID)
-	fmt.Println(request)
 	response := usecase.HandleTranslate(ts.Translate, request)
-	fmt.Println("translated: ", response)
 	misc.WriteStatusJson(ctx, w, 200, response)
 }

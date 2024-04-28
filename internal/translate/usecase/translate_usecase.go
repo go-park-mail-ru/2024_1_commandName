@@ -23,8 +23,12 @@ func HandleTranslate(ts TranslateStore, request domain.TranslateRequest) (respon
 func GetUserLanguageByID(ctx context.Context, db *sql.DB, userID uint) (languageCode string) {
 	err := db.QueryRowContext(ctx, "SELECT language FROM auth.person WHERE id = $1", userID).Scan(&languageCode)
 	if err != nil {
-		fmt.Println("err:", err)
-		//TODO
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetUserLanguageByID, translate_usecase.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	return languageCode
 }
