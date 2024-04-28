@@ -97,7 +97,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
 
-	router.HandleFunc("/searchChats", searchHandler.SearchChats)
+	router.HandleFunc("/searchChats", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)
 
 	// middleware

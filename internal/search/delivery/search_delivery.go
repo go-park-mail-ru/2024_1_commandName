@@ -25,7 +25,7 @@ func NewSearchHandler(chatsHandler *delivery.ChatsHandler, database *sql.DB) *Se
 	}
 }
 
-func (SearchHandler *SearchHandler) SearchChats(w http.ResponseWriter, r *http.Request) {
+func (SearchHandler *SearchHandler) SearchObjects(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	authorized, userID := SearchHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)

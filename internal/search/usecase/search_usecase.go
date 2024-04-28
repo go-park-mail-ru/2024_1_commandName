@@ -22,6 +22,8 @@ type SearchStore interface {
 	SendMatchedChatsSearchResponse(response domain.ChatSearchResponse)
 	SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse)
 	SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse)
+	SearchContacts(ctx context.Context, word string, userID uint) (foundContactsStructure domain.ContactsSearchResponse)
+	SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse)
 }
 
 func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person, typeToSearch string) {
@@ -48,6 +50,9 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 	}
 	if typeToSearch == "message" {
 		SearchMessages(ctx, connection, s, user, logger)
+	}
+	if typeToSearch == "contact" {
+		SearchContacts(ctx, connection, s, user, logger)
 	}
 }
 
@@ -101,6 +106,33 @@ func SearchMessages(ctx context.Context, connection *websocket.Conn, s SearchSto
 		//TODO: валидация
 		matchedMessagesStructure := s.SearchMessages(ctx, decodedMessageSearchRequest.Word, decodedMessageSearchRequest.UserID)
 		s.SendMatchedMessagesSearchResponse(matchedMessagesStructure)
+	}
+	s.DeleteSearchIndexes(ctx)
+}
+
+func SearchContacts(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person, logger *slog.Logger) {
+	s.AddSearchIndexes(ctx)
+	for {
+		var decodedContactSearchRequest domain.ContactsSearchRequest
+		mt, request, err := connection.ReadMessage()
+		if err != nil || mt == websocket.CloseMessage {
+			break
+		}
+		err = json.Unmarshal(request, &decodedContactSearchRequest)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "json Unmarshal",
+				Message: err.Error(),
+				Segment: "method SearchContacts, search_usecase.go",
+			}
+			fmt.Println(customErr.Error())
+			continue
+		}
+		decodedContactSearchRequest.UserID = user.ID
+		logger.Debug("got ws message", "msg", decodedContactSearchRequest)
+		//TODO: валидация
+		matchedContactsStructure := s.SearchContacts(ctx, decodedContactSearchRequest.Word, decodedContactSearchRequest.UserID)
+		s.SendMatchedContactsSearchResponse(matchedContactsStructure)
 	}
 	s.DeleteSearchIndexes(ctx)
 }

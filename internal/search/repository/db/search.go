@@ -150,6 +150,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 		}
 	}
 	foundChatsStructure.UserID = userID
+	foundChatsStructure.Chats = DeleteDuplicatesChats(foundChatsStructure.Chats)
 	return foundChatsStructure
 }
 
@@ -224,7 +225,86 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 		}
 	}
 	foundMessagesStructure.UserID = userID
+	fmt.Println(foundMessagesStructure)
+	foundMessagesStructure.Messages = DeleteDuplicatesMessages(foundMessagesStructure.Messages)
 	return foundMessagesStructure
+}
+
+func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (foundContactsStructure domain.ContactsSearchResponse) {
+	wordsArr := strings.Split(word, " ")
+	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
+	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
+	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
+
+	minLength := len(wordsArr)
+	if len(translatedWordsArr) < minLength {
+		minLength = len(translatedWordsArr)
+	}
+	if len(translatedWordsWithRuneArr) < minLength {
+		minLength = len(translatedWordsWithRuneArr)
+	}
+	if len(translatedWordsWithSyllableArr) < minLength {
+		minLength = len(translatedWordsWithSyllableArr)
+	}
+
+	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
+	if len(translatedWordsArr) > 0 {
+		requestToSearchTranslator := ""
+		requestToSearchOriginal := ""
+		requestToSearchRune := ""
+		requestToSearchSyllable := ""
+
+		for i := 0; i < minLength; i++ {
+			requestToSearchTranslator += translatedWordsArr[i]
+			requestToSearchOriginal += wordsArr[i]
+			requestToSearchRune += translatedWordsWithRuneArr[i]
+			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+
+			rows, err := s.db.QueryContext(ctx,
+				`SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path
+					FROM chat.contacts cc
+					JOIN auth.person ap ON cc.user1_id = ap.id or cc.user2_id = ap.id
+					WHERE (ap.name ILIKE '%' || $1 || '%' OR ap.name ILIKE '%' || $2 || '%' OR ap.name ILIKE '%' || $3 || '%' OR ap.name ILIKE '%' || $4 || '%') AND (cc.user1_id = $5 or cc.user2_id = $5)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+			if err != nil {
+				customErr := &domain.CustomError{
+					Type:    "database",
+					Message: err.Error(),
+					Segment: "method searchMessages, search.go",
+				}
+				fmt.Println(customErr.Error())
+				return foundContactsStructure
+			}
+			matchedContacts := make([]domain.Person, 0)
+
+			for rows.Next() {
+				var mContact domain.Person
+				err = rows.Scan(&mContact.ID, &mContact.Username, &mContact.Email, &mContact.Name, &mContact.Surname, &mContact.About, &mContact.LastSeenDate, &mContact.AvatarPath)
+				if err != nil {
+					customErr := &domain.CustomError{
+						Type:    "database",
+						Message: err.Error(),
+						Segment: "method searchChats, search.go",
+					}
+					fmt.Println(customErr.Error())
+					return foundContactsStructure
+				}
+				matchedContacts = append(matchedContacts, mContact)
+				foundContactsStructure.Contacts = append(foundContactsStructure.Contacts, matchedContacts...)
+			}
+			if err = rows.Err(); err != nil {
+				customErr := &domain.CustomError{
+					Type:    "database",
+					Message: err.Error(),
+					Segment: "method searchChats, search.go",
+				}
+				fmt.Println(customErr.Error())
+				return foundContactsStructure
+			}
+		}
+	}
+	foundContactsStructure.UserID = userID
+	foundContactsStructure.Contacts = DeleteDuplicatesContacts(foundContactsStructure.Contacts)
+	return foundContactsStructure
 }
 
 func ConvertToJSONResponse(data interface{}) (jsonResponse []byte) {
@@ -238,6 +318,46 @@ func ConvertToJSONResponse(data interface{}) (jsonResponse []byte) {
 		fmt.Println(customErr.Error())
 	}
 	return jsonResponse
+}
+
+func DeleteDuplicatesContacts(data []domain.Person) []domain.Person {
+	uniqueMap := make(map[domain.Person]bool)
+	var uniqueSlice []domain.Person
+	for i := 0; i < len(data); i++ {
+		element := data[i]
+		if _, ok := uniqueMap[element]; !ok {
+			uniqueMap[element] = true
+			uniqueSlice = append(uniqueSlice, element)
+		}
+	}
+	return uniqueSlice
+}
+
+func DeleteDuplicatesChats(data []domain.Chat) []domain.Chat {
+	uniqueMap := make(map[uint]bool)
+	var uniqueSlice []domain.Chat
+	for i := 0; i < len(data); i++ {
+		chatID := data[i].ID
+		if _, ok := uniqueMap[chatID]; !ok {
+			uniqueMap[chatID] = true
+			uniqueSlice = append(uniqueSlice, data[i])
+		}
+	}
+	return uniqueSlice
+}
+
+func DeleteDuplicatesMessages(data []domain.Message) []domain.Message {
+	uniqueMap := make(map[uint]bool)
+	var uniqueSlice []domain.Message
+	for i := 0; i < len(data); i++ {
+		element := data[i]
+		if _, ok := uniqueMap[element.ID]; !ok {
+			uniqueMap[element.ID] = true
+			uniqueSlice = append(uniqueSlice, element)
+		}
+	}
+	fmt.Println(uniqueSlice)
+	return uniqueSlice
 }
 
 func (s *Search) AddSearchIndexes(ctx context.Context) {
@@ -326,6 +446,19 @@ func (s *Search) SendMatchedMessagesSearchResponse(response domain.MessagesSearc
 	}
 }
 
+func (s *Search) SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse) {
+	jsonResp := ConvertToJSONResponse(response)
+	err := s.WebSocket.SendMessageToUser(response.UserID, jsonResp)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    ".WebSocket.SendMessageToUser",
+			Message: err.Error(),
+			Segment: "method SendMatchedSearchResponse, search.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+}
+
 func (s *Search) TranslateWordWithRune(words []string) (translatedWords []string) {
 	letterMap := map[string]string{
 		"а": "a",
@@ -339,7 +472,7 @@ func (s *Search) TranslateWordWithRune(words []string) (translatedWords []string
 		"з": "z",
 		"и": "i",
 		"й": "y",
-		"к": "c",
+		"к": "k",
 		"л": "l",
 		"м": "m",
 		"н": "n",
@@ -367,6 +500,9 @@ func (s *Search) TranslateWordWithRune(words []string) (translatedWords []string
 		enWord := ""
 		for _, char := range word {
 			enLetter := letterMap[strings.ToLower(string(char))]
+			if string(char) == "к" {
+
+			}
 			if enLetter == "" {
 				enWord += string(char)
 			} else {

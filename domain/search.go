@@ -19,3 +19,13 @@ type MessagesSearchResponse struct {
 	Messages []Message `json:"messages"`
 	UserID   uint      `json:"user_id"`
 }
+
+type ContactsSearchRequest struct {
+	Word   string `json:"word"`
+	UserID uint   `json:"user_id"`
+}
+
+type ContactsSearchResponse struct {
+	Contacts []Person `json:"contacts"`
+	UserID   uint     `json:"user_id"`
+}
