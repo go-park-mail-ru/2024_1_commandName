@@ -18,3 +18,11 @@ type Config struct {
 		Method       string `yaml:"method"`
 	} `yaml:"yandex"`
 }
+
+type YandexConfig struct {
+	TranslateKey string
+	FolderID     string
+	Url          string
+	Method       string
+	Header       string
+}
