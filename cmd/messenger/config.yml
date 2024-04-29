@@ -1,5 +1,5 @@
 app:
-  isDebug: false
+  isDebug: true
   inMemory: false
   avatarPath: "./uploads/"
 server:

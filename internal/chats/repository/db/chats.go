@@ -40,7 +40,6 @@ func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, 
 		//fmt.Println(customErr.Error())
 		return domain.Chat{}, fmt.Errorf("internal error")
 	}
-	fmt.Println("here", err)
 	chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
 	chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 	logger.Debug("GetChat: found chat", "chatID", chatID)
@@ -55,7 +54,7 @@ func (c *Chats) CheckPrivateChatExists(ctx context.Context, userID1, userID2 uin
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetChatsForUser, chats.go",
+			Segment: "method CheckPrivateChatExists, chats.go",
 		}
 		fmt.Println(customErr.Error())
 		return false, 0, fmt.Errorf("internal error")
@@ -121,9 +120,11 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		return 0, fmt.Errorf("internal error")
 	}
 
-	query := `INSERT INTO chat.chat_user (chat_id, user_id) VALUES($1, $2)`
+	firstMessageInChat := c.GetFirstChatMessageID(ctx, chatID)
+
+	query := `INSERT INTO chat.chat_user (chat_id, user_id, lastseen_message_id) VALUES($1, $2, $3)`
 	for i := range userIDs {
-		_, err = c.db.Exec(query, chatID, userIDs[i])
+		_, err = c.db.Exec(query, chatID, userIDs[i], firstMessageInChat)
 		if err != nil {
 			fmt.Println("here")
 			customErr := &domain.CustomError{
@@ -209,6 +210,8 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 		}
 		fmt.Println("chatMessages: ", chat.Messages)
 		fmt.Println("chat.ID: ", chat.ID)
+		lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
+		chat.LastSeenMessageID = lastSeenMessageId
 		if chat.Users != nil {
 			chats = append(chats, chat)
 		}
@@ -222,15 +225,42 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 		fmt.Println(customErr.Error())
 		return nil
 	}
-	fmt.Println(chats)
 	return chats
+}
+
+func (c *Chats) GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int) {
+	err := c.db.QueryRowContext(ctx, "SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = $1 and chat_id = $2", userID, chatID).Scan(&lastSeenMessageID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetLastSeenMessageId, chats.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	return lastSeenMessageID
+}
+
+func (c *Chats) GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int) {
+	err := c.db.QueryRowContext(ctx, "SELECT id FROM chat.message WHERE chat_id = $1 ORDER BY created_at LIMIT 1", chatID).Scan(&firstMessageID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0
+		}
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetLastSeenMessageId, chats.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	return firstMessageID
 }
 
 func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain.ChatUser {
 	chatUsers := make([]*domain.ChatUser, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {
-		fmt.Println("ERROR in GetChatUsersByChatID:", err)
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),

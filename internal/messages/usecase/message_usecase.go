@@ -1,13 +1,14 @@
 package usecase
 
 import (
-	"ProjectMessenger/internal/chats/usecase"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
 	"time"
+
+	"ProjectMessenger/internal/chats/usecase"
 
 	"ProjectMessenger/domain"
 
@@ -36,7 +37,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 	for {
 		mt, message, err := connection.ReadMessage()
 		if err != nil || mt == websocket.CloseMessage {
-			break // Выходим из цикла, если клиент пытается закрыть соединение или связь с клиентом прервана
+			break
 		}
 		var userDecodedMessage domain.Message
 		err = json.Unmarshal(message, &userDecodedMessage)
@@ -49,6 +50,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		userDecodedMessage.CreatedAt = time.Now().UTC()
 		userDecodedMessage.SenderUsername = user.Username
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
+
 		SendMessageToOtherUsers(ctx, messageSaved, wsStorage, chatStorage)
 	}
 }
