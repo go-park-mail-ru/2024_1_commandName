@@ -56,11 +56,13 @@ func (SearchHandler *SearchHandler) SearchObjects(w http.ResponseWriter, r *http
 			Segment: "method SearchChats, search_delivery.go",
 		}
 		fmt.Println(customErr.Error())
-
-		logger.Info("could not upgrade connection :user wasn't found")
+		logger.Error("could not upgrade connection :user wasn't found")
 		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
 		return
 	}
-	typeToSearch := r.Header.Get("toSearch")
-	usecase.HandleWebSocket(ctx, connection, SearchHandler.Search, user, typeToSearch)
+	err = usecase.HandleWebSocket(ctx, connection, SearchHandler.Search, user)
+	if err != nil {
+		fmt.Println(err)
+		logger.Error("could not parse json request")
+	}
 }

@@ -63,7 +63,6 @@ func (s *Search) GetConnection(userID uint) *websocket.Conn {
 }
 
 func (s *Search) SendMessageToUser(userID uint, message []byte) error {
-	fmt.Println("GET CONN FOR USER ", userID)
 	connection := s.GetConnection(userID)
 	if connection == nil {
 		err := errors.New("no connection found for user")
@@ -94,7 +93,9 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	slog.Info(logString)
 	if len(translatedWordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
@@ -170,7 +171,9 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	slog.Info(logString)
 	if len(translatedWordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
@@ -234,29 +237,36 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
 	minLength := len(wordsArr)
-	if len(translatedWordsArr) < minLength {
+	if len(translatedWordsArr) < minLength && len(translatedWordsArr) > 0 {
 		minLength = len(translatedWordsArr)
 	}
-	if len(translatedWordsWithRuneArr) < minLength {
+	if len(translatedWordsWithRuneArr) < minLength && len(translatedWordsWithRuneArr) > 0 {
 		minLength = len(translatedWordsWithRuneArr)
 	}
-	if len(translatedWordsWithSyllableArr) < minLength {
+	if len(translatedWordsWithSyllableArr) < minLength && len(translatedWordsWithSyllableArr) > 0 {
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	fmt.Println("Search for words: ", wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
-	if len(translatedWordsArr) > 0 {
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	slog.Info(logString)
+	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
 		requestToSearchRune := ""
 		requestToSearchSyllable := ""
 
 		for i := 0; i < minLength; i++ {
-			requestToSearchTranslator += translatedWordsArr[i]
+			if len(translatedWordsArr) > 0 {
+				requestToSearchTranslator += translatedWordsArr[i]
+			}
 			requestToSearchOriginal += wordsArr[i]
-			requestToSearchRune += translatedWordsWithRuneArr[i]
-			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
-
+			if len(translatedWordsWithRuneArr) > 0 {
+				requestToSearchRune += translatedWordsWithRuneArr[i]
+			}
+			if len(translatedWordsWithSyllableArr) > 0 {
+				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			}
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path
 					FROM chat.contacts cc
@@ -532,6 +542,7 @@ func (s *Search) TranslateWordWithTranslator(words []string) (translatedWords []
 	for i := 0; i < len(response); i++ {
 		translatedWords = append(translatedWords, response[i].Text)
 	}
+	fmt.Println("TranslateWordWithTranslator returns ", translatedWords)
 	return translatedWords
 }
 
@@ -572,6 +583,7 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 		syllToTranslate = append(syllToTranslate, " ")
 	}
 	translatedWords = s.TranslateWordWithTranslator(syllToTranslate)
+	fmt.Println("TranslateWordWithTranslator returns ", translatedWords)
 	return translatedWords
 }
 

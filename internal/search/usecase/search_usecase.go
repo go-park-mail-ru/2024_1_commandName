@@ -26,7 +26,7 @@ type SearchStore interface {
 	SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse, userID uint)
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person, typeToSearch string) {
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchStore, user domain.Person) error {
 	fmt.Println("add conn for", user.ID)
 	ctx = s.AddConnection(ctx, connection, user.ID)
 	defer func() {
@@ -66,14 +66,21 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		//TODO: валидация
 		if decodedSearchRequest.Type == "chat" {
 			SearchChats(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
-		}
-		if decodedSearchRequest.Type == "message" {
+		} else if decodedSearchRequest.Type == "message" {
 			SearchMessages(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
-		}
-		if decodedSearchRequest.Type == "contact" {
+		} else if decodedSearchRequest.Type == "contact" {
 			SearchContacts(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
+		} else {
+			fmt.Println("TYPE :", decodedSearchRequest.Type)
+			customErr := &domain.CustomError{
+				Type:    "WebSocket.SendMessageToUser",
+				Message: err.Error(),
+				Segment: "method SendMatchedMessagesSearchResponse, search.go",
+			}
+			return customErr
 		}
 	}
+	return nil
 }
 
 func SearchChats(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
