@@ -24,6 +24,10 @@ type editMessageRequest struct {
 	NewMessageText string `json:"new_message_text"`
 }
 
+type deleteMessageRequest struct {
+	MessageID uint `json:"message_id"`
+}
+
 type MessageHandler struct {
 	ChatsHandler *delivery.ChatsHandler
 	Websocket    usecase.WebsocketStore
@@ -133,6 +137,44 @@ func (messageHandler *MessageHandler) EditMessage(w http.ResponseWriter, r *http
 		return
 	}
 	err = usecase.EditMessage(ctx, userID, json.MessageID, json.NewMessageText, messageHandler.Messages)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// DeleteMessage deletes message
+//
+// @Summary DeleteMessage
+// @ID deleteMessage
+// @Accept application/json
+// @Produce application/json
+// @Param user body  deleteMessageRequest true "ID of message to delete"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 405 {object}  domain.Response[domain.Error] "use POST"
+// @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /deleteMessage [post]
+func (messageHandler *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var json deleteMessageRequest
+	err := decoder.Decode(&json)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	err = usecase.DeleteMessage(ctx, userID, json.MessageID, messageHandler.Messages)
 	if err != nil {
 		if err == fmt.Errorf("internal error") {
 			misc.WriteInternalErrorJson(ctx, w)

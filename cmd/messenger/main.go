@@ -98,6 +98,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
 	router.HandleFunc("/editMessage", messageHandler.EditMessage)
+	router.HandleFunc("/deleteMessage", messageHandler.DeleteMessage)
 
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)

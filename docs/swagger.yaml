@@ -45,6 +45,11 @@ definitions:
       successfully_deleted:
         type: boolean
     type: object
+  delivery.deleteMessageRequest:
+    properties:
+      message_id:
+        type: integer
+    type: object
   delivery.docsContacts:
     properties:
       contacts:
@@ -433,6 +438,38 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: deletes chat
+  /deleteMessage:
+    post:
+      consumes:
+      - application/json
+      operationId: deleteMessage
+      parameters:
+      - description: ID of message to delete
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.deleteMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: wrong json structure
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: DeleteMessage
   /editMessage:
     post:
       consumes:

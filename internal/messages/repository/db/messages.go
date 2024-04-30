@@ -114,3 +114,13 @@ func (m *Messages) UpdateMessageText(ctx context.Context, message domain.Message
 	}
 	return nil
 }
+
+func (m *Messages) DeleteMessage(ctx context.Context, messageID uint) error {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	_, err := m.db.ExecContext(ctx, "DELETE FROM chat.message WHERE id = $1", messageID)
+	if err != nil {
+		logger.Error("DeleteMessage db error", "messageID", messageID)
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}

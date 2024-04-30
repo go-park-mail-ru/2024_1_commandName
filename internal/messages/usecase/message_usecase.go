@@ -27,6 +27,7 @@ type MessageStore interface {
 	GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message
 	GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error)
 	UpdateMessageText(ctx context.Context, message domain.Message) (err error)
+	DeleteMessage(ctx context.Context, messageID uint) error
 }
 
 func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage usecase.ChatStore) {
@@ -97,6 +98,21 @@ func EditMessage(ctx context.Context, userID uint, messageID uint, newMessageTex
 	message.EditedAt = time.Now().UTC()
 	message.Edited = true
 	err = messageStorage.UpdateMessageText(ctx, message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteMessage(ctx context.Context, userID uint, messageID uint, messageStorage MessageStore) error {
+	message, err := messageStorage.GetMessage(ctx, messageID)
+	if err != nil {
+		return err
+	}
+	if message.UserID != userID {
+		return fmt.Errorf("Пользователь не является отправителем")
+	}
+	err = messageStorage.DeleteMessage(ctx, messageID)
 	if err != nil {
 		return err
 	}
