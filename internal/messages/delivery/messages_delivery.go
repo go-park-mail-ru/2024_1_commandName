@@ -15,8 +15,13 @@ import (
 	"ProjectMessenger/internal/messages/usecase"
 )
 
-type RequestChatIDBody struct {
+type requestChatIDBody struct {
 	ChatID uint `json:"chatID"`
+}
+
+type editMessageRequest struct {
+	MessageID      uint   `json:"message_id"`
+	NewMessageText string `json:"new_message_text"`
 }
 
 type MessageHandler struct {
@@ -76,7 +81,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 // @ID getChatMessages
 // @Accept application/json
 // @Produce application/json
-// @Param user body  RequestChatIDBody true "ID of chat"
+// @Param user body  requestChatIDBody true "ID of chat"
 // @Success 200 {object}  domain.Response[domain.Messages]
 // @Failure 405 {object}  domain.Response[domain.Error] "use POST"
 // @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
@@ -90,7 +95,7 @@ func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var RequestChatID RequestChatIDBody
+	var RequestChatID requestChatIDBody
 	err := decoder.Decode(&RequestChatID)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -99,4 +104,42 @@ func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *
 	limit := 100
 	messages := usecase.GetChatMessages(r.Context(), limit, RequestChatID.ChatID, messageHandler.Messages)
 	misc.WriteStatusJson(ctx, w, 200, domain.Messages{Messages: messages})
+}
+
+// EditMessage edits message
+//
+// @Summary EditMessage
+// @ID editMessage
+// @Accept application/json
+// @Produce application/json
+// @Param user body  editMessageRequest true "ID of chat"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 405 {object}  domain.Response[domain.Error] "use POST"
+// @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /editMessage [post]
+func (messageHandler *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var json editMessageRequest
+	err := decoder.Decode(&json)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	err = usecase.EditMessage(ctx, userID, json.MessageID, json.NewMessageText, messageHandler.Messages)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }

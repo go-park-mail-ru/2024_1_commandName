@@ -1,10 +1,5 @@
 basePath: /
 definitions:
-  delivery.RequestChatIDBody:
-    properties:
-      chatID:
-        type: integer
-    type: object
   delivery.addContactStruct:
     properties:
       username_of_user_to_add:
@@ -78,6 +73,18 @@ definitions:
       username:
         type: string
     type: object
+  delivery.editMessageRequest:
+    properties:
+      message_id:
+        type: integer
+      new_message_text:
+        type: string
+    type: object
+  delivery.requestChatIDBody:
+    properties:
+      chatID:
+        type: integer
+    type: object
   delivery.updateChatJson:
     properties:
       chat_id:
@@ -103,9 +110,13 @@ definitions:
     properties:
       avatar:
         type: string
+      created_at:
+        type: string
       creator:
         type: integer
       description:
+        type: string
+      edited_at:
         type: string
       id:
         type: integer
@@ -113,6 +124,8 @@ definitions:
         type: string
       last_message:
         $ref: '#/definitions/domain.Message'
+      last_seen_message_id:
+        type: integer
       messages:
         items:
           $ref: '#/definitions/domain.Message'
@@ -420,6 +433,38 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: deletes chat
+  /editMessage:
+    post:
+      consumes:
+      - application/json
+      operationId: editMessage
+      parameters:
+      - description: ID of chat
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.editMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: wrong json structure
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: EditMessage
   /getChat:
     post:
       consumes:
@@ -459,7 +504,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/delivery.RequestChatIDBody'
+          $ref: '#/definitions/delivery.requestChatIDBody'
       produces:
       - application/json
       responses:
