@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	_ "regexp"
 
 	"ProjectMessenger/domain"
@@ -13,6 +12,7 @@ import (
 type TranslateStore interface {
 	Translate(request domain.TranslateRequest) (response domain.TranslateResponse)
 	GetFolderID() string
+	GetUserLanguageByID(ctx context.Context, db *sql.DB, userID uint) (languageCode string)
 }
 
 func HandleTranslate(ts TranslateStore, request domain.TranslateRequest) (response domain.TranslateResponse) {
@@ -20,15 +20,7 @@ func HandleTranslate(ts TranslateStore, request domain.TranslateRequest) (respon
 	return response
 }
 
-func GetUserLanguageByID(ctx context.Context, db *sql.DB, userID uint) (languageCode string) {
-	err := db.QueryRowContext(ctx, "SELECT language FROM auth.person WHERE id = $1", userID).Scan(&languageCode)
-	if err != nil {
-		customErr := &domain.CustomError{
-			Type:    "database",
-			Message: err.Error(),
-			Segment: "method GetUserLanguageByID, translate_usecase.go",
-		}
-		fmt.Println(customErr.Error())
-	}
+func GetUserLanguageByID(ctx context.Context, db *sql.DB, ts TranslateStore, userID uint) (languageCode string) {
+	languageCode = ts.GetUserLanguageByID(ctx, db, userID)
 	return languageCode
 }

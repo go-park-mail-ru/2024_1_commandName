@@ -96,7 +96,7 @@ func (ts *TranslateHandler) TranslateMessage(w http.ResponseWriter, r *http.Requ
 		fmt.Println(customErr.Error())
 	}
 	request.FolderID = ts.Config.FolderID
-	request.TargetLanguageCode = usecase.GetUserLanguageByID(ctx, ts.Database, userID)
+	request.TargetLanguageCode = usecase.GetUserLanguageByID(ctx, ts.Database, ts.Translate, userID)
 	response := usecase.HandleTranslate(ts.Translate, request)
 	misc.WriteStatusJson(ctx, w, 200, response)
 }

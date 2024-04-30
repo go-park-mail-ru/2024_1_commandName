@@ -71,11 +71,10 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		} else if decodedSearchRequest.Type == "contact" {
 			SearchContacts(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
 		} else {
-			fmt.Println("TYPE :", decodedSearchRequest.Type)
 			customErr := &domain.CustomError{
-				Type:    "WebSocket.SendMessageToUser",
+				Type:    "search type",
 				Message: err.Error(),
-				Segment: "method SendMatchedMessagesSearchResponse, search.go",
+				Segment: "method HandleWebSocket, search.go",
 			}
 			return customErr
 		}
@@ -86,6 +85,8 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 func SearchChats(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
 	s.AddSearchIndexes(ctx)
 	matchedChatsStructure := s.SearchChats(ctx, word, userID)
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	logger.Debug("return chats:", "chats", matchedChatsStructure)
 	s.SendMatchedChatsSearchResponse(matchedChatsStructure, user.ID)
 	s.DeleteSearchIndexes(ctx)
 }
@@ -93,6 +94,8 @@ func SearchChats(ctx context.Context, s SearchStore, user domain.Person, word st
 func SearchMessages(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
 	s.AddSearchIndexes(ctx)
 	matchedMessagesStructure := s.SearchMessages(ctx, word, userID)
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	logger.Debug("return messages:", "messages", matchedMessagesStructure)
 	s.SendMatchedMessagesSearchResponse(matchedMessagesStructure, user.ID)
 	s.DeleteSearchIndexes(ctx)
 }
@@ -100,6 +103,8 @@ func SearchMessages(ctx context.Context, s SearchStore, user domain.Person, word
 func SearchContacts(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
 	s.AddSearchIndexes(ctx)
 	matchedContactsStructure := s.SearchContacts(ctx, word, userID)
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	logger.Debug("return contacts:", "contacts", matchedContactsStructure)
 	s.SendMatchedContactsSearchResponse(matchedContactsStructure, user.ID)
 	s.DeleteSearchIndexes(ctx)
 }

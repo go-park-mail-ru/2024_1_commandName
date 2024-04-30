@@ -518,9 +518,6 @@ func (s *Search) TranslateWordWithRune(words []string) (translatedWords []string
 		enWord := ""
 		for _, char := range word {
 			enLetter := letterMap[strings.ToLower(string(char))]
-			if string(char) == "к" {
-
-			}
 			if enLetter == "" {
 				enWord += string(char)
 			} else {
@@ -542,7 +539,6 @@ func (s *Search) TranslateWordWithTranslator(words []string) (translatedWords []
 	for i := 0; i < len(response); i++ {
 		translatedWords = append(translatedWords, response[i].Text)
 	}
-	fmt.Println("TranslateWordWithTranslator returns ", translatedWords)
 	return translatedWords
 }
 
@@ -583,7 +579,6 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 		syllToTranslate = append(syllToTranslate, " ")
 	}
 	translatedWords = s.TranslateWordWithTranslator(syllToTranslate)
-	fmt.Println("TranslateWordWithTranslator returns ", translatedWords)
 	return translatedWords
 }
 

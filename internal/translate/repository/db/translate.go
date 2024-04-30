@@ -2,6 +2,7 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -20,8 +21,12 @@ type Translate struct {
 func (t *Translate) Translate(request domain.TranslateRequest) (response domain.TranslateResponse) {
 	jsonRequest, err := json.Marshal(request)
 	if err != nil {
-		//TODO
-		fmt.Println(err)
+		customErr := &domain.CustomError{
+			Type:    "json unmarshal",
+			Message: err.Error(),
+			Segment: "method Translate, translate.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	client := &http.Client{}
 	req, err := http.NewRequest(t.Config.Method, t.Config.Url, bytes.NewBuffer(jsonRequest))
@@ -36,8 +41,6 @@ func (t *Translate) Translate(request domain.TranslateRequest) (response domain.
 	req.Header.Add("Content-Type", t.Config.Header)
 	req.Header.Add("Authorization", t.Config.TranslateKey)
 	resp, err := client.Do(req)
-	fmt.Println("Config:", t.Config)
-	fmt.Println("Request:", req)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "http do request",
@@ -83,4 +86,17 @@ func NewTranslateStorage(database *sql.DB, YandexConfig domain.YandexConfig) *Tr
 		db:     database,
 		Config: YandexConfig,
 	}
+}
+
+func (t *Translate) GetUserLanguageByID(ctx context.Context, db *sql.DB, userID uint) (languageCode string) {
+	err := db.QueryRowContext(ctx, "SELECT language FROM auth.person WHERE id = $1", userID).Scan(&languageCode)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetUserLanguageByID, translate.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	return languageCode
 }
