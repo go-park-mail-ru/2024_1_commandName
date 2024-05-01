@@ -211,11 +211,11 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 			fmt.Println(customErr.Error())
 			return nil
 		}
-		chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
-		if chat.Messages != nil {
-			chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
-		}
-		fmt.Println("chatMessages: ", chat.Messages)
+		//chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
+		//if chat.Messages != nil {
+		chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
+		//}
+		//fmt.Println("chatMessages: ", chat.Messages)
 		fmt.Println("chat.ID: ", chat.ID)
 		lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
 		chat.LastSeenMessageID = lastSeenMessageId
