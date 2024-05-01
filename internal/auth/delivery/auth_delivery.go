@@ -1,14 +1,16 @@
 package delivery
 
 import (
-	profileUsecase "ProjectMessenger/internal/profile/usecase"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+
+	profileUsecase "ProjectMessenger/internal/profile/usecase"
 
 	_ "github.com/lib/pq"
 	_ "github.com/swaggo/http-swagger"
@@ -202,6 +204,7 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.Request) (authorized bool, userID uint) {
 	ctx := r.Context()
 	session, err := r.Cookie("session_id")
+	fmt.Println(err)
 	if err == nil && session != nil {
 		authorized, userID = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	}

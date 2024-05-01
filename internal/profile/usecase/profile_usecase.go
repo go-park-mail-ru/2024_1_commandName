@@ -105,15 +105,15 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 		return fmt.Errorf("internal error")
 	}
 	oldAvatarFilename := ""
-	if user.Avatar != "" {
-		oldAvatarFilename = user.Avatar
+	if user.AvatarPath != "" {
+		oldAvatarFilename = user.AvatarPath
 	}
 
 	fileName, err := userStorage.StoreAvatar(ctx, multipartFile, fileHandler)
 	if err != nil {
 		return err
 	}
-	user.Avatar = "avatars/" + fileName
+	user.AvatarPath = "avatars/" + fileName
 	ok := userStorage.UpdateUser(ctx, user)
 	if !ok {
 		return fmt.Errorf("internal error")

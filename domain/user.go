@@ -14,6 +14,6 @@ type Person struct {
 	Password     string    `json:"password,omitempty"`
 	CreateDate   time.Time `json:"create_date,omitempty" swaggerignore:"true"`
 	LastSeenDate time.Time `json:"last_seen_date" swaggerignore:"true"`
-	Avatar       string    `json:"avatar" swaggerignore:"true"`
+	AvatarPath   string    `json:"avatar" swaggerignore:"true"`
 	PasswordSalt string    `json:"password_salt,omitempty" swaggerignore:"true"`
 }
