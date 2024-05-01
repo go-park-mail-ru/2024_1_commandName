@@ -1,11 +1,12 @@
 package usecase
 
 import (
-	"ProjectMessenger/internal/auth/usecase"
 	"context"
 	"fmt"
 	"log/slog"
 	"sort"
+
+	"ProjectMessenger/internal/auth/usecase"
 
 	"ProjectMessenger/domain"
 )
@@ -18,6 +19,9 @@ type ChatStore interface {
 	CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error)
 	DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error)
 	UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (ok bool)
+	GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message
+	GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int)
+	GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int)
 }
 
 func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {

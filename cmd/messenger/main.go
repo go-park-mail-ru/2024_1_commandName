@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"ProjectMessenger/domain"
 	"github.com/gorilla/mux"
 	_ "github.com/swaggo/echo-swagger/example/docs"
 	"gopkg.in/yaml.v3"
@@ -15,6 +16,8 @@ import (
 	messagedelivery "ProjectMessenger/internal/messages/delivery"
 	"ProjectMessenger/internal/middleware"
 	profiledelivery "ProjectMessenger/internal/profile/delivery"
+	searchdelivery "ProjectMessenger/internal/search/delivery"
+	translatedelivery "ProjectMessenger/internal/translate/delivery"
 
 	database "ProjectMessenger/db"
 )
@@ -26,19 +29,7 @@ func main() {
 	Router(cfg)
 }
 
-type config struct {
-	Server struct {
-		Host string `yaml:"host"`
-		Port int    `yaml:"port"`
-	} `yaml:"server"`
-	App struct {
-		IsDebug    bool   `yaml:"isDebug"`
-		InMemory   bool   `yaml:"inMemory"`
-		AvatarPath string `yaml:"avatarPath"`
-	} `yaml:"app"`
-}
-
-func loadConfig() config {
+func loadConfig() domain.Config {
 	envPath := os.Getenv("GOCHATME_HOME")
 	slog.Debug("env home =" + envPath)
 	f, err := os.Open(envPath + "config.yml")
@@ -49,7 +40,7 @@ func loadConfig() config {
 	}
 	defer f.Close()
 
-	var cfg config
+	var cfg domain.Config
 	decoder := yaml.NewDecoder(f)
 	err = decoder.Decode(&cfg)
 	if err != nil {
@@ -66,19 +57,23 @@ func loadConfig() config {
 // @schemes http
 // @host localhost:8080
 // @BasePath  /
-func Router(cfg config) {
+func Router(cfg domain.Config) {
 	router := mux.NewRouter()
 
 	var authHandler *authdelivery.AuthHandler
 	var chatsHandler *chatsdelivery.ChatsHandler
 	var profileHandler *profiledelivery.ProfileHandler
 	var messageHandler *messagedelivery.MessageHandler
+	var searchHandler *searchdelivery.SearchHandler
+	var translateHandler *translatedelivery.TranslateHandler
 
 	dataBase := database.СreateDatabase()
 	authHandler = authdelivery.NewAuthHandler(dataBase, cfg.App.AvatarPath)
 	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
 	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
+	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
+	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
 
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
@@ -101,6 +96,9 @@ func Router(cfg config) {
 
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
+
+	router.HandleFunc("/search", searchHandler.SearchObjects)
+	router.HandleFunc("/translate", translateHandler.TranslateMessage)
 
 	// middleware
 	if cfg.App.IsDebug {

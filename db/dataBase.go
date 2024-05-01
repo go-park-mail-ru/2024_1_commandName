@@ -25,25 +25,27 @@ func СreateDatabase() *sql.DB {
 	}
 
 	/*
-		m, err := migrate.New(
-			"file://migrations",
-			connStrToDataBase,
-		)
+		driver, err := postgres.WithInstance(dataBase, &postgres.Config{})
 		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
-		if err := m.Up(); err != nil {
-			if err.Error() == "no change" {
-				fmt.Println("Database already up-to-date")
-			} else {
-				fmt.Println("Error applying migrations:", err)
-				os.Exit(1)
-			}
-		} else {
-			fmt.Println("Migrations applied successfully")
+		m, err := migrate.NewWithDatabaseInstance(
+			"file://migrations",
+			"postgres", driver)
+		if err != nil {
+			log.Fatal(err)
 		}
-	*/
+		//ProjectMessenger/db/migrations
+		//file://migrations
+
+		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			log.Fatal(err)
+		}
+
+		fmt.Println("Migration successful")*/
 	return dataBase
 }
+
+//GOOSE_DBSTRING=postgresql://chatme_user:EasyPassword(@127.0.0.1:8888/chatme?sslmode=disable
+// goose -dir C:\Users\m2907\GolandProjects\VK_Education_Go\2024_1_commandName\db\migrations postgres "postgresql://chatme_user:EasyPassword(@127.0.0.1:8888/chatme?sslmode=disable" up

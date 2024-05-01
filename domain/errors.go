@@ -9,7 +9,6 @@ type CustomError struct {
 }
 
 func (e CustomError) Error() string {
-	//TODO (fix incorrect) res := fmt.Sprintf("error in %s: %s", e.Segment, e.Message)
-	res := fmt.Sprintf("%s", e.Message)
+	res := fmt.Sprintf("%s error in %s: %s", e.Type, e.Segment, e.Message)
 	return res
 }
