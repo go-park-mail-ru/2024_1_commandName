@@ -22,6 +22,10 @@ type ChatStore interface {
 	GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message
 	GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int)
 	GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int)
+
+	GetNPopularChannels(ctx context.Context, n int) ([]domain.ChannelWithCounter, error)
+	AddUserToChat(ctx context.Context, userID uint, chatID uint) (err error)
+	RemoveUserFromChat(ctx context.Context, userID uint, chatID uint) (err error)
 }
 
 func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {
@@ -127,9 +131,24 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	return chatID, true, nil
 }
 
-func DeletePrivateChat(ctx context.Context, deletingUserID, chatID uint, chatStorage ChatStore) (wasDeleted bool, err error) {
+func DeleteChat(ctx context.Context, deletingUserID, chatID uint, chatStorage ChatStore) (wasDeleted bool, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("DeleteChat: enter", "userID", deletingUserID, "chatID", chatID)
+
+	userBelongsToChat := CheckUserBelongsToChat(ctx, chatID, deletingUserID, chatStorage)
+	if !userBelongsToChat {
+		return false, fmt.Errorf("Неверный id для удаления")
+	}
+	chat, err := chatStorage.GetChatByChatID(ctx, chatID)
+	if err != nil {
+		return false, err
+	}
+	if chat.Type == "3" && chat.CreatorID != deletingUserID {
+		return false, fmt.Errorf("Вы не можете удалить этот канал")
+	}
+	if chat.Type == "2" && chat.CreatorID != deletingUserID {
+		return false, fmt.Errorf("Вы не можете удалить эту группу")
+	}
 
 	wasDeleted, err = chatStorage.DeleteChat(ctx, chatID)
 	if err != nil {
@@ -195,6 +214,51 @@ func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *strin
 	logger.Info("UpdateGroupChat", "ok", ok)
 	if !ok {
 		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
+func GetPopularChannels(ctx context.Context, chatStorage ChatStore) ([]domain.ChannelWithCounter, error) {
+	channels, err := chatStorage.GetNPopularChannels(ctx, 10)
+	return channels, err
+}
+
+func JoinChannel(ctx context.Context, userID uint, channelID uint, chatStorage ChatStore) (err error) {
+	channel, err := chatStorage.GetChatByChatID(ctx, channelID)
+	if err != nil {
+		return err
+	}
+	if channel.Type != "3" {
+		return fmt.Errorf("Неверный id канала")
+	}
+
+	belongs := CheckUserBelongsToChat(ctx, channelID, userID, chatStorage)
+	if belongs {
+		return fmt.Errorf("Пользователь уже состоит в этом канале")
+	}
+	err = chatStorage.AddUserToChat(ctx, userID, channelID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func LeaveChannel(ctx context.Context, userID uint, channelID uint, chatStorage ChatStore) (err error) {
+	channel, err := chatStorage.GetChatByChatID(ctx, channelID)
+	if err != nil {
+		return err
+	}
+	if channel.Type != "3" {
+		return fmt.Errorf("Неверный id канала")
+	}
+
+	belongs := CheckUserBelongsToChat(ctx, channelID, userID, chatStorage)
+	if !belongs {
+		return fmt.Errorf("Пользователь не состоит в этом канале")
+	}
+	err = chatStorage.RemoveUserFromChat(ctx, userID, channelID)
+	if err != nil {
+		return err
 	}
 	return nil
 }

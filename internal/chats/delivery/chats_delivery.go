@@ -3,6 +3,7 @@ package delivery
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -49,6 +50,10 @@ type updateChatJson struct {
 	ChatID         uint    `json:"chat_id"`
 	NewName        *string `json:"new_name"`
 	NewDescription *string `json:"new_description"`
+}
+
+type getPopularChannelsResponse struct {
+	Channels []domain.ChannelWithCounter `json:"channels"`
 }
 
 func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
@@ -198,12 +203,8 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	userBelongsToChat := usecase.CheckUserBelongsToChat(ctx, chatIDJson.ChatID, userID, chatsHandler.Chats)
-	if !userBelongsToChat {
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "User doesn't belong to chat"})
-		return
-	}
-	success, err := usecase.DeletePrivateChat(ctx, userID, chatIDJson.ChatID, chatsHandler.Chats)
+
+	success, err := usecase.DeleteChat(ctx, userID, chatIDJson.ChatID, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)
@@ -295,5 +296,112 @@ func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.
 		misc.WriteInternalErrorJson(ctx, w)
 		return
 	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// GetPopularChannels updates group chat
+//
+// @Summary gets 10 popular channels
+// @ID GetPopularChannels
+// @Produce json
+// @Success 200 {object}  domain.Response[getPopularChannelsResponse]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /getPopularChannels [get]
+func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, _ := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	channels, err := usecase.GetPopularChannels(ctx, chatsHandler.Chats)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "Что-то пошло не так"})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, channels)
+}
+
+// JoinChannel joins channel
+//
+// @Summary joins channel
+// @ID JoinChannel
+// @Accept json
+// @Produce json
+// @Param user body chatIDStruct true "id of channel"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /joinChannel [post]
+func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	chatIDStruct := chatIDStruct{}
+	err := decoder.Decode(&chatIDStruct)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	err = usecase.JoinChannel(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// LeaveChannel exits from channel
+//
+// @Summary exits from channel
+// @ID LeaveChannel
+// @Accept json
+// @Produce json
+// @Param user body chatIDStruct true "id of channel"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /leaveChannel [post]
+func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	chatIDStruct := chatIDStruct{}
+	err := decoder.Decode(&chatIDStruct)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	err = usecase.LeaveChannel(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }

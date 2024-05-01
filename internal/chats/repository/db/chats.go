@@ -348,11 +348,83 @@ func (c *Chats) UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (o
 	return true
 }
 
+func (c *Chats) GetNPopularChannels(ctx context.Context, n int) ([]domain.ChannelWithCounter, error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "SELECT id, name, description, count(id) FROM chat.chat JOIN chat.chat_user cu on chat.id = cu.chat_id WHERE type_id = '3' GROUP BY id ORDER BY count(id) DESC LIMIT $1"
+	rows, err := c.db.QueryContext(ctx, query, n)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetNPopularChannels, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return []domain.ChannelWithCounter{}, fmt.Errorf("internal error")
+	}
+	channels := make([]domain.ChannelWithCounter, 0, n)
+	defer rows.Close()
+	for rows.Next() {
+		var chat domain.ChannelWithCounter
+		if err = rows.Scan(&chat.ID, &chat.Name, &chat.Description, &chat.NumOfUsers); err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method GetNPopularChannels, chats.go",
+			}
+			logger.Error(customErr.Error())
+			return []domain.ChannelWithCounter{}, fmt.Errorf("internal error")
+		}
+		channels = append(channels, chat)
+	}
+	if err = rows.Err(); err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetMessagesByChatID, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return []domain.ChannelWithCounter{}, fmt.Errorf("internal error")
+	}
+	return channels, nil
+}
+
+func (c *Chats) AddUserToChat(ctx context.Context, userID uint, chatID uint) (err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "INSERT INTO chat.chat_user (chat_id, user_id) VALUES ($1, $2)"
+	_, err = c.db.ExecContext(ctx, query, chatID, userID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddUserToChat, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
+func (c *Chats) RemoveUserFromChat(ctx context.Context, userID uint, chatID uint) (err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "DELETE FROM chat.chat_user WHERE chat_id = $1 AND user_id = $2"
+	_, err = c.db.ExecContext(ctx, query, chatID, userID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method RemoveUserFromChat, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
 func addFakeChatUsers(db *sql.DB) {
 	_, err := db.Exec("DELETE FROM chat.chat_user")
 	_, err = db.Exec("DELETE FROM chat.message")
-	_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
-	_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
+	//_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
+	//_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
 
 	if err != nil {
 		customErr := &domain.CustomError{

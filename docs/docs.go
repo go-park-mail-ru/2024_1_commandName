@@ -513,6 +513,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/getPopularChannels": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "gets 10 popular channels",
+                "operationId": "GetPopularChannels",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_getPopularChannelsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/getProfileInfo": {
             "get": {
                 "produces": [
@@ -525,6 +554,92 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-delivery_docsUserForGetProfile"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/joinChannel": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "joins channel",
+                "operationId": "JoinChannel",
+                "parameters": [
+                    {
+                        "description": "id of channel",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.chatIDStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/leaveChannel": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "exits from channel",
+                "operationId": "LeaveChannel",
+                "parameters": [
+                    {
+                        "description": "id of channel",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.chatIDStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
                         }
                     },
                     "400": {
@@ -969,6 +1084,17 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.getPopularChannelsResponse": {
+            "type": "object",
+            "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ChannelWithCounter"
+                    }
+                }
+            }
+        },
         "delivery.requestChatIDBody": {
             "type": "object",
             "properties": {
@@ -1006,6 +1132,23 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.ChannelWithCounter": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "numOfUsers": {
                     "type": "integer"
                 }
             }
@@ -1192,6 +1335,18 @@ const docTemplate = `{
             "properties": {
                 "body": {
                     "$ref": "#/definitions/delivery.docsUserForGetProfile"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_getPopularChannelsResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.getPopularChannelsResponse"
                 },
                 "status": {
                     "type": "integer",
