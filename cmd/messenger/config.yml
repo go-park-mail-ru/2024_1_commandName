@@ -1,0 +1,13 @@
+app:
+  isDebug: true
+  inMemory: false
+  avatarPath: "./uploads/"
+server:
+  host: ""
+  port: 8080
+yandex:
+  trKey: "Bearer t1.9euelZqZm52WmYnLi4qXnsnLy8aMme3rnpWanMyVzMzLyJuXnJSQzZSQzJnl8_cUfjdO-e9TF2hr_t3z91QsNU7571MXaGv-zef1656VmpHOnpiTmsuXyZzJnIudzJDP7_zF656VmpHOnpiTmsuXyZzJnIudzJDP.egf0KjdGUcgvhmzaJfijfi2IcZus04mkyk80gG91J0_aLZUMwqmC-Nl2ekRpCaBR1wV2dlmZRHA5R5kv9JHsAw"
+  url: "https://translate.api.cloud.yandex.net/translate/v2/translate"
+  folderId: "b1gq4i9e5unl47m0kj5f"
+  header: "application/json"
+  method: "POST"

@@ -1,18 +1,121 @@
 basePath: /
 definitions:
-  models.Chat:
+  delivery.RequestChatIDBody:
+    properties:
+      chatID:
+        type: integer
+    type: object
+  delivery.addContactStruct:
+    properties:
+      username_of_user_to_add:
+        type: string
+    type: object
+  delivery.changePasswordStruct:
+    properties:
+      newPassword:
+        type: string
+      oldPassword:
+        type: string
+    type: object
+  delivery.chatIDIsNewJsonResponse:
+    properties:
+      chat_id:
+        type: integer
+      is_new_chat:
+        type: boolean
+    type: object
+  delivery.chatIDStruct:
+    properties:
+      chat_id:
+        type: integer
+    type: object
+  delivery.chatJsonResponse:
+    properties:
+      chat:
+        $ref: '#/definitions/domain.Chat'
+    type: object
+  delivery.createGroupJson:
+    properties:
+      description:
+        type: string
+      group_name:
+        type: string
+      user_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  delivery.deleteChatJsonResponse:
+    properties:
+      successfully_deleted:
+        type: boolean
+    type: object
+  delivery.docsContacts:
+    properties:
+      contacts:
+        items:
+          $ref: '#/definitions/delivery.docsUserForGetProfile'
+        type: array
+    type: object
+  delivery.docsUserForGetProfile:
+    properties:
+      about:
+        type: string
+      avatar:
+        type: string
+      create_date:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      last_seen_date:
+        type: string
+      name:
+        type: string
+      surname:
+        type: string
+      username:
+        type: string
+    type: object
+  delivery.updateChatJson:
+    properties:
+      chat_id:
+        type: integer
+      new_description:
+        type: string
+      new_name:
+        type: string
+    type: object
+  delivery.updateUserStruct-delivery_docsUserForGetProfile:
+    properties:
+      numOfUpdatedFields:
+        type: integer
+      user:
+        $ref: '#/definitions/delivery.docsUserForGetProfile'
+    type: object
+  delivery.userIDJson:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  domain.Chat:
     properties:
       avatar:
         type: string
       creator:
-        type: string
+        type: integer
       description:
         type: string
       id:
         type: integer
+      last_action_date_time:
+        type: string
+      last_message:
+        $ref: '#/definitions/domain.Message'
       messages:
         items:
-          $ref: '#/definitions/models.Message'
+          $ref: '#/definitions/domain.Message'
         type: array
       name:
         type: string
@@ -20,69 +123,128 @@ definitions:
         type: string
       users:
         items:
-          $ref: '#/definitions/models.ChatUser'
+          $ref: '#/definitions/domain.ChatUser'
         type: array
     type: object
-  models.ChatUser:
+  domain.ChatUser:
     properties:
       chat_id:
         type: integer
       user_id:
         type: integer
     type: object
-  models.Chats:
+  domain.Chats:
     properties:
       chats:
         items:
-          $ref: '#/definitions/models.Chat'
+          $ref: '#/definitions/domain.Chat'
         type: array
     type: object
-  models.Error:
+  domain.Error:
     properties:
       error:
         example: error description
         type: string
     type: object
-  models.Message:
+  domain.Message:
     properties:
       chat_id:
         type: integer
-      edited:
-        type: boolean
-      id:
-        type: integer
       message_text:
         type: string
-      user_id:
-        type: integer
+      username:
+        type: string
     type: object
-  models.Person:
+  domain.Messages:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/domain.Message'
+        type: array
+    type: object
+  domain.Person:
     properties:
       password:
         type: string
       username:
         type: string
     type: object
-  models.Response-int:
+  domain.Response-delivery_chatIDIsNewJsonResponse:
     properties:
       body:
-        type: integer
+        $ref: '#/definitions/delivery.chatIDIsNewJsonResponse'
       status:
         example: 200
         type: integer
     type: object
-  models.Response-models_Chats:
+  domain.Response-delivery_chatIDStruct:
     properties:
       body:
-        $ref: '#/definitions/models.Chats'
+        $ref: '#/definitions/delivery.chatIDStruct'
       status:
         example: 200
         type: integer
     type: object
-  models.Response-models_Error:
+  domain.Response-delivery_chatJsonResponse:
     properties:
       body:
-        $ref: '#/definitions/models.Error'
+        $ref: '#/definitions/delivery.chatJsonResponse'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_deleteChatJsonResponse:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.deleteChatJsonResponse'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_docsContacts:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.docsContacts'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_docsUserForGetProfile:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.docsUserForGetProfile'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-domain_Chats:
+    properties:
+      body:
+        $ref: '#/definitions/domain.Chats'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-domain_Error:
+    properties:
+      body:
+        $ref: '#/definitions/domain.Error'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-domain_Messages:
+    properties:
+      body:
+        $ref: '#/definitions/domain.Messages'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-int:
+    properties:
+      body:
+        type: integer
       status:
         example: 200
         type: integer
@@ -93,6 +255,66 @@ info:
   title: Messenger authorization API
   version: "1.0"
 paths:
+  /addContact:
+    post:
+      consumes:
+      - application/json
+      operationId: AddContact
+      parameters:
+      - description: username of user to add to contacts
+        in: body
+        name: usernameToAdd
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.addContactStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: adds contact for user
+  /changePassword:
+    post:
+      consumes:
+      - application/json
+      operationId: ChangePassword
+      parameters:
+      - description: Old and new passwords
+        in: body
+        name: Password
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.changePasswordStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: passwords are empty
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "401":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: changes profile password
   /checkAuth:
     get:
       operationId: checkAuth
@@ -102,12 +324,162 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Response-int'
+            $ref: '#/definitions/domain.Response-int'
         "401":
           description: Person not authorized
           schema:
-            $ref: '#/definitions/models.Response-models_Error'
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
+  /createGroupChat:
+    post:
+      consumes:
+      - application/json
+      operationId: CreateGroupChat
+      parameters:
+      - description: IDs of users to create group chat with
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.createGroupJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatIDStruct'
+        "400":
+          description: Person not authorized | Пользователь, с которым вы хотите создать
+            дилаог, не найден | Чат с этим пользователем уже существует
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: creates group chat
+  /createPrivateChat:
+    post:
+      consumes:
+      - application/json
+      operationId: CreatePrivateChat
+      parameters:
+      - description: ID of person to create private chat with
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.userIDJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatIDIsNewJsonResponse'
+        "400":
+          description: Person not authorized | Пользователь, с которым вы хотите создать
+            дилаог, не найден | Чат с этим пользователем уже существует
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: creates dialogue
+  /deleteChat:
+    post:
+      consumes:
+      - application/json
+      operationId: DeleteChat
+      parameters:
+      - description: ID of chat to delete
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.chatIDStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_deleteChatJsonResponse'
+        "400":
+          description: Person not authorized | User doesn't belong to chat
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: deletes chat
+  /getChat:
+    post:
+      consumes:
+      - application/json
+      operationId: GetChat
+      parameters:
+      - description: id of chat to get
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.chatIDStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatJsonResponse'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: gets one chat
+  /getChatMessages:
+    post:
+      consumes:
+      - application/json
+      operationId: getChatMessages
+      parameters:
+      - description: ID of chat
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.RequestChatIDBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Messages'
+        "400":
+          description: wrong json structure
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: GetChatMessages
   /getChats:
     get:
       operationId: GetChats
@@ -117,12 +489,54 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Response-models_Chats'
+            $ref: '#/definitions/domain.Response-domain_Chats'
         "400":
           description: Person not authorized
           schema:
-            $ref: '#/definitions/models.Response-models_Error'
-      summary: gets chats previews for user
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: gets Chats previews for user
+  /getContacts:
+    get:
+      operationId: GetContacts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_docsContacts'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: returns contacts of user
+  /getProfileInfo:
+    get:
+      operationId: GetProfileInfo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_docsUserForGetProfile'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: gets profile info
   /login:
     post:
       consumes:
@@ -134,22 +548,26 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.Person'
+          $ref: '#/definitions/domain.Person'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Response-int'
+            $ref: '#/definitions/domain.Response-int'
         "400":
           description: wrong json structure | user not found | wrong password
           schema:
-            $ref: '#/definitions/models.Response-models_Error'
+            $ref: '#/definitions/domain.Response-domain_Error'
         "405":
           description: use POST
           schema:
-            $ref: '#/definitions/models.Response-models_Error'
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
       summary: logs user in
   /logout:
     get:
@@ -160,11 +578,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Response-int'
+            $ref: '#/definitions/domain.Response-int'
         "400":
           description: no session to logout
           schema:
-            $ref: '#/definitions/models.Response-models_Error'
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
       summary: logs user out
   /register:
     post:
@@ -177,23 +599,137 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.Person'
+          $ref: '#/definitions/domain.Person'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Response-int'
+            $ref: '#/definitions/domain.Response-int'
         "400":
           description: user already exists | required field empty | wrong json structure
           schema:
-            $ref: '#/definitions/models.Response-models_Error'
+            $ref: '#/definitions/domain.Response-domain_Error'
         "405":
           description: use POST
           schema:
-            $ref: '#/definitions/models.Response-models_Error'
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
       summary: registers user
+  /sendMessage:
+    post:
+      consumes:
+      - application/json
+      description: Сначала по этому URL надо произвести upgrade до вебсокета, потом
+        слать json сообщений
+      operationId: sendMessage
+      parameters:
+      - description: message that was sent
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Message'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "500":
+          description: Internal server error | could not upgrade connection
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: SendMessage
+  /updateGroupChat:
+    post:
+      consumes:
+      - application/json
+      operationId: UpdateGroupChat
+      parameters:
+      - description: updated chat (если имя или описание не обновлялось, поле не слать
+          вообще)
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.updateChatJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: updates group chat
+  /updateProfileInfo:
+    post:
+      consumes:
+      - application/json
+      operationId: UpdateProfileInfo
+      parameters:
+      - description: Send only the updated fields, and number of them
+        in: body
+        name: userAndNumOfUpdatedFields
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.updateUserStruct-delivery_docsUserForGetProfile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "401":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: updates profile info
+  /uploadAvatar:
+    post:
+      consumes:
+      - multipart/form-data
+      operationId: UploadAvatar
+      parameters:
+      - description: avatar image
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Описание ошибки
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: uploads or changes avatar
 schemes:
 - http
 swagger: "2.0"
