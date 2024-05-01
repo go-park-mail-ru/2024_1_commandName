@@ -83,30 +83,36 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
 	minLength := len(wordsArr)
-	if len(translatedWordsArr) < minLength {
+	if len(translatedWordsArr) < minLength && len(translatedWordsArr) > 0 {
 		minLength = len(translatedWordsArr)
 	}
-	if len(translatedWordsWithRuneArr) < minLength {
+	if len(translatedWordsWithRuneArr) < minLength && len(translatedWordsWithRuneArr) > 0 {
 		minLength = len(translatedWordsWithRuneArr)
 	}
-	if len(translatedWordsWithSyllableArr) < minLength {
+	if len(translatedWordsWithSyllableArr) < minLength && len(translatedWordsWithSyllableArr) > 0 {
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
-	if len(translatedWordsArr) > 0 {
+	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
 		requestToSearchRune := ""
 		requestToSearchSyllable := ""
 
 		for i := 0; i < minLength; i++ {
-			requestToSearchTranslator += translatedWordsArr[i]
+			if len(translatedWordsArr) > 0 {
+				requestToSearchTranslator += translatedWordsArr[i]
+			}
 			requestToSearchOriginal += wordsArr[i]
-			requestToSearchRune += translatedWordsWithRuneArr[i]
-			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			if len(translatedWordsWithRuneArr) > 0 {
+				requestToSearchRune += translatedWordsWithRuneArr[i]
+			}
+			if len(translatedWordsWithSyllableArr) > 0 {
+				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			}
 
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
@@ -161,30 +167,36 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
 	minLength := len(wordsArr)
-	if len(translatedWordsArr) < minLength {
+	if len(translatedWordsArr) < minLength && len(translatedWordsArr) > 0 {
 		minLength = len(translatedWordsArr)
 	}
-	if len(translatedWordsWithRuneArr) < minLength {
+	if len(translatedWordsWithRuneArr) < minLength && len(translatedWordsWithRuneArr) > 0 {
 		minLength = len(translatedWordsWithRuneArr)
 	}
-	if len(translatedWordsWithSyllableArr) < minLength {
+	if len(translatedWordsWithSyllableArr) < minLength && len(translatedWordsWithSyllableArr) > 0 {
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
-	if len(translatedWordsArr) > 0 {
+	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
 		requestToSearchRune := ""
 		requestToSearchSyllable := ""
 
 		for i := 0; i < minLength; i++ {
-			requestToSearchTranslator += translatedWordsArr[i]
+			if len(translatedWordsArr) > 0 {
+				requestToSearchTranslator += translatedWordsArr[i]
+			}
 			requestToSearchOriginal += wordsArr[i]
-			requestToSearchRune += translatedWordsWithRuneArr[i]
-			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			if len(translatedWordsWithRuneArr) > 0 {
+				requestToSearchRune += translatedWordsWithRuneArr[i]
+			}
+			if len(translatedWordsWithSyllableArr) > 0 {
+				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			}
 
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at
@@ -247,8 +259,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
 	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""

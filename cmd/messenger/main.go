@@ -100,7 +100,6 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)
 
-	// middleware
 	if cfg.App.IsDebug {
 		router.Use(middleware.CORS)
 	}
