@@ -3,6 +3,7 @@ package delivery
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -21,6 +22,10 @@ type ChatsHandler struct {
 type chatIDIsNewJsonResponse struct {
 	ChatID    uint `json:"chat_id"`
 	IsNewChat bool `json:"is_new_chat"`
+}
+
+type messagesByChatIDRequest struct {
+	ChatID uint `json:"chat_id"`
 }
 
 type chatIDStruct struct {
@@ -296,4 +301,23 @@ func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+func (chatsHandler ChatsHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r) // нули ли проверять userID на то, что он состоит в запрашиваемом чате?
+	if !authorized {
+		return
+	}
+	fmt.Println(userID)
+
+	messageByChatIDRequest := messagesByChatIDRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&messageByChatIDRequest)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	messages := usecase.GetMessagesByChatID(ctx, chatsHandler.Chats, messageByChatIDRequest.ChatID)
+	misc.WriteStatusJson(ctx, w, 200, domain.Messages{Messages: messages})
 }

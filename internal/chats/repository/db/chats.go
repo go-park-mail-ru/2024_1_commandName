@@ -46,7 +46,7 @@ func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, 
 		fmt.Println(customErr.Error())
 		return domain.Chat{}, fmt.Errorf("internal error")
 	}
-	chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
+	//chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
 	chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 	logger.Debug("GetChat: found chat", "chatID", chatID)
 	return chat, nil
@@ -296,8 +296,8 @@ func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain
 	return chatUsers
 }
 
-func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message {
-	chatMessagesArr := make([]*domain.Message, 0)
+func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []domain.Message {
+	chatMessagesArr := make([]domain.Message, 0)
 	fmt.Println("in GetMessagesByChatID")
 	rows, err := c.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, message.created_at, message.edited, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = $1", chatID)
 	if err != nil {
@@ -323,7 +323,7 @@ func (c *Chats) GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.
 			fmt.Println(customErr.Error())
 			return nil
 		}
-		chatMessagesArr = append(chatMessagesArr, &mess)
+		chatMessagesArr = append(chatMessagesArr, mess)
 	}
 	if err = rows.Err(); err != nil {
 		customErr := &domain.CustomError{

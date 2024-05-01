@@ -135,7 +135,12 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 					fmt.Println(customErr.Error())
 					return foundChatsStructure
 				}
-				mChat.Messages = append(mChat.Messages, s.Chats.GetMessagesByChatID(ctx, mChat.ID)...)
+				mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+				var messages []*domain.Message
+				for j := range mMessages {
+					messages = append(messages, &mMessages[j])
+				}
+				mChat.Messages = messages
 				matchedChats = append(matchedChats, mChat)
 				foundChatsStructure.Chats = append(foundChatsStructure.Chats, mChat)
 			}
