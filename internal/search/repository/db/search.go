@@ -119,8 +119,8 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
     FROM chat.chat c
     JOIN chat.chat_user cu ON c.id = cu.chat_id
     WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') 
-    AND (cu.user_id = $5) 
-    `, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+    AND (cu.user_id = $5)
+	AND (($6 = 'chat' AND c.type_id IN ('1', '2')) OR ($6 = 'channel' AND c.type_id = '3'))`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
