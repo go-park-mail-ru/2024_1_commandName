@@ -278,6 +278,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 		for i := 0; i < minLength; i++ {
 			if len(translatedWordsArr) > 0 {
 				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
 			}
 			requestToSearchOriginal += wordsArr[i]
 			if len(translatedWordsWithRuneArr) > 0 {
@@ -285,6 +287,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 			}
 			if len(translatedWordsWithSyllableArr) > 0 {
 				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
 			}
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path

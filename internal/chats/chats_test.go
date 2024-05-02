@@ -28,12 +28,6 @@ func TestChatRepo_GetChatByChatID_Succes(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "type_id", "name", "description", "avatar_path", "created_at", "edited_at", "creator_id"}).
 			AddRow(1, "1", "test@mail.ru", "Test", "User", fixedTime, fixedTime, 1))
 
-	mock.ExpectQuery("SELECT message.id, user_id, chat_id, message.message, message.created_at, message.edited, username FROM chat.message JOIN auth.person ON").
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "created_at", "edited", "username"}).
-			AddRow(1, 1, 1, "desc", fixedTime, false, "artem").
-			AddRow(2, 2, 2, "desc", fixedTime, false, "alex"))
-
 	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
