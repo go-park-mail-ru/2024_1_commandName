@@ -19,9 +19,9 @@ type ChatStore interface {
 	CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error)
 	DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error)
 	UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (ok bool)
-	GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message
 	GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int)
 	GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int)
+	GetMessagesByChatID(ctx context.Context, chatID uint) []domain.Message
 }
 
 func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {
@@ -197,4 +197,9 @@ func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *strin
 		return fmt.Errorf("internal error")
 	}
 	return nil
+}
+
+func GetMessagesByChatID(ctx context.Context, chatStorage ChatStore, chatID uint) []domain.Message {
+	messages := chatStorage.GetMessagesByChatID(ctx, chatID)
+	return messages
 }

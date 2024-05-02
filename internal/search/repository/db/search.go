@@ -76,7 +76,7 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 	return connection.WriteMessage(websocket.TextMessage, message)
 }
 
-func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse) {
+func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse) {
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
@@ -116,9 +116,11 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
-					FROM chat.chat c
-					JOIN chat.chat_user cu ON c.id = cu.chat_id
-					WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') AND cu.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+    FROM chat.chat c
+    JOIN chat.chat_user cu ON c.id = cu.chat_id
+    WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') 
+    AND (cu.user_id = $5)
+	AND (($6 = 'chat' AND c.type_id IN ('1', '2')) OR ($6 = 'channel' AND c.type_id = '3'))`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -141,7 +143,12 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 					fmt.Println(customErr.Error())
 					return foundChatsStructure
 				}
-				mChat.Messages = append(mChat.Messages, s.Chats.GetMessagesByChatID(ctx, mChat.ID)...)
+				mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+				var messages []*domain.Message
+				for j := range mMessages {
+					messages = append(messages, &mMessages[j])
+				}
+				mChat.Messages = messages
 				matchedChats = append(matchedChats, mChat)
 				foundChatsStructure.Chats = append(foundChatsStructure.Chats, mChat)
 			}
