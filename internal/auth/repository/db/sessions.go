@@ -44,7 +44,7 @@ func (s *Sessions) CreateSession(ctx context.Context, userID uint) (sessionID st
 	logger.Debug("CreateSession", "userID", userID)
 	//fmt.Println("create session for user", userID)
 	sessionID = misc.RandStringRunes(32)
-	_, err := s.db.ExecContext(ctx, "INSERT INTO auth.go.session (sessionid, userid) VALUES ($1, $2)", sessionID, userID)
+	_, err := s.db.ExecContext(ctx, "INSERT INTO auth.session (sessionid, userid) VALUES ($1, $2)", sessionID, userID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -62,7 +62,7 @@ func (s *Sessions) CreateSession(ctx context.Context, userID uint) (sessionID st
 func (s *Sessions) DeleteSession(ctx context.Context, sessionID string) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("DeleteSession", "sessionID", sessionID)
-	_, err := s.db.ExecContext(ctx, "DELETE FROM auth.go.session WHERE sessionID = $1", sessionID)
+	_, err := s.db.ExecContext(ctx, "DELETE FROM auth.session WHERE sessionID = $1", sessionID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",

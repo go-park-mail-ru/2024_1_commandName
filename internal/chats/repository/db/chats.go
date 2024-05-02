@@ -54,7 +54,7 @@ func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, 
 
 func (c *Chats) CheckPrivateChatExists(ctx context.Context, userID1, userID2 uint) (exists bool, chatID uint, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	rows, err := c.db.QueryContext(ctx, "SELECT cu1.chat_id FROM chat.chat_user cu1 INNER JOIN chat.chat_user cu2 ON cu1.chat_id = cu2.chat_id WHERE cu1.user_id = $1 AND cu2.user_id = $2 AND cu1.user_id <> cu2.user_id", userID1, userID2)
+	rows, err := c.db.QueryContext(ctx, "SELECT cu1.chat_id, cu1.user_id, cu2.user_id FROM chat.chat_user cu1 INNER JOIN chat.chat_user cu2 ON cu1.chat_id = cu2.chat_id WHERE cu1.user_id = $1 AND cu2.user_id = $2 AND cu1.user_id <> cu2.user_id", userID1, userID2)
 	if err != nil {
 		fmt.Println("ERR:", err)
 		customErr := &domain.CustomError{
@@ -67,7 +67,9 @@ func (c *Chats) CheckPrivateChatExists(ctx context.Context, userID1, userID2 uin
 	}
 	for rows.Next() {
 		var chatID uint
-		if err = rows.Scan(&chatID); err != nil {
+		var user1_ID uint
+		var user2_ID uint
+		if err = rows.Scan(&chatID, &user1_ID, &user2_ID); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
@@ -224,20 +226,13 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 			chats = append(chats, chat)
 		}
 	}
-	if err = rows.Err(); err != nil {
-		customErr := &domain.CustomError{
-			Type:    "database",
-			Message: err.Error(),
-			Segment: "method GetChatsForUser, chats.go",
-		}
-		fmt.Println(customErr.Error())
-		return nil
-	}
 	return chats
 }
 
 func (c *Chats) GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int) {
+	fmt.Println("Do for ", chatID, userID)
 	err := c.db.QueryRowContext(ctx, "SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = $1 and chat_id = $2", userID, chatID).Scan(&lastSeenMessageID)
+	fmt.Println("LSID:", lastSeenMessageID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
