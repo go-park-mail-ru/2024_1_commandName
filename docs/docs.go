@@ -136,6 +136,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/createChannel": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "creates channel",
+                "operationId": "CreateChannel",
+                "parameters": [
+                    {
+                        "description": "IDs of users to create group chat with",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.createChannelJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDStruct"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/createGroupChat": {
             "post": {
                 "consumes": [
@@ -994,6 +1037,17 @@ const docTemplate = `{
             "properties": {
                 "chat": {
                     "$ref": "#/definitions/domain.Chat"
+                }
+            }
+        },
+        "delivery.createChannelJson": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

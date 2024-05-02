@@ -88,6 +88,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/updateGroupChat", chatsHandler.UpdateGroupChat)
 	router.HandleFunc("/deleteChat", chatsHandler.DeleteChat)
 	router.HandleFunc("/getPopularChannels", chatsHandler.GetPopularChannels)
+	router.HandleFunc("/createChannel", chatsHandler.CreateChannel)
 	router.HandleFunc("/joinChannel", chatsHandler.JoinChannel)
 	router.HandleFunc("/leaveChannel", chatsHandler.LeaveChannel)
 

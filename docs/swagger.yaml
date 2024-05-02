@@ -29,6 +29,13 @@ definitions:
       chat:
         $ref: '#/definitions/domain.Chat'
     type: object
+  delivery.createChannelJson:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
   delivery.createGroupJson:
     properties:
       description:
@@ -378,6 +385,34 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
+  /createChannel:
+    post:
+      consumes:
+      - application/json
+      operationId: CreateChannel
+      parameters:
+      - description: IDs of users to create group chat with
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.createChannelJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatIDStruct'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: creates channel
   /createGroupChat:
     post:
       consumes:

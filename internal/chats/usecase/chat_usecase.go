@@ -262,3 +262,11 @@ func LeaveChat(ctx context.Context, userID uint, channelID uint, chatStorage Cha
 	}
 	return nil
 }
+
+func CreateChannel(ctx context.Context, creatingUserID uint, chatName, description string, chatStorage ChatStore) (chatID uint, err error) {
+	chatID, err = chatStorage.CreateChat(ctx, chatName, description, creatingUserID)
+	if err != nil {
+		return 0, err
+	}
+	return chatID, nil
+}

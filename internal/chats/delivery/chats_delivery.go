@@ -42,6 +42,11 @@ type createGroupJson struct {
 	Users       []uint `json:"user_ids"`
 }
 
+type createChannelJson struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 type deleteChatJsonResponse struct {
 	SuccessfullyDeleted bool `json:"successfully_deleted"`
 }
@@ -404,4 +409,49 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// CreateChannel creates channel
+//
+// @Summary creates channel
+// @ID CreateChannel
+// @Accept json
+// @Produce json
+// @Param user body createChannelJson true "IDs of users to create group chat with"
+// @Success 200 {object}  domain.Response[chatIDStruct]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /createChannel [post]
+func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
+		return
+	}
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	channelRequest := createChannelJson{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&channelRequest)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	chatID, err := usecase.CreateChannel(ctx, userID, channelRequest.Name, channelRequest.Description, chatsHandler.Chats)
+	if err != nil {
+		if err.Error() == "internal error" {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		logger.Error(err.Error())
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
 }

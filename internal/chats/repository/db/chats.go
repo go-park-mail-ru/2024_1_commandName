@@ -92,8 +92,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 	chatType := ""
 	chatName := ""
 	chatDesc := ""
-	fmt.Println("here")
-	if len(userIDs) < 2 {
+	if len(userIDs) < 1 {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: "len < 2!",
@@ -101,9 +100,13 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		}
 		logger.Error(customErr.Error())
 		return 0, fmt.Errorf("internal error")
+	} else if len(userIDs) == 1 {
+		chatType = "3"
+		chatName = name
+		chatDesc = description
 	} else if len(userIDs) == 2 {
 		chatType = "1"
-	} else {
+	} else if len(userIDs) > 2 {
 		chatType = "2"
 		chatName = name
 		chatDesc = description
