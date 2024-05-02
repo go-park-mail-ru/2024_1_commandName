@@ -330,7 +330,7 @@ func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *ht
 		return
 	}
 
-	misc.WriteStatusJson(ctx, w, 200, channels)
+	misc.WriteStatusJson(ctx, w, 200, getPopularChannelsResponse{Channels: channels})
 }
 
 // JoinChannel joins channel
