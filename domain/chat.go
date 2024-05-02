@@ -17,3 +17,13 @@ type Chat struct {
 	LastMessage        Message     `json:"last_message"`
 	LastSeenMessageID  int         `json:"last_seen_message_id"`
 }
+
+type ChannelWithCounter struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	CreatorID   uint   `json:"creator"`
+	Avatar      string `json:"avatar"`
+	IsMember    bool   `json:"is_member"`
+	NumOfUsers  int    `json:"numOfUsers"`
+}

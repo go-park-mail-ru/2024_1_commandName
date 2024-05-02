@@ -98,8 +98,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 	chatType := ""
 	chatName := ""
 	chatDesc := ""
-	fmt.Println(userIDs)
-	if len(userIDs) < 2 {
+	if len(userIDs) < 1 {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: "len < 2!",
@@ -107,9 +106,13 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		}
 		logger.Error(customErr.Error())
 		return 0, fmt.Errorf("internal error")
+	} else if len(userIDs) == 1 {
+		chatType = "3"
+		chatName = name
+		chatDesc = description
 	} else if len(userIDs) == 2 {
 		chatType = "1"
-	} else {
+	} else if len(userIDs) > 2 {
 		chatType = "2"
 		chatName = name
 		chatDesc = description
@@ -357,11 +360,89 @@ func (c *Chats) UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (o
 	return true
 }
 
+func (c *Chats) GetNPopularChannels(ctx context.Context, userID uint, n int) ([]domain.ChannelWithCounter, error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "SELECT id, name, description, creator_id, avatar_path, count(id), max(CASE WHEN user_id = $1 THEN 1 ELSE 0 END) as Aexists FROM chat.chat JOIN chat.chat_user cu on chat.id = cu.chat_id WHERE type_id = '3' GROUP BY id ORDER BY count(id) DESC LIMIT $2"
+	rows, err := c.db.QueryContext(ctx, query, userID, n)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetNPopularChannels, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return []domain.ChannelWithCounter{}, fmt.Errorf("internal error")
+	}
+	channels := make([]domain.ChannelWithCounter, 0, n)
+	defer rows.Close()
+	for rows.Next() {
+		var chat domain.ChannelWithCounter
+		belongsToChat := 0
+		if err = rows.Scan(&chat.ID, &chat.Name, &chat.Description, &chat.CreatorID, &chat.Avatar, &chat.NumOfUsers, &belongsToChat); err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method GetNPopularChannels, chats.go",
+			}
+			logger.Error(customErr.Error())
+			return []domain.ChannelWithCounter{}, fmt.Errorf("internal error")
+		}
+		if belongsToChat == 0 {
+			chat.IsMember = false
+		} else {
+			chat.IsMember = true
+		}
+		channels = append(channels, chat)
+	}
+	if err = rows.Err(); err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetMessagesByChatID, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return []domain.ChannelWithCounter{}, fmt.Errorf("internal error")
+	}
+	return channels, nil
+}
+
+func (c *Chats) AddUserToChat(ctx context.Context, userID uint, chatID uint) (err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "INSERT INTO chat.chat_user (chat_id, user_id) VALUES ($1, $2)"
+	_, err = c.db.ExecContext(ctx, query, chatID, userID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method AddUserToChat, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
+func (c *Chats) RemoveUserFromChat(ctx context.Context, userID uint, chatID uint) (err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "DELETE FROM chat.chat_user WHERE chat_id = $1 AND user_id = $2"
+	_, err = c.db.ExecContext(ctx, query, chatID, userID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method RemoveUserFromChat, chats.go",
+		}
+		logger.Error(customErr.Error())
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
 func addFakeChatUsers(db *sql.DB) {
 	_, err := db.Exec("DELETE FROM chat.chat_user")
 	_, err = db.Exec("DELETE FROM chat.message")
-	_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
-	_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
+	//_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
+	//_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
 
 	if err != nil {
 		customErr := &domain.CustomError{
