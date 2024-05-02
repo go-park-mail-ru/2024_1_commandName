@@ -265,6 +265,104 @@ const docTemplate = `{
                 }
             }
         },
+        "/deleteMessage": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "DeleteMessage",
+                "operationId": "deleteMessage",
+                "parameters": [
+                    {
+                        "description": "ID of message to delete",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.deleteMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "wrong json structure",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "405": {
+                        "description": "use POST",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/editMessage": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "EditMessage",
+                "operationId": "editMessage",
+                "parameters": [
+                    {
+                        "description": "ID of chat",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.editMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "wrong json structure",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "405": {
+                        "description": "use POST",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/getChat": {
             "post": {
                 "consumes": [
@@ -325,7 +423,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/delivery.RequestChatIDBody"
+                            "$ref": "#/definitions/delivery.requestChatIDBody"
                         }
                     }
                 ],
@@ -738,14 +836,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "delivery.RequestChatIDBody": {
-            "type": "object",
-            "properties": {
-                "chatID": {
-                    "type": "integer"
-                }
-            }
-        },
         "delivery.addContactStruct": {
             "type": "object",
             "properties": {
@@ -817,6 +907,14 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.deleteMessageRequest": {
+            "type": "object",
+            "properties": {
+                "message_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "delivery.docsContacts": {
             "type": "object",
             "properties": {
@@ -860,6 +958,25 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.editMessageRequest": {
+            "type": "object",
+            "properties": {
+                "message_id": {
+                    "type": "integer"
+                },
+                "new_message_text": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.requestChatIDBody": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "type": "integer"
+                }
+            }
+        },
         "delivery.updateChatJson": {
             "type": "object",
             "properties": {
@@ -899,10 +1016,16 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
+                "created_at": {
+                    "type": "string"
+                },
                 "creator": {
                     "type": "integer"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "edited_at": {
                     "type": "string"
                 },
                 "id": {
@@ -913,6 +1036,9 @@ const docTemplate = `{
                 },
                 "last_message": {
                     "$ref": "#/definitions/domain.Message"
+                },
+                "last_seen_message_id": {
+                    "type": "integer"
                 },
                 "messages": {
                     "type": "array",
