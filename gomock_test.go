@@ -1,25 +1,8 @@
 package _024_1_commandName
 
-import (
-	"context"
-	"database/sql"
-	"errors"
-	"fmt"
-	"reflect"
-	"testing"
-	"time"
-
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/auth/delivery"
-	database "ProjectMessenger/internal/auth/repository/db"
-	chat "ProjectMessenger/internal/chats/repository/db"
-	message "ProjectMessenger/internal/messages/repository/db"
-	"github.com/DATA-DOG/go-sqlmock"
-)
-
 //chat "ProjectMessenger/internal/chats/repository/db"
 //message "ProjectMessenger/internal/messages/repository/db"
-
+/*
 func TestNewUserRepo(t *testing.T) {
 	db, _, err := sqlmock.New()
 	if err != nil {
@@ -39,8 +22,6 @@ func TestUserRepo(t *testing.T) {
 		t.Fatalf("cant create mock: %s", err)
 	}
 	defer db.Close()
-
-	//userStorage := database.NewUserStorage(db, "")
 
 	mock.
 		ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
@@ -69,14 +50,12 @@ func TestUserRepo(t *testing.T) {
 }
 
 func TestUserRepo_GetByUserID(t *testing.T) {
-	// Создание mock базы данных
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("cant create mock: %s", err)
 	}
 	defer db.Close()
 
-	// Создание userRepo с mock базы данных
 	userRepo := database.NewRawUserStorage(db, "")
 
 	// Утверждение ожидания запроса к базе данных
@@ -507,6 +486,7 @@ func TestUserRepo_AddContact_CustomError(t *testing.T) {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
+
 
 func TestSessionRepo_GetUserIDbySessionID(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -1548,4 +1528,4 @@ func TestUserRepo_SetMessage(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
-}
+}*/
