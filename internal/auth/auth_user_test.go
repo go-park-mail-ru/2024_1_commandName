@@ -19,7 +19,7 @@ func TestNewUserRepo(t *testing.T) {
 	}
 	defer db.Close()
 
-	userRepo := database.NewRawUserStorage(db, "")
+	userRepo := database.NewUserStorage(db, "")
 
 	// Утверждение ожидания запроса к базе данных
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
