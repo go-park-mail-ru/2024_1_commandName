@@ -23,5 +23,7 @@ type ChannelWithCounter struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	CreatorID   uint   `json:"creator"`
+	Avatar      string `json:"avatar"`
+	IsMember    bool   `json:"is_member"`
 	NumOfUsers  int    `json:"numOfUsers"`
 }

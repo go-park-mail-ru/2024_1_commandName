@@ -315,12 +315,12 @@ func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.
 // @Router /getPopularChannels [get]
 func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	authorized, _ := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
 
-	channels, err := usecase.GetPopularChannels(ctx, chatsHandler.Chats)
+	channels, err := usecase.GetPopularChannels(ctx, userID, chatsHandler.Chats)
 	if err != nil {
 		if err == fmt.Errorf("internal error") {
 			misc.WriteInternalErrorJson(ctx, w)

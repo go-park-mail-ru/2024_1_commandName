@@ -23,7 +23,7 @@ type ChatStore interface {
 	GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int)
 	GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int)
 
-	GetNPopularChannels(ctx context.Context, n int) ([]domain.ChannelWithCounter, error)
+	GetNPopularChannels(ctx context.Context, userID uint, n int) ([]domain.ChannelWithCounter, error)
 	AddUserToChat(ctx context.Context, userID uint, chatID uint) (err error)
 	RemoveUserFromChat(ctx context.Context, userID uint, chatID uint) (err error)
 }
@@ -218,8 +218,8 @@ func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *strin
 	return nil
 }
 
-func GetPopularChannels(ctx context.Context, chatStorage ChatStore) ([]domain.ChannelWithCounter, error) {
-	channels, err := chatStorage.GetNPopularChannels(ctx, 10)
+func GetPopularChannels(ctx context.Context, userID uint, chatStorage ChatStore) ([]domain.ChannelWithCounter, error) {
+	channels, err := chatStorage.GetNPopularChannels(ctx, userID, 10)
 	return channels, err
 }
 

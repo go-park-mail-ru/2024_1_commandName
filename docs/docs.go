@@ -1193,11 +1193,20 @@ const docTemplate = `{
         "domain.ChannelWithCounter": {
             "type": "object",
             "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "creator": {
+                    "type": "integer"
+                },
                 "description": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
+                },
+                "is_member": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"

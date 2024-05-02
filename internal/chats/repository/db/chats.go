@@ -351,10 +351,10 @@ func (c *Chats) UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (o
 	return true
 }
 
-func (c *Chats) GetNPopularChannels(ctx context.Context, n int) ([]domain.ChannelWithCounter, error) {
+func (c *Chats) GetNPopularChannels(ctx context.Context, userID uint, n int) ([]domain.ChannelWithCounter, error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	query := "SELECT id, name, description, creator_id,count(id) FROM chat.chat JOIN chat.chat_user cu on chat.id = cu.chat_id WHERE type_id = '3' GROUP BY id ORDER BY count(id) DESC LIMIT $1"
-	rows, err := c.db.QueryContext(ctx, query, n)
+	query := "SELECT id, name, description, creator_id, avatar_path, count(id), max(CASE WHEN user_id = $1 THEN 1 ELSE 0 END) as Aexists FROM chat.chat JOIN chat.chat_user cu on chat.id = cu.chat_id WHERE type_id = '3' GROUP BY id ORDER BY count(id) DESC LIMIT $2"
+	rows, err := c.db.QueryContext(ctx, query, userID, n)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -368,7 +368,8 @@ func (c *Chats) GetNPopularChannels(ctx context.Context, n int) ([]domain.Channe
 	defer rows.Close()
 	for rows.Next() {
 		var chat domain.ChannelWithCounter
-		if err = rows.Scan(&chat.ID, &chat.Name, &chat.Description, &chat.CreatorID, &chat.NumOfUsers); err != nil {
+		belongsToChat := 0
+		if err = rows.Scan(&chat.ID, &chat.Name, &chat.Description, &chat.CreatorID, &chat.Avatar, &chat.NumOfUsers, &belongsToChat); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),
@@ -376,6 +377,11 @@ func (c *Chats) GetNPopularChannels(ctx context.Context, n int) ([]domain.Channe
 			}
 			logger.Error(customErr.Error())
 			return []domain.ChannelWithCounter{}, fmt.Errorf("internal error")
+		}
+		if belongsToChat == 0 {
+			chat.IsMember = false
+		} else {
+			chat.IsMember = true
 		}
 		channels = append(channels, chat)
 	}
