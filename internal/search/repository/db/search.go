@@ -105,6 +105,8 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 		for i := 0; i < minLength; i++ {
 			if len(translatedWordsArr) > 0 {
 				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
 			}
 			requestToSearchOriginal += wordsArr[i]
 			if len(translatedWordsWithRuneArr) > 0 {
@@ -112,6 +114,8 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 			}
 			if len(translatedWordsWithSyllableArr) > 0 {
 				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
 			}
 
 			rows, err := s.db.QueryContext(ctx,
@@ -196,6 +200,8 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 		for i := 0; i < minLength; i++ {
 			if len(translatedWordsArr) > 0 {
 				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
 			}
 			requestToSearchOriginal += wordsArr[i]
 			if len(translatedWordsWithRuneArr) > 0 {
@@ -203,6 +209,8 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			}
 			if len(translatedWordsWithSyllableArr) > 0 {
 				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
 			}
 
 			rows, err := s.db.QueryContext(ctx,
