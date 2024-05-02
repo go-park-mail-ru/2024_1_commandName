@@ -353,7 +353,7 @@ func (c *Chats) UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (o
 
 func (c *Chats) GetNPopularChannels(ctx context.Context, n int) ([]domain.ChannelWithCounter, error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	query := "SELECT id, name, description, count(id) FROM chat.chat JOIN chat.chat_user cu on chat.id = cu.chat_id WHERE type_id = '3' GROUP BY id ORDER BY count(id) DESC LIMIT $1"
+	query := "SELECT id, name, description, creator_id,count(id) FROM chat.chat JOIN chat.chat_user cu on chat.id = cu.chat_id WHERE type_id = '3' GROUP BY id ORDER BY count(id) DESC LIMIT $1"
 	rows, err := c.db.QueryContext(ctx, query, n)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -368,7 +368,7 @@ func (c *Chats) GetNPopularChannels(ctx context.Context, n int) ([]domain.Channe
 	defer rows.Close()
 	for rows.Next() {
 		var chat domain.ChannelWithCounter
-		if err = rows.Scan(&chat.ID, &chat.Name, &chat.Description, &chat.NumOfUsers); err != nil {
+		if err = rows.Scan(&chat.ID, &chat.Name, &chat.Description, &chat.CreatorID, &chat.NumOfUsers); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),

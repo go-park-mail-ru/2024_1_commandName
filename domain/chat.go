@@ -22,5 +22,6 @@ type ChannelWithCounter struct {
 	ID          uint   `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	CreatorID   uint   `json:"creator"`
 	NumOfUsers  int    `json:"numOfUsers"`
 }
