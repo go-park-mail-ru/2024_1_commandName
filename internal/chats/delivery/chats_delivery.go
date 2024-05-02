@@ -393,7 +393,7 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	err = usecase.LeaveChannel(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
+	err = usecase.LeaveChat(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
 	if err != nil {
 		if err == fmt.Errorf("internal error") {
 			misc.WriteInternalErrorJson(ctx, w)

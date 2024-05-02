@@ -143,13 +143,13 @@ func DeleteChat(ctx context.Context, deletingUserID, chatID uint, chatStorage Ch
 	if err != nil {
 		return false, err
 	}
-	if chat.Type == "3" && chat.CreatorID != deletingUserID {
-		return false, fmt.Errorf("Вы не можете удалить этот канал")
+	if (chat.Type == "3" || chat.Type == "2") && chat.CreatorID != deletingUserID {
+		err := LeaveChat(ctx, deletingUserID, chatID, chatStorage)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
 	}
-	if chat.Type == "2" && chat.CreatorID != deletingUserID {
-		return false, fmt.Errorf("Вы не можете удалить эту группу")
-	}
-
 	wasDeleted, err = chatStorage.DeleteChat(ctx, chatID)
 	if err != nil {
 		logger.Error("DeleteChat: error", "error", err.Error(), "wasDeleted", wasDeleted)
@@ -243,18 +243,18 @@ func JoinChannel(ctx context.Context, userID uint, channelID uint, chatStorage C
 	return nil
 }
 
-func LeaveChannel(ctx context.Context, userID uint, channelID uint, chatStorage ChatStore) (err error) {
+func LeaveChat(ctx context.Context, userID uint, channelID uint, chatStorage ChatStore) (err error) {
 	channel, err := chatStorage.GetChatByChatID(ctx, channelID)
 	if err != nil {
 		return err
 	}
-	if channel.Type != "3" {
-		return fmt.Errorf("Неверный id канала")
+	if channel.Type != "3" && channel.Type != "2" {
+		return fmt.Errorf("Неверный id чата")
 	}
 
 	belongs := CheckUserBelongsToChat(ctx, channelID, userID, chatStorage)
 	if !belongs {
-		return fmt.Errorf("Пользователь не состоит в этом канале")
+		return fmt.Errorf("Пользователь не состоит в этом чате")
 	}
 	err = chatStorage.RemoveUserFromChat(ctx, userID, channelID)
 	if err != nil {
