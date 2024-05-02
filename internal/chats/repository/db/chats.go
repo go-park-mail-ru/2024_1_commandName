@@ -77,6 +77,7 @@ func (c *Chats) CheckPrivateChatExists(ctx context.Context, userID1, userID2 uin
 			return false, 0, fmt.Errorf("internal error")
 		}
 		chat, err := c.GetChatByChatID(ctx, chatID)
+		fmt.Println("CHAT: ", chat)
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
