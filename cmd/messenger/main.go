@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 
 	"ProjectMessenger/domain"
@@ -26,6 +28,7 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(logger)
 	cfg := loadConfig()
+	refreshIAM()
 	Router(cfg)
 }
 
@@ -47,6 +50,21 @@ func loadConfig() domain.Config {
 		panic(err)
 	}
 	return cfg
+}
+
+func refreshIAM() {
+	cmd := exec.Command("/bin/bash", "translate_key_refresh_unix.sh")
+	err := cmd.Start()
+	if err != nil {
+		fmt.Println("Ошибка при выполнении скрипта:", err)
+		return
+	}
+
+	// Остальная часть вашей функции main
+	fmt.Println("Bash-скрипт запушен в фоновом режиме")
+
+	// Запуск команды
+
 }
 
 // swag init -d cmd/messenger/,domain/,internal/
@@ -112,4 +130,5 @@ func Router(cfg domain.Config) {
 		slog.Error("server failed with ", "error", err)
 		return
 	}
+
 }

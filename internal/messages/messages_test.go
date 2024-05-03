@@ -4,12 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"ProjectMessenger/domain"
 	database "ProjectMessenger/internal/messages/repository/db"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestSetMessage(t *testing.T) {
@@ -111,4 +116,93 @@ func TestGetChatMessages_Error1(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
+}
+
+// MockWebsocket представляет макет объекта Websocket
+type MockWebsocket struct {
+	mock.Mock
+}
+
+// SendMessageToUser заменяет реальный метод для тестирования
+func (m *MockWebsocket) SendMessageToUser(userID uint, message []byte) error {
+	args := m.Called(userID, message)
+	return args.Error(0)
+}
+
+func TestSendMessageToUser(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{}
+		conn, _ := upgrader.Upgrade(w, r, nil)
+		defer conn.Close()
+	}))
+	defer s.Close()
+
+	dialer := websocket.Dialer{}
+	mockConn, _, _ := dialer.Dial("ws"+s.URL[4:], nil)
+	defer mockConn.Close()
+	userID := uint(1)
+	message := []byte("Test message")
+	mockWebsocket := new(MockWebsocket)
+	mockWebsocket.On("SendMessageToUser", userID, message).Return(nil)
+
+	ws := &database.Websocket{
+		Connections: map[uint]*websocket.Conn{},
+	}
+
+	ctx := context.Background()
+	ws.AddConnection(ctx, mockConn, 1)
+	err := ws.SendMessageToUser(userID, message)
+
+	assert.Equal(t, nil, err)
+}
+
+func TestSendMessageToUser_Error(t *testing.T) {
+
+	expectedErr := errors.New("No connection found for user")
+	userID := uint(1)
+	message := []byte("Test message")
+	mockWebsocket := new(MockWebsocket)
+	mockWebsocket.On("SendMessageToUser", userID, message).Return(expectedErr)
+
+	ws := &database.Websocket{
+		Connections: map[uint]*websocket.Conn{},
+	}
+
+	err := ws.SendMessageToUser(userID, message)
+
+	assert.Equal(t, expectedErr, err)
+}
+
+func TestCreateWSStorage(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	wsStorage := database.NewWsStorage(db)
+	if wsStorage == nil {
+		t.Errorf("wsStorage is nil")
+	}
+}
+
+func TestDeleteConnection(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{}
+		conn, _ := upgrader.Upgrade(w, r, nil)
+		defer conn.Close()
+	}))
+	defer s.Close()
+
+	dialer := websocket.Dialer{}
+	mockConn, _, _ := dialer.Dial("ws"+s.URL[4:], nil)
+	defer mockConn.Close()
+
+	ws := &database.Websocket{
+		Connections: map[uint]*websocket.Conn{},
+	}
+
+	ctx := context.Background()
+	ws.AddConnection(ctx, mockConn, 1)
+	ws.DeleteConnection(1)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -45,6 +46,7 @@ func (m *Websocket) SendMessageToUser(userID uint, message []byte) error {
 }
 
 func (m *Websocket) AddConnection(ctx context.Context, connection *websocket.Conn, userID uint) context.Context {
+	fmt.Println("add con  for ", userID)
 	m.mu.Lock()
 	m.Connections[userID] = connection
 	m.mu.Unlock()
