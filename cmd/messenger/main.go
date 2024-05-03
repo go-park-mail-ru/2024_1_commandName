@@ -60,11 +60,7 @@ func refreshIAM() {
 		return
 	}
 
-	// Остальная часть вашей функции main
 	fmt.Println("Bash-скрипт запушен в фоновом режиме")
-
-	// Запуск команды
-
 }
 
 // swag init -d cmd/messenger/,domain/,internal/
