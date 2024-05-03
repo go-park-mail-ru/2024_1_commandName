@@ -118,12 +118,10 @@ func TestGetChatMessages_Error1(t *testing.T) {
 	}
 }
 
-// MockWebsocket представляет макет объекта Websocket
 type MockWebsocket struct {
 	mock.Mock
 }
 
-// SendMessageToUser заменяет реальный метод для тестирования
 func (m *MockWebsocket) SendMessageToUser(userID uint, message []byte) error {
 	args := m.Called(userID, message)
 	return args.Error(0)

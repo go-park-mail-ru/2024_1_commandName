@@ -46,6 +46,7 @@ func (s *Search) AddConnection(ctx context.Context, connection *websocket.Conn, 
 	ctx = context.WithValue(ctx, "ws userID", userID)
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	logger.Debug("established ws")
+	fmt.Println("add conn for user", userID)
 	return ctx
 }
 
@@ -214,9 +215,7 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			}
 
 			rows, err := s.db.QueryContext(ctx,
-				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at
-					FROM chat.message m
-					WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%') AND m.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at FROM chat.message m WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%') AND m.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -458,6 +457,7 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 }
 
 func (s *Search) SendMatchedChatsSearchResponse(response domain.ChatSearchResponse, userID uint) {
+	fmt.Println("call")
 	jsonResponse := map[string]interface{}{
 		"status": 200,
 		"body":   response,
