@@ -42,7 +42,9 @@ func TestSearchChats(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "type_id", "name", "description", "avatar_path", "created_at", "edited_at", "creator_id"}).AddRow(1, "1", "name", "desc", "", fixedTime, fixedTime, 1))
 
 	ctx := context.Background()
+	searchRepo.AddSearchIndexes(ctx)
 	foundChat := searchRepo.SearchChats(ctx, "name", 1, "1")
+	searchRepo.DeleteSearchIndexes(ctx)
 	if len(foundChat.Chats) == 0 {
 		t.Error("len is 0")
 	}
