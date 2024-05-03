@@ -10,11 +10,9 @@ import (
 	"time"
 
 	"ProjectMessenger/internal/chats/usecase"
-	ws "ProjectMessenger/internal/messages/repository/db"
 	database "ProjectMessenger/internal/search/repository/db"
 	tl "ProjectMessenger/internal/translate/usecase"
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"github.com/gorilla/websocket"
@@ -25,7 +23,7 @@ type Search struct {
 	Connections map[uint]*websocket.Conn
 	mu          sync.RWMutex
 	Chats       usecase.ChatStore
-	WebSocket   *ws.Websocket
+	WebSocket   *MockWebsocket
 	Translate   tl.TranslateStore
 }
 
@@ -136,7 +134,18 @@ func (m *MockWebsocket) SendMessageToUser(userID uint, message []byte) error {
 	return args.Error(0)
 }
 
+func (m *MockWebsocket) AddConnection(ctx context.Context, connection *websocket.Conn, userID uint) error {
+	args := m.Called(ctx, connection, userID)
+	return args.Error(0)
+}
+
 func TestAddConnection(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		upgrader := websocket.Upgrader{}
 		conn, _ := upgrader.Upgrade(w, r, nil)
@@ -148,21 +157,10 @@ func TestAddConnection(t *testing.T) {
 	mockConn, _, _ := dialer.Dial("ws"+s.URL[4:], nil)
 	defer mockConn.Close()
 
-	userID := uint(1)
-	message := []byte("Test message")
-	mockWebsocket := new(MockWebsocket)
-	mockWebsocket.On("SendMessageToUser", userID, message).Return(nil)
-	defer mockWebsocket.AssertExpectations(t)
-
-	webSocket := &ws.Websocket{
-		Connections: map[uint]*websocket.Conn{},
-	}
-
 	ctx := context.Background()
-	webSocket.AddConnection(ctx, mockConn, userID)
-	err := mockWebsocket.SendMessageToUser(userID, message)
-
-	assert.Equal(t, nil, err)
+	searchStore := database.NewSearchStorage(db)
+	searchStore.AddConnection(ctx, mockConn, uint(1))
+	searchStore.DeleteConnection(1)
 }
 
 /*
