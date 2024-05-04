@@ -188,7 +188,7 @@ func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, 
 func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatStorage ChatStore) (err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chat, err := chatStorage.GetChatByChatID(ctx, chatID)
-	if chat.Type != "2" {
+	if chat.Type != "2" && chat.Type != "3" {
 		return fmt.Errorf("internal error")
 	}
 	if err != nil {
