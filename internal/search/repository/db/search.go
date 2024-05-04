@@ -76,43 +76,55 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 	return connection.WriteMessage(websocket.TextMessage, message)
 }
 
-func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse) {
+func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse) {
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
 	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
 	minLength := len(wordsArr)
-	if len(translatedWordsArr) < minLength {
+	if len(translatedWordsArr) < minLength && len(translatedWordsArr) > 0 {
 		minLength = len(translatedWordsArr)
 	}
-	if len(translatedWordsWithRuneArr) < minLength {
+	if len(translatedWordsWithRuneArr) < minLength && len(translatedWordsWithRuneArr) > 0 {
 		minLength = len(translatedWordsWithRuneArr)
 	}
-	if len(translatedWordsWithSyllableArr) < minLength {
+	if len(translatedWordsWithSyllableArr) < minLength && len(translatedWordsWithSyllableArr) > 0 {
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
-	if len(translatedWordsArr) > 0 {
+	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
 		requestToSearchRune := ""
 		requestToSearchSyllable := ""
 
 		for i := 0; i < minLength; i++ {
-			requestToSearchTranslator += translatedWordsArr[i]
+			if len(translatedWordsArr) > 0 {
+				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
+			}
 			requestToSearchOriginal += wordsArr[i]
-			requestToSearchRune += translatedWordsWithRuneArr[i]
-			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			if len(translatedWordsWithRuneArr) > 0 {
+				requestToSearchRune += translatedWordsWithRuneArr[i]
+			}
+			if len(translatedWordsWithSyllableArr) > 0 {
+				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
+			}
 
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
-					FROM chat.chat c
-					JOIN chat.chat_user cu ON c.id = cu.chat_id
-					WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') AND cu.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+    FROM chat.chat c
+    JOIN chat.chat_user cu ON c.id = cu.chat_id
+    WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') 
+    AND (cu.user_id = $5)
+	AND (($6 = 'chat' AND c.type_id IN ('1', '2')) OR ($6 = 'channel' AND c.type_id = '3'))`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -135,7 +147,12 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 					fmt.Println(customErr.Error())
 					return foundChatsStructure
 				}
-				mChat.Messages = append(mChat.Messages, s.Chats.GetMessagesByChatID(ctx, mChat.ID)...)
+				mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+				var messages []*domain.Message
+				for j := range mMessages {
+					messages = append(messages, &mMessages[j])
+				}
+				mChat.Messages = messages
 				matchedChats = append(matchedChats, mChat)
 				foundChatsStructure.Chats = append(foundChatsStructure.Chats, mChat)
 			}
@@ -161,30 +178,40 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
 	minLength := len(wordsArr)
-	if len(translatedWordsArr) < minLength {
+	if len(translatedWordsArr) < minLength && len(translatedWordsArr) > 0 {
 		minLength = len(translatedWordsArr)
 	}
-	if len(translatedWordsWithRuneArr) < minLength {
+	if len(translatedWordsWithRuneArr) < minLength && len(translatedWordsWithRuneArr) > 0 {
 		minLength = len(translatedWordsWithRuneArr)
 	}
-	if len(translatedWordsWithSyllableArr) < minLength {
+	if len(translatedWordsWithSyllableArr) < minLength && len(translatedWordsWithSyllableArr) > 0 {
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
-	if len(translatedWordsArr) > 0 {
+	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
 		requestToSearchRune := ""
 		requestToSearchSyllable := ""
 
 		for i := 0; i < minLength; i++ {
-			requestToSearchTranslator += translatedWordsArr[i]
+			if len(translatedWordsArr) > 0 {
+				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
+			}
 			requestToSearchOriginal += wordsArr[i]
-			requestToSearchRune += translatedWordsWithRuneArr[i]
-			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			if len(translatedWordsWithRuneArr) > 0 {
+				requestToSearchRune += translatedWordsWithRuneArr[i]
+			}
+			if len(translatedWordsWithSyllableArr) > 0 {
+				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
+			}
 
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at
@@ -247,8 +274,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
 	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
@@ -259,6 +286,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 		for i := 0; i < minLength; i++ {
 			if len(translatedWordsArr) > 0 {
 				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
 			}
 			requestToSearchOriginal += wordsArr[i]
 			if len(translatedWordsWithRuneArr) > 0 {
@@ -266,6 +295,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 			}
 			if len(translatedWordsWithSyllableArr) > 0 {
 				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
 			}
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path
