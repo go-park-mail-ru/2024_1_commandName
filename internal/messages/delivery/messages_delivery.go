@@ -1,14 +1,15 @@
 package delivery
 
 import (
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/chats/delivery"
-	"ProjectMessenger/internal/misc"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/chats/delivery"
+	"ProjectMessenger/internal/misc"
 
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
 	repository "ProjectMessenger/internal/messages/repository/db"
@@ -142,7 +143,7 @@ func (messageHandler *MessageHandler) EditMessage(w http.ResponseWriter, r *http
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
@@ -180,7 +181,7 @@ func (messageHandler *MessageHandler) DeleteMessage(w http.ResponseWriter, r *ht
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
