@@ -64,6 +64,11 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		decodedSearchRequest.UserID = user.ID
 		logger.Debug("got ws message", "msg", decodedSearchRequest)
 		//TODO: валидация
+		conn := s.GetConnection(user.ID)
+		if conn == nil {
+			fmt.Println("conn was closed")
+			s.AddConnection(ctx, connection, user.ID)
+		}
 		if decodedSearchRequest.Type == "chat" {
 			SearchChats(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
 		} else if decodedSearchRequest.Type == "message" {
