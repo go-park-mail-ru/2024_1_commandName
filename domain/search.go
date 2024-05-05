@@ -31,4 +31,5 @@ type SearchRequest struct {
 	Word   string `json:"word"`
 	UserID uint   `json:"user_id"`
 	Type   string `json:"search_type"`
+	ChatID uint   `json:"chat_id"`
 }

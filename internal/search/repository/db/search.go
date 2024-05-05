@@ -172,7 +172,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 	return foundChatsStructure
 }
 
-func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse) {
+func (s *Search) SearchMessages(ctx context.Context, word string, userID uint, chatID uint) (foundMessagesStructure domain.MessagesSearchResponse) {
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
@@ -215,7 +215,10 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			}
 
 			rows, err := s.db.QueryContext(ctx,
-				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at FROM chat.message m WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%') AND m.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at, username 
+FROM chat.message m 
+JOIN auth.person ON m.user_id = person.id
+WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%') AND m.user_id = $5 AND m.chat_id = $6`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -228,7 +231,7 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			matchedMessages := make([]domain.Message, 0)
 			for rows.Next() {
 				var mMesssage domain.Message
-				err = rows.Scan(&mMesssage.ID, &mMesssage.UserID, &mMesssage.ChatID, &mMesssage.Message, &mMesssage.Edited, &mMesssage.CreatedAt)
+				err = rows.Scan(&mMesssage.ID, &mMesssage.UserID, &mMesssage.ChatID, &mMesssage.Message, &mMesssage.Edited, &mMesssage.CreatedAt, &mMesssage.SenderUsername)
 				if err != nil {
 					customErr := &domain.CustomError{
 						Type:    "database",
