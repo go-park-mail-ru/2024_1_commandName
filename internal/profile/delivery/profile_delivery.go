@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -97,7 +98,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
-
+	fmt.Println("is authtorized")
 	decoder := json.NewDecoder(r.Body)
 	var jsonUser updateUserStruct[domain.Person]
 	err := decoder.Decode(&jsonUser)
@@ -109,7 +110,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-
+	fmt.Println("USER: ", jsonUser)
 	err = usecase.UpdateProfileInfo(ctx, jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})

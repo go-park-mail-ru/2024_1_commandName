@@ -84,6 +84,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
+	fmt.Println("login user:", jsonUser)
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})

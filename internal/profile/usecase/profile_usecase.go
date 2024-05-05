@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
-	"os"
-
 	//"io"
 	"mime/multipart"
+	"net/http"
+	"os"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -28,6 +27,7 @@ func UpdateProfileInfo(ctx context.Context, updatedFields domain.Person, numOfUp
 	if !found {
 		return fmt.Errorf("user not found")
 	}
+	fmt.Println("User is found", userFromStorage)
 	numOfUpdatedAlready := 0
 	if updatedFields.Username != "" {
 		numOfUpdatedAlready++

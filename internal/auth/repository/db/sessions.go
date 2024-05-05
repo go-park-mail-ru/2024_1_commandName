@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"ProjectMessenger/domain"
@@ -35,6 +36,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 		logger.Error(customErr.Error())
 		return 0, false
 	}
+	fmt.Println("found user by session userID", userID, "sessionID", sessionID)
 	logger.Debug("found user by session", "userID", userID, "sessionID", sessionID)
 	return userID, true
 }

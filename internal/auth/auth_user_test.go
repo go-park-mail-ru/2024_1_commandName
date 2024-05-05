@@ -4,10 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"ProjectMessenger/domain"
+	authDelivery "ProjectMessenger/internal/auth/delivery"
 	database "ProjectMessenger/internal/auth/repository/db"
 	"github.com/DATA-DOG/go-sqlmock"
 )
@@ -445,6 +448,93 @@ func TestUserRepo_AddContact_CustomError(t *testing.T) {
 	}
 
 	// Проверка выполнения всех ожиданий
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestUser_Login(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	req := httptest.NewRequest("POST", "/login", strings.NewReader(`{
+  "password": "Demouser123!",
+  "username": "TestUser"
+}`))
+	req.Header.Set("Cookie", "session_id=yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo")
+	w := httptest.NewRecorder()
+	mock.ExpectQuery("^SELECT userid, sessionid FROM auth.session WHERE sessionid = \\$1$").
+		WithArgs("yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo").WillReturnError(sql.ErrNoRows)
+
+	mock.ExpectQuery(`SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE username = ?`).
+		WithArgs("TestUser").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
+			AddRow(2, "TestUser", "test@mail.ru", "Test", "User", "Developer", "59c85ba56081d0b478d5acaa0a53e8c3c8f3bfd62a3fbafe7a1b09df37ede22e8745eda7646f67b565fcc533f50a7e9802e6972c29f6816d6a7bdb2c01eda7f2", time.Now(), time.Now(), "", "5t2HF7Tq"))
+
+	mock.ExpectExec(`INSERT INTO auth\.session \(sessionid, userid\) VALUES (.+)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg())
+
+	authHandler := authDelivery.NewRawAuthHandler(db, "")
+	authHandler.Login(w, req)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestUser_Login_Error(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	req := httptest.NewRequest("POST", "/login", strings.NewReader(`{
+  "password": "Demouser123!",
+  "username": "TestUser"
+}`))
+	req.Header.Set("Cookie", "session_id=yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo")
+	req.Header.Set("Content-Type", "multipart/form-data")
+	w := httptest.NewRecorder()
+	mock.ExpectQuery("^SELECT userid, sessionid FROM auth.session WHERE sessionid = \\$1$").
+		WithArgs("yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo").WillReturnError(sql.ErrNoRows)
+
+	authHandler := authDelivery.NewRawAuthHandler(db, "")
+	authHandler.Login(w, req)
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestUser_Logout(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	req := httptest.NewRequest("POST", "/login", strings.NewReader(`{
+  "password": "Demouser123!",
+  "username": "TestUser"
+}`))
+	req.Header.Set("Cookie", "session_id=yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo")
+	w := httptest.NewRecorder()
+	mock.ExpectQuery("^SELECT userid, sessionid FROM auth.session WHERE sessionid = \\$1$").
+		WithArgs("yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo").
+		WillReturnRows(sqlmock.NewRows([]string{"userid", "sessionid"}).
+			AddRow(1, "yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo"))
+
+	mock.ExpectExec(`DELETE FROM auth.session WHERE sessionID = ?`).
+		WithArgs("yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	authHandler := authDelivery.NewRawAuthHandler(db, "")
+	authHandler.Logout(w, req)
+
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
