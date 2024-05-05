@@ -1,4 +1,4 @@
-package _024_1_commandName
+package chats
 
 import (
 	"context"

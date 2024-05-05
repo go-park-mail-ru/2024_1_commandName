@@ -13,6 +13,9 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
+//go test -coverpkg=./... -coverprofile=cover ./... && cat cover | grep -v "mock" | grep -v  "easyjson" | grep -v "proto" > cover.out && go tool cover -func=cover.out
+//go tool cover -html=cover.out
+
 func TestSessionRepo_GetUserIDbySessionID(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

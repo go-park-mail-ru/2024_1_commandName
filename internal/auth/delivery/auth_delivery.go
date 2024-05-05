@@ -34,6 +34,14 @@ func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	return &handler
 }
 
+func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
+	handler := AuthHandler{
+		Sessions: db.NewSessionStorage(dataBase),
+		Users:    db.NewRawUserStorage(dataBase, avatarPath),
+	}
+	return &handler
+}
+
 // Login logs user in
 //
 // @Summary logs user in

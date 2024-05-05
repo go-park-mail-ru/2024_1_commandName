@@ -72,6 +72,13 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *C
 	}
 }
 
+func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
+	return &ChatsHandler{
+		AuthHandler: authHandler,
+		Chats:       db.NewRawChatsStorage(dataBase),
+	}
+}
+
 // GetChats gets Chats previews for user
 //
 // @Summary gets Chats previews for user
