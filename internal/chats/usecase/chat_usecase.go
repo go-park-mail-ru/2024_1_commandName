@@ -33,7 +33,13 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatS
 	belongs := CheckUserBelongsToChat(ctx, chatID, userID, chatStorage)
 	if !belongs {
 		logger.Info("GetChatByChatID: user does not belong", "userID", userID, "chatID", chatID)
-		return domain.Chat{}, fmt.Errorf("user does not belong to chat")
+
+		customErr := &domain.CustomError{
+			Type:    "internal",
+			Message: "user does not belong to chat",
+			Segment: "method CheckUserBelongsToChat, chat_usecase.go",
+		}
+		return domain.Chat{}, customErr
 	}
 
 	if chat.Type == "1" {

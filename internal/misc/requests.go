@@ -1,12 +1,13 @@
 package misc
 
 import (
-	"ProjectMessenger/domain"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"ProjectMessenger/domain"
 )
 
 const INTERNALERRORJSON = "{\"status\": 500,\"body\":{\"error\": \"Internal server error\"}}"
@@ -46,4 +47,9 @@ func WriteInternalErrorJson(ctx context.Context, w http.ResponseWriter) {
 	w.WriteHeader(500)
 	_, _ = fmt.Fprintln(w, INTERNALERRORJSON)
 	logger.Info("response internal error", "body", INTERNALERRORJSON)
+}
+
+func WriteErrorMessageJson(ctx context.Context, w http.ResponseWriter, statusCode int, errorMessage string) {
+	errorResponse := domain.Error{Error: errorMessage}
+	WriteStatusJson(ctx, w, statusCode, errorResponse)
 }
