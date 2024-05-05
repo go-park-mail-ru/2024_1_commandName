@@ -301,7 +301,7 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 				`SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path
 					FROM chat.contacts cc
 					JOIN auth.person ap ON cc.user1_id = ap.id or cc.user2_id = ap.id
-					WHERE (ap.name ILIKE '%' || $1 || '%' OR ap.name ILIKE '%' || $2 || '%' OR ap.name ILIKE '%' || $3 || '%' OR ap.name ILIKE '%' || $4 || '%') AND (cc.user1_id = $5 or cc.user2_id = $5)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+					WHERE (ap.username ILIKE '%' || $1 || '%' OR ap.username ILIKE '%' || $2 || '%' OR ap.username ILIKE '%' || $3 || '%' OR ap.username ILIKE '%' || $4 || '%') AND (cc.user1_id = $5 or cc.user2_id = $5)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
