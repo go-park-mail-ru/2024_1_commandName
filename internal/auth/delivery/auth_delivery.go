@@ -11,6 +11,7 @@ import (
 	"time"
 
 	profileUsecase "ProjectMessenger/internal/profile/usecase"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	_ "github.com/lib/pq"
 	_ "github.com/swaggo/http-swagger"
@@ -19,17 +20,39 @@ import (
 	"ProjectMessenger/internal/auth/repository/db"
 	"ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type AuthHandler struct {
-	Sessions usecase.SessionStore
-	Users    usecase.UserStore
+	Sessions          usecase.SessionStore
+	Users             usecase.UserStore
+	prometheusMetrics *PrometheusMetrics
+}
+
+type PrometheusMetrics struct {
+	LogoutSuccessCount prometheus.Counter
+}
+
+func NewPrometheusMetrics() *PrometheusMetrics {
+	logoutSuccessCount := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "logout_success_total",
+			Help: "Total number of successful logout operations.",
+		},
+	)
+
+	prometheus.MustRegister(logoutSuccessCount)
+
+	return &PrometheusMetrics{
+		LogoutSuccessCount: logoutSuccessCount,
+	}
 }
 
 func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
-		Sessions: db.NewSessionStorage(dataBase),
-		Users:    db.NewUserStorage(dataBase, avatarPath),
+		Sessions:          db.NewSessionStorage(dataBase),
+		Users:             db.NewUserStorage(dataBase, avatarPath),
+		prometheusMetrics: NewPrometheusMetrics(),
 	}
 	return &handler
 }
@@ -40,6 +63,9 @@ func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 		Users:    db.NewRawUserStorage(dataBase, avatarPath),
 	}
 	return &handler
+}
+func (authHandler *AuthHandler) Metrics(w http.ResponseWriter, r *http.Request) {
+	promhttp.Handler().ServeHTTP(w, r)
 }
 
 // Login logs user in
@@ -127,6 +153,7 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
+	authHandler.prometheusMetrics.LogoutSuccessCount.Inc()
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 

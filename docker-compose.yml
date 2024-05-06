@@ -19,3 +19,10 @@ services:
     env_file:
       - .env/dev/.env.db
 
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - "./metrics/prometheus:/etc/prometheus"
+
