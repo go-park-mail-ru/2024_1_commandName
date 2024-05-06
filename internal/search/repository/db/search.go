@@ -276,8 +276,7 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint, c
 FROM chat.message m 
 JOIN auth.person ON m.user_id = person.id
 WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%')
-AND m.user_id = $5 
-AND (m.chat_id = $6 OR $6 = 0)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatID)
+AND (m.chat_id = $5 OR $5 = 0)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, chatID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
