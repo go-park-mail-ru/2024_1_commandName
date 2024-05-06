@@ -213,7 +213,7 @@ func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslat
 			return foundChatsStructure
 		}
 
-		chatName, _ := usecase.GetCompanionNameForPrivateChat(ctx, userID, mChat.ID, s.Chats, s.Users)
+		chatName, _ := usecase.GetCompanionNameForPrivateChat(ctx, mChat.ID, userID, s.Chats, s.Users)
 
 		if strings.Contains(chatName, requestToSearchTranslator) || strings.Contains(chatName, requestToSearchOriginal) || strings.Contains(chatName, requestToSearchRune) || strings.Contains(chatName, requestToSearchSyllable) {
 			mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
