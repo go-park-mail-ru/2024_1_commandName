@@ -24,6 +24,10 @@ type chatIDIsNewJsonResponse struct {
 	IsNewChat bool `json:"is_new_chat"`
 }
 
+type messagesByChatIDRequest struct {
+	ChatID uint `json:"chat_id"`
+}
+
 type chatIDStruct struct {
 	ChatID uint `json:"chat_id"`
 }
@@ -65,6 +69,13 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *C
 	return &ChatsHandler{
 		AuthHandler: authHandler,
 		Chats:       db.NewChatsStorage(dataBase),
+	}
+}
+
+func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
+	return &ChatsHandler{
+		AuthHandler: authHandler,
+		Chats:       db.NewRawChatsStorage(dataBase),
 	}
 }
 
@@ -126,7 +137,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -171,7 +182,7 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -216,7 +227,7 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, deleteChatJsonResponse{success})
@@ -260,7 +271,7 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -365,7 +376,7 @@ func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Requ
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -404,7 +415,7 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -449,9 +460,28 @@ func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Re
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
+}
+
+func (chatsHandler ChatsHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r) // нули ли проверять userID на то, что он состоит в запрашиваемом чате?
+	if !authorized {
+		return
+	}
+	fmt.Println(userID)
+
+	messageByChatIDRequest := messagesByChatIDRequest{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&messageByChatIDRequest)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	messages := usecase.GetMessagesByChatID(ctx, chatsHandler.Chats, messageByChatIDRequest.ChatID)
+	misc.WriteStatusJson(ctx, w, 200, domain.Messages{Messages: messages})
 }

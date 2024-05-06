@@ -19,28 +19,16 @@ func NewMessageStorage(db *sql.DB) *Messages {
 
 func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (messageSaved domain.Message) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	fmt.Println("MESSAGE:", message)
 	query := "INSERT INTO chat.message (user_id, chat_id, message, edited_at, created_at) VALUES($1, $2, $3, $4, $5) RETURNING id"
 	var messageID uint
 	err := m.db.QueryRowContext(ctx, query, message.UserID, message.ChatID, message.Message, message.EditedAt, message.CreatedAt).Scan(&messageID)
 	if err != nil {
-		fmt.Println("ARGS:", message.UserID, message.ChatID, message.Message, message.EditedAt, message.CreatedAt)
+		// TODO
 		fmt.Println(err)
 		return domain.Message{}
 	}
-	fmt.Println("made insert", messageID)
 	message.ID = messageID
-	query = "UPDATE chat.chat SET created_at = $1 WHERE id = $2"
-	_, err = m.db.ExecContext(ctx, query, message.CreatedAt, message.ChatID)
-	fmt.Println("made update")
-	if err != nil {
-		fmt.Println("err in SetMessage")
-		logger.Error(err.Error())
-		return
-	}
-	//m.SendMessageToOtherUsers(ctx, message)
 	logger.Debug("SetMessage: success", "msg", message)
-	fmt.Println("return")
 	return message
 }
 
@@ -71,15 +59,6 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 			return nil
 		}
 		chatMessagesArr = append(chatMessagesArr, mess)
-	}
-	if err = rows.Err(); err != nil {
-		customErr := &domain.CustomError{
-			Type:    "database",
-			Message: err.Error(),
-			Segment: "method GetMessagesByChatID, profile.go",
-		}
-		fmt.Println(customErr.Error())
-		return nil
 	}
 	return chatMessagesArr
 }

@@ -34,6 +34,14 @@ func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	return &handler
 }
 
+func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
+	handler := AuthHandler{
+		Sessions: db.NewSessionStorage(dataBase),
+		Users:    db.NewRawUserStorage(dataBase, avatarPath),
+	}
+	return &handler
+}
+
 // Login logs user in
 //
 // @Summary logs user in
@@ -78,7 +86,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -160,7 +168,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 
 	sessionID, userID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 

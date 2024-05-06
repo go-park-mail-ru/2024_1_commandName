@@ -18,9 +18,9 @@ type SearchStore interface {
 	GetConnection(userID uint) *websocket.Conn
 	AddSearchIndexes(ctx context.Context)
 	DeleteSearchIndexes(ctx context.Context)
-	SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse)
+	SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse)
 	SendMatchedChatsSearchResponse(response domain.ChatSearchResponse, userID uint)
-	SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse)
+	SearchMessages(ctx context.Context, word string, userID uint, chatID uint) (foundMessagesStructure domain.MessagesSearchResponse)
 	SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse, userID uint)
 	SearchContacts(ctx context.Context, word string, userID uint) (foundContactsStructure domain.ContactsSearchResponse)
 	SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse, userID uint)
@@ -64,12 +64,19 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		decodedSearchRequest.UserID = user.ID
 		logger.Debug("got ws message", "msg", decodedSearchRequest)
 		//TODO: валидация
+		conn := s.GetConnection(user.ID)
+		if conn == nil {
+			fmt.Println("conn was closed")
+			s.AddConnection(ctx, connection, user.ID)
+		}
 		if decodedSearchRequest.Type == "chat" {
 			SearchChats(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
 		} else if decodedSearchRequest.Type == "message" {
-			SearchMessages(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
+			SearchMessages(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID, decodedSearchRequest.ChatID)
 		} else if decodedSearchRequest.Type == "contact" {
 			SearchContacts(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
+		} else if decodedSearchRequest.Type == "channel" {
+			SearchChannels(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
 		} else {
 			customErr := &domain.CustomError{
 				Type:    "search type",
@@ -84,16 +91,25 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 
 func SearchChats(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
 	s.AddSearchIndexes(ctx)
-	matchedChatsStructure := s.SearchChats(ctx, word, userID)
+	matchedChatsStructure := s.SearchChats(ctx, word, userID, "chat")
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("return chats:", "chats", matchedChatsStructure)
 	s.SendMatchedChatsSearchResponse(matchedChatsStructure, user.ID)
 	s.DeleteSearchIndexes(ctx)
 }
 
-func SearchMessages(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
+func SearchChannels(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
 	s.AddSearchIndexes(ctx)
-	matchedMessagesStructure := s.SearchMessages(ctx, word, userID)
+	matchedChatsStructure := s.SearchChats(ctx, word, userID, "channel")
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	logger.Debug("return channels:", "channels", matchedChatsStructure)
+	s.SendMatchedChatsSearchResponse(matchedChatsStructure, user.ID)
+	s.DeleteSearchIndexes(ctx)
+}
+
+func SearchMessages(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint, chatID uint) {
+	s.AddSearchIndexes(ctx)
+	matchedMessagesStructure := s.SearchMessages(ctx, word, userID, chatID)
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("return messages:", "messages", matchedMessagesStructure)
 	s.SendMatchedMessagesSearchResponse(matchedMessagesStructure, user.ID)

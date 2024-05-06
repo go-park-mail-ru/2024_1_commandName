@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"ProjectMessenger/domain"
@@ -23,7 +22,6 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 	userID = uint(userIDInt)
 	logger.Debug("GetUserIDbySessionID", "userID", userID, "sessionID", sessionID)
 	if err != nil {
-		fmt.Println("here", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("didn't found user by session", "userID", userID, "sessionID", sessionID)
 			return 0, false
@@ -44,7 +42,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 func (s *Sessions) CreateSession(ctx context.Context, userID uint) (sessionID string) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("CreateSession", "userID", userID)
-	fmt.Println("create session for user", userID)
+	//fmt.Println("create session for user", userID)
 	sessionID = misc.RandStringRunes(32)
 	_, err := s.db.ExecContext(ctx, "INSERT INTO auth.session (sessionid, userid) VALUES ($1, $2)", sessionID, userID)
 	if err != nil {

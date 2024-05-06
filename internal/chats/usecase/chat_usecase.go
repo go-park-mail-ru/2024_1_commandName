@@ -19,13 +19,13 @@ type ChatStore interface {
 	CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error)
 	DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error)
 	UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (ok bool)
-	GetMessagesByChatID(ctx context.Context, chatID uint) []*domain.Message
 	GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int)
 	GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int)
 
 	GetNPopularChannels(ctx context.Context, userID uint, n int) ([]domain.ChannelWithCounter, error)
 	AddUserToChat(ctx context.Context, userID uint, chatID uint) (err error)
 	RemoveUserFromChat(ctx context.Context, userID uint, chatID uint) (err error)
+	GetMessagesByChatID(ctx context.Context, chatID uint) []domain.Message
 }
 
 func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {
@@ -37,7 +37,13 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatS
 	belongs := CheckUserBelongsToChat(ctx, chatID, userID, chatStorage)
 	if !belongs {
 		logger.Info("GetChatByChatID: user does not belong", "userID", userID, "chatID", chatID)
-		return domain.Chat{}, fmt.Errorf("user does not belong to chat")
+
+		customErr := &domain.CustomError{
+			Type:    "internal",
+			Message: "user does not belong to chat",
+			Segment: "method CheckUserBelongsToChat, chat_usecase.go",
+		}
+		return domain.Chat{}, customErr
 	}
 
 	if chat.Type == "1" {
@@ -113,6 +119,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	}
 
 	companion, found := userStorage.GetByUserID(ctx, companionID)
+	fmt.Println("Comp: ", companion)
 	if !found {
 		logger.Error("CreatePrivateChat: user wasn't found", "companionID", companionID)
 		return 0, false, fmt.Errorf("Пользователь, с которым вы хотите создать диалог, не найден")
@@ -124,7 +131,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	if exists {
 		return chatID, false, nil
 	}
-	chatID, err = chatStorage.CreateChat(ctx, "", "", creatingUserID, companion.ID)
+	chatID, err = chatStorage.CreateChat(ctx, companion.Username, "", creatingUserID, companion.ID)
 	if err != nil {
 		return 0, false, err
 	}
@@ -188,7 +195,7 @@ func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, 
 func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatStorage ChatStore) (err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chat, err := chatStorage.GetChatByChatID(ctx, chatID)
-	if chat.Type != "2" {
+	if chat.Type != "2" && chat.Type != "3" {
 		return fmt.Errorf("internal error")
 	}
 	if err != nil {
@@ -216,6 +223,11 @@ func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *strin
 		return fmt.Errorf("internal error")
 	}
 	return nil
+}
+
+func GetMessagesByChatID(ctx context.Context, chatStorage ChatStore, chatID uint) []domain.Message {
+	messages := chatStorage.GetMessagesByChatID(ctx, chatID)
+	return messages
 }
 
 func GetPopularChannels(ctx context.Context, userID uint, chatStorage ChatStore) ([]domain.ChannelWithCounter, error) {

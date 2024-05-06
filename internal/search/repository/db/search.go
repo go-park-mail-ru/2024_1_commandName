@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"ProjectMessenger/domain"
+	userRepo "ProjectMessenger/internal/auth/repository/db"
+	users "ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	ws "ProjectMessenger/internal/messages/repository/db"
@@ -28,6 +30,7 @@ type Search struct {
 	Chats       usecase.ChatStore
 	WebSocket   *ws.Websocket
 	Translate   tl.TranslateStore
+	Users       users.UserStore
 }
 
 func UpgradeConnection() websocket.Upgrader {
@@ -46,6 +49,7 @@ func (s *Search) AddConnection(ctx context.Context, connection *websocket.Conn, 
 	ctx = context.WithValue(ctx, "ws userID", userID)
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	logger.Debug("established ws")
+	fmt.Println("add conn for user", userID)
 	return ctx
 }
 
@@ -76,43 +80,58 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 	return connection.WriteMessage(websocket.TextMessage, message)
 }
 
-func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (foundChatsStructure domain.ChatSearchResponse) {
+func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse) {
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
 	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
 	minLength := len(wordsArr)
-	if len(translatedWordsArr) < minLength {
+	if len(translatedWordsArr) < minLength && len(translatedWordsArr) > 0 {
 		minLength = len(translatedWordsArr)
 	}
-	if len(translatedWordsWithRuneArr) < minLength {
+	if len(translatedWordsWithRuneArr) < minLength && len(translatedWordsWithRuneArr) > 0 {
 		minLength = len(translatedWordsWithRuneArr)
 	}
-	if len(translatedWordsWithSyllableArr) < minLength {
+	if len(translatedWordsWithSyllableArr) < minLength && len(translatedWordsWithSyllableArr) > 0 {
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
-	if len(translatedWordsArr) > 0 {
+	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
 		requestToSearchRune := ""
 		requestToSearchSyllable := ""
 
 		for i := 0; i < minLength; i++ {
-			requestToSearchTranslator += translatedWordsArr[i]
+			if len(translatedWordsArr) > 0 {
+				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
+			}
 			requestToSearchOriginal += wordsArr[i]
-			requestToSearchRune += translatedWordsWithRuneArr[i]
-			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			if len(translatedWordsWithRuneArr) > 0 {
+				requestToSearchRune += translatedWordsWithRuneArr[i]
+			}
+			if len(translatedWordsWithSyllableArr) > 0 {
+				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
+			}
+
+			//usecase.GetCompanionNameForPrivateChat()
 
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
-					FROM chat.chat c
-					JOIN chat.chat_user cu ON c.id = cu.chat_id
-					WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') AND cu.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+				    FROM chat.chat c
+				    JOIN chat.chat_user cu ON c.id = cu.chat_id
+				    WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%')
+				    AND (cu.user_id = $5)
+					AND (($6 = 'chat' AND c.type_id = '2') OR ($6 = 'channel' AND c.type_id = '3'))`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
+
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -122,6 +141,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 				fmt.Println(customErr.Error())
 				return foundChatsStructure
 			}
+
 			matchedChats := make([]domain.Chat, 0)
 			for rows.Next() {
 				var mChat domain.Chat
@@ -135,7 +155,12 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 					fmt.Println(customErr.Error())
 					return foundChatsStructure
 				}
-				mChat.Messages = append(mChat.Messages, s.Chats.GetMessagesByChatID(ctx, mChat.ID)...)
+				mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+				var messages []*domain.Message
+				for j := range mMessages {
+					messages = append(messages, &mMessages[j])
+				}
+				mChat.Messages = messages
 				matchedChats = append(matchedChats, mChat)
 				foundChatsStructure.Chats = append(foundChatsStructure.Chats, mChat)
 			}
@@ -148,48 +173,110 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint) (fou
 				fmt.Println(customErr.Error())
 				return foundChatsStructure
 			}
+			fmt.Println("go to private chats")
+
+			privateChats := s.SearchPrivateChats(ctx, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
+			fmt.Println("found", privateChats)
+			foundChatsStructure.Chats = append(foundChatsStructure.Chats, privateChats...)
 		}
 	}
 	foundChatsStructure.Chats = DeleteDuplicatesChats(foundChatsStructure.Chats)
 	return foundChatsStructure
 }
 
-func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse) {
+func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable string, userID uint, chatType string) (foundChatsStructure []domain.Chat) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
+				    FROM chat.chat c
+				    JOIN chat.chat_user cu ON c.id = cu.chat_id
+				    WHERE cu.user_id = $1 AND c.type_id = '1'`, userID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method searchChats, search.go",
+		}
+		fmt.Println(customErr.Error())
+		return foundChatsStructure
+	}
+	matchedChats := make([]domain.Chat, 0)
+	for rows.Next() {
+		var mChat domain.Chat
+		err = rows.Scan(&mChat.ID, &mChat.Type, &mChat.Name, &mChat.Description, &mChat.AvatarPath, &mChat.CreatedAt, &mChat.LastActionDateTime, &mChat.CreatorID)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method searchChats, search.go",
+			}
+			fmt.Println(customErr.Error())
+			return foundChatsStructure
+		}
+
+		chatName, _ := usecase.GetCompanionNameForPrivateChat(ctx, userID, mChat.ID, s.Chats, s.Users)
+
+		if strings.Contains(chatName, requestToSearchTranslator) || strings.Contains(chatName, requestToSearchOriginal) || strings.Contains(chatName, requestToSearchRune) || strings.Contains(chatName, requestToSearchSyllable) {
+			mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+			var messages []*domain.Message
+			for j := range mMessages {
+				messages = append(messages, &mMessages[j])
+			}
+			mChat.Messages = messages
+			mChat.Name = chatName
+			matchedChats = append(matchedChats, mChat)
+		}
+	}
+	return matchedChats
+}
+
+func (s *Search) SearchMessages(ctx context.Context, word string, userID uint, chatID uint) (foundMessagesStructure domain.MessagesSearchResponse) {
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
 	translatedWordsWithSyllableArr := s.TranslateWordWithSyllable(wordsArr)
 
 	minLength := len(wordsArr)
-	if len(translatedWordsArr) < minLength {
+	if len(translatedWordsArr) < minLength && len(translatedWordsArr) > 0 {
 		minLength = len(translatedWordsArr)
 	}
-	if len(translatedWordsWithRuneArr) < minLength {
+	if len(translatedWordsWithRuneArr) < minLength && len(translatedWordsWithRuneArr) > 0 {
 		minLength = len(translatedWordsWithRuneArr)
 	}
-	if len(translatedWordsWithSyllableArr) < minLength {
+	if len(translatedWordsWithSyllableArr) < minLength && len(translatedWordsWithSyllableArr) > 0 {
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
-	if len(translatedWordsArr) > 0 {
+	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
 		requestToSearchOriginal := ""
 		requestToSearchRune := ""
 		requestToSearchSyllable := ""
 
 		for i := 0; i < minLength; i++ {
-			requestToSearchTranslator += translatedWordsArr[i]
+			if len(translatedWordsArr) > 0 {
+				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
+			}
 			requestToSearchOriginal += wordsArr[i]
-			requestToSearchRune += translatedWordsWithRuneArr[i]
-			requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			if len(translatedWordsWithRuneArr) > 0 {
+				requestToSearchRune += translatedWordsWithRuneArr[i]
+			}
+			if len(translatedWordsWithSyllableArr) > 0 {
+				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
+			}
 
 			rows, err := s.db.QueryContext(ctx,
-				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at
-					FROM chat.message m
-					WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%') AND m.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at, username 
+FROM chat.message m 
+JOIN auth.person ON m.user_id = person.id
+WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%')
+AND (m.chat_id = $5 OR $5 = 0)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, chatID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -202,7 +289,7 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			matchedMessages := make([]domain.Message, 0)
 			for rows.Next() {
 				var mMesssage domain.Message
-				err = rows.Scan(&mMesssage.ID, &mMesssage.UserID, &mMesssage.ChatID, &mMesssage.Message, &mMesssage.Edited, &mMesssage.CreatedAt)
+				err = rows.Scan(&mMesssage.ID, &mMesssage.UserID, &mMesssage.ChatID, &mMesssage.Message, &mMesssage.Edited, &mMesssage.CreatedAt, &mMesssage.SenderUsername)
 				if err != nil {
 					customErr := &domain.CustomError{
 						Type:    "database",
@@ -247,8 +334,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 		minLength = len(translatedWordsWithSyllableArr)
 	}
 
-	logString := fmt.Sprintf("Search for words: %s, %s, %s, %d",
-		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, userID)
+	logString := fmt.Sprintf("Search for words: %s, %s, %s, %s, %d",
+		wordsArr, translatedWordsArr, translatedWordsWithRuneArr, translatedWordsWithSyllableArr, userID)
 	slog.Info(logString)
 	if len(wordsArr) > 0 {
 		requestToSearchTranslator := ""
@@ -259,6 +346,8 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 		for i := 0; i < minLength; i++ {
 			if len(translatedWordsArr) > 0 {
 				requestToSearchTranslator += translatedWordsArr[i]
+			} else {
+				requestToSearchTranslator += wordsArr[i]
 			}
 			requestToSearchOriginal += wordsArr[i]
 			if len(translatedWordsWithRuneArr) > 0 {
@@ -266,12 +355,14 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 			}
 			if len(translatedWordsWithSyllableArr) > 0 {
 				requestToSearchSyllable += translatedWordsWithSyllableArr[i]
+			} else {
+				requestToSearchSyllable += wordsArr[i]
 			}
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path
 					FROM chat.contacts cc
 					JOIN auth.person ap ON cc.user1_id = ap.id or cc.user2_id = ap.id
-					WHERE (ap.name ILIKE '%' || $1 || '%' OR ap.name ILIKE '%' || $2 || '%' OR ap.name ILIKE '%' || $3 || '%' OR ap.name ILIKE '%' || $4 || '%') AND (cc.user1_id = $5 or cc.user2_id = $5)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+					WHERE (ap.username ILIKE '%' || $1 || '%' OR ap.username ILIKE '%' || $2 || '%' OR ap.username ILIKE '%' || $3 || '%' OR ap.username ILIKE '%' || $4 || '%') AND (cc.user1_id = $5 or cc.user2_id = $5)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -427,6 +518,7 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 }
 
 func (s *Search) SendMatchedChatsSearchResponse(response domain.ChatSearchResponse, userID uint) {
+	fmt.Println("call")
 	jsonResponse := map[string]interface{}{
 		"status": 200,
 		"body":   response,
@@ -597,5 +689,6 @@ func NewSearchStorage(database *sql.DB) *Search {
 		Chats:       db.NewChatsStorage(database),
 		WebSocket:   ws.NewWsStorage(database),
 		Translate:   translaterepo.NewTranslateStorage(database, YandexConfig),
+		Users:       userRepo.NewUserStorage(database, ""),
 	}
 }

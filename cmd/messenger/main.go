@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 
 	"ProjectMessenger/domain"
@@ -27,6 +29,7 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	slog.SetDefault(logger)
 	cfg := loadConfig()
+	refreshIAM()
 	Router(cfg)
 }
 
@@ -48,6 +51,17 @@ func loadConfig() domain.Config {
 		panic(err)
 	}
 	return cfg
+}
+
+func refreshIAM() {
+	cmd := exec.Command("/bin/bash", "translate_key_refresh.sh")
+	err := cmd.Start()
+	if err != nil {
+		fmt.Println("Ошибка при выполнении скрипта:", err)
+		return
+	}
+
+	fmt.Println("Bash-скрипт запушен в фоновом режиме")
 }
 
 // swag init -d cmd/messenger/,domain/,internal/
@@ -82,6 +96,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/register", authHandler.Register)
 
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
+	router.HandleFunc("/getMessages", chatsHandler.GetMessages)
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
 	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)
@@ -107,7 +122,6 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)
 
-	// middleware
 	if cfg.App.IsDebug {
 		router.Use(middleware.CORS)
 	}
@@ -119,4 +133,5 @@ func Router(cfg domain.Config) {
 		slog.Error("server failed with ", "error", err)
 		return
 	}
+
 }

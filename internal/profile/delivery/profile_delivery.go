@@ -112,7 +112,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 
 	err = usecase.UpdateProfileInfo(ctx, jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
 	if err != nil {
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
@@ -155,7 +155,7 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 
 	err = usecase.ChangePassword(r.Context(), passwordsJson.OldPassword, passwordsJson.NewPassword, userID, p.AuthHandler.Users)
 	if err != nil {
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
@@ -202,7 +202,7 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)
 		} else {
-			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		}
 		return
 	}
@@ -259,7 +259,7 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)
 		} else {
-			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 			return
 		}
 	}
