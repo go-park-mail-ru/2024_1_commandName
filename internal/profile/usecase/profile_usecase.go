@@ -105,7 +105,7 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 		return fmt.Errorf("internal error")
 	}
 	oldAvatarFilename := ""
-	if user.AvatarPath != "" {
+	if user.AvatarPath != "" && user.AvatarPath != "avatars/avatar.jpg" {
 		oldAvatarFilename = user.AvatarPath
 	}
 
