@@ -119,6 +119,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	}
 
 	companion, found := userStorage.GetByUserID(ctx, companionID)
+	fmt.Println("Comp: ", companion)
 	if !found {
 		logger.Error("CreatePrivateChat: user wasn't found", "companionID", companionID)
 		return 0, false, fmt.Errorf("Пользователь, с которым вы хотите создать диалог, не найден")
@@ -130,7 +131,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	if exists {
 		return chatID, false, nil
 	}
-	chatID, err = chatStorage.CreateChat(ctx, "", "", creatingUserID, companion.ID)
+	chatID, err = chatStorage.CreateChat(ctx, companion.Username, "", creatingUserID, companion.ID)
 	if err != nil {
 		return 0, false, err
 	}

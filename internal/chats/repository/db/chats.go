@@ -97,6 +97,7 @@ func (c *Chats) CheckPrivateChatExists(ctx context.Context, userID1, userID2 uin
 }
 
 func (c *Chats) CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error) {
+	fmt.Println("Get name:", name)
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chatType := ""
 	chatName := ""
@@ -104,7 +105,7 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 	if len(userIDs) < 1 {
 		customErr := &domain.CustomError{
 			Type:    "database",
-			Message: "len < 2!",
+			Message: "len < 1!",
 			Segment: "method CreateСhat, chats.go",
 		}
 		logger.Error(customErr.Error())
