@@ -12,12 +12,6 @@ import (
 	"ProjectMessenger/internal/misc"
 )
 
-type SessionStore interface {
-	GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool)
-	CreateSession(ctx context.Context, userID uint) (sessionID string)
-	DeleteSession(ctx context.Context, sessionID string)
-}
-
 type UserStore interface {
 	GetByUserID(ctx context.Context, userID uint) (user domain.Person, found bool)
 	UpdateUser(ctx context.Context, userUpdated domain.Person) (ok bool)
@@ -37,7 +31,6 @@ func CheckAuthorized(ctx context.Context, sessionID string, storage session2.Aut
 	}
 	userID = uint(response.User.ID)
 	authorized = response.Authorized
-	//userID, authorized = storage.GetUserIDbySessionID(ctx, sessionID)
 	return authorized, userID
 }
 
@@ -47,7 +40,6 @@ func createSession(ctx context.Context, user domain.Person, storage session2.Aut
 		return ""
 	}
 	sessionID := sessionIDRPC.GetID()
-	//sessionID := sessionStorage.CreateSession(ctx, user.ID)
 	return sessionID
 }
 
@@ -128,7 +120,6 @@ func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, s
 
 func LogoutUser(ctx context.Context, sessionID string, sessionStorage session2.AuthCheckerClient) {
 	sessionStorage.LogoutUserRPC(context.Background(), &session2.Session{ID: sessionID})
-	//sessionStorage.DeleteSession(ctx, sessionID)
 	return
 }
 

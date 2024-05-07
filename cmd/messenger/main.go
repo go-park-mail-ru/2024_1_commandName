@@ -77,6 +77,7 @@ func refreshIAM() {
 // @BasePath  /
 func Router(cfg domain.Config) {
 	router := mux.NewRouter()
+
 	grcpConn, err := grpc.Dial(
 		"127.0.0.1:8081",
 		grpc.WithInsecure(),
@@ -85,7 +86,6 @@ func Router(cfg domain.Config) {
 		log.Fatalf("cant connect to grpc")
 	}
 	defer grcpConn.Close()
-
 	sessManager := session.NewAuthCheckerClient(grcpConn)
 
 	var authHandler *authdelivery.AuthHandler
