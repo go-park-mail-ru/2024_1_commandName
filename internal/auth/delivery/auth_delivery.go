@@ -136,6 +136,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
@@ -167,12 +168,14 @@ func (authHandler *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	session, err := r.Cookie("session_id")
 	if errors.Is(err, http.ErrNoCookie) {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "no session to logout"})
 		return
 	}
 	sessionExists, _ := usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	if !sessionExists {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "no session to logout"})
 		return
@@ -204,6 +207,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("405", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
@@ -222,12 +226,14 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	var jsonUser domain.Person
 	err := decoder.Decode(&jsonUser)
 	if err != nil {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 	}
 
 	sessionID, userID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
@@ -268,6 +274,7 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 		authHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 200, nil)
 	} else {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("401").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("401", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 401, domain.Error{Error: "Person not authorized"})
 	}
@@ -280,6 +287,7 @@ func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.R
 		authorized, userID = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	}
 	if !authorized {
+		authHandler.prometheusMetrics.Errors.WithLabelValues("401").Inc()
 		authHandler.prometheusMetrics.Hits.WithLabelValues("401", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 401, domain.Error{Error: "Person not authorized"})
 	}
