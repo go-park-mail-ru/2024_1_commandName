@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"ProjectMessenger/internal/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -22,13 +23,13 @@ import (
 )
 
 type AuthHandler struct {
-	Sessions usecase.SessionStore
+	Sessions session.AuthCheckerClient
 	Users    usecase.UserStore
 }
 
-func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
+func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
-		Sessions: db.NewSessionStorage(dataBase),
+		Sessions: sessions,
 		Users:    db.NewUserStorage(dataBase, avatarPath),
 	}
 	return &handler
@@ -36,8 +37,8 @@ func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 
 func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
-		Sessions: db.NewSessionStorage(dataBase),
-		Users:    db.NewRawUserStorage(dataBase, avatarPath),
+		//Sessions: repository.NewSessionStorage(dataBase),
+		Users: db.NewRawUserStorage(dataBase, avatarPath),
 	}
 	return &handler
 }
@@ -56,9 +57,9 @@ func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 // @Router /login [post]
 func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	session, err := r.Cookie("session_id")
+	sessionHttp, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
-		sessionExists, _ := usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
+		sessionExists, _ := usecase.CheckAuthorized(ctx, sessionHttp.Value, authHandler.Sessions)
 		if sessionExists {
 			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "session already exists"})
 			return
@@ -85,6 +86,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
+
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return

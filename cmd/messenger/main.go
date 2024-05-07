@@ -1,7 +1,9 @@
 package main
 
 import (
+	"ProjectMessenger/internal/sessions_service/proto"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/swaggo/echo-swagger/example/docs"
+	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 
 	authdelivery "ProjectMessenger/internal/auth/delivery"
@@ -74,6 +77,16 @@ func refreshIAM() {
 // @BasePath  /
 func Router(cfg domain.Config) {
 	router := mux.NewRouter()
+	grcpConn, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpConn.Close()
+
+	sessManager := session.NewAuthCheckerClient(grcpConn)
 
 	var authHandler *authdelivery.AuthHandler
 	var chatsHandler *chatsdelivery.ChatsHandler
@@ -83,7 +96,7 @@ func Router(cfg domain.Config) {
 	var translateHandler *translatedelivery.TranslateHandler
 
 	dataBase := database.СreateDatabase()
-	authHandler = authdelivery.NewAuthHandler(dataBase, cfg.App.AvatarPath)
+	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath)
 	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
 	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
@@ -128,7 +141,7 @@ func Router(cfg domain.Config) {
 	router.Use(middleware.AccessLogMiddleware)
 
 	slog.Info("http server starting on " + strconv.Itoa(cfg.Server.Port))
-	err := http.ListenAndServe(cfg.Server.Host+":"+strconv.Itoa(cfg.Server.Port), router)
+	err = http.ListenAndServe(cfg.Server.Host+":"+strconv.Itoa(cfg.Server.Port), router)
 	if err != nil {
 		slog.Error("server failed with ", "error", err)
 		return

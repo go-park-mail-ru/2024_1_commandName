@@ -1,0 +1,29 @@
+syntax = "proto3";
+package sessions;
+
+
+option go_package = "./;session";
+
+
+message Session {
+  string ID = 1;
+}
+
+message User {
+  uint64 ID = 1;
+}
+
+message ResultBool{
+  bool Result = 1;
+}
+
+message UserFound{
+  User user = 1;
+  bool Authorized = 2;
+}
+
+service AuthChecker {
+  rpc CheckAuthorizedRPC(Session) returns (UserFound);
+  rpc CreateSessionRPC(User) returns (Session);
+  rpc LogoutUserRPC(Session) returns (ResultBool);
+}
