@@ -12,11 +12,13 @@ import (
 	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type ChatsHandler struct {
-	AuthHandler *authdelivery.AuthHandler
-	Chats       usecase.ChatStore
+	AuthHandler       *authdelivery.AuthHandler
+	Chats             usecase.ChatStore
+	prometheusMetrics *PrometheusMetrics
 }
 
 type chatIDIsNewJsonResponse struct {
@@ -65,10 +67,39 @@ type getPopularChannelsResponse struct {
 	Channels []domain.ChannelWithCounter `json:"channels"`
 }
 
+type PrometheusMetrics struct {
+	ActiveSessionsCount prometheus.Gauge
+	Hits                *prometheus.CounterVec
+}
+
+func NewPrometheusMetrics() *PrometheusMetrics {
+	activeSessionsCount := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "active_sessions_total",
+			Help: "Total number of active sessions.",
+		},
+	)
+
+	hits := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "hits",
+			Help: "Total number of hits.",
+		}, []string{"status", "path"},
+	)
+
+	prometheus.MustRegister(activeSessionsCount, hits)
+
+	return &PrometheusMetrics{
+		ActiveSessionsCount: activeSessionsCount,
+		Hits:                hits,
+	}
+}
+
 func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
-		AuthHandler: authHandler,
-		Chats:       db.NewChatsStorage(dataBase),
+		AuthHandler:       authHandler,
+		Chats:             db.NewChatsStorage(dataBase),
+		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
 
