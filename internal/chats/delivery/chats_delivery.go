@@ -11,15 +11,15 @@ import (
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
-	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type ChatsHandler struct {
-	AuthHandler *authdelivery.AuthHandler
-	Chats       chats.ChatServiceClient
+	AuthHandler       *authdelivery.AuthHandler
+	Chats             chats.ChatServiceClient
 	prometheusMetrics *PrometheusMetrics
 }
 
@@ -120,8 +120,8 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 
 func NewChatsHandler(authHandler *authdelivery.AuthHandler, chats chats.ChatServiceClient) *ChatsHandler {
 	return &ChatsHandler{
-		Chats:       chats,
-		AuthHandler: authHandler,
+		Chats:             chats,
+		AuthHandler:       authHandler,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
@@ -129,7 +129,7 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, chats chats.ChatServ
 func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		Chats:       db.NewRawChatsStorage(dataBase),
+		//Chats:       db.NewRawChatsStorage(dataBase),
 	}
 }
 

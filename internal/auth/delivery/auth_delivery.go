@@ -103,8 +103,8 @@ func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatar
 
 func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
-		Sessions: db.NewSessionStorage(dataBase),
-		Users:    db.NewRawUserStorage(dataBase, avatarPath),
+		//Sessions: db.NewSessionStorage(dataBase),
+		Users: db.NewRawUserStorage(dataBase, avatarPath),
 	}
 	return &handler
 }
