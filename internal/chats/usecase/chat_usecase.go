@@ -3,7 +3,7 @@ package usecase
 import (
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/auth/usecase"
-	chats "ProjectMessenger/internal/chats_service/proto"
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"fmt"
 	"log/slog"
@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func convertChat(chat *chats.Chat) domain.Chat {
+func convertChat(chat *chats2.Chat) domain.Chat {
 	messages := make([]*domain.Message, 0)
 	for i := range chat.Messages {
 		messages = append(messages, &domain.Message{
@@ -60,8 +60,8 @@ func convertChat(chat *chats.Chat) domain.Chat {
 	}
 }
 
-func GetChatByChatID(ctx context.Context, userID, chatID uint, userStorage usecase.UserStore, chatsGRPC chats.ChatServiceClient) (domain.Chat, error) {
-	chatGRPC, err := chatsGRPC.GetChatByChatID(ctx, &chats.UserAndChatID{UserID: uint64(userID), ChatID: uint64(chatID)})
+func GetChatByChatID(ctx context.Context, userID, chatID uint, userStorage usecase.UserStore, chatsGRPC chats2.ChatServiceClient) (domain.Chat, error) {
+	chatGRPC, err := chatsGRPC.GetChatByChatID(ctx, &chats2.UserAndChatID{UserID: uint64(userID), ChatID: uint64(chatID)})
 	if err != nil {
 		if e, ok := status.FromError(err); ok {
 			switch e.Code() {
@@ -81,9 +81,9 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, userStorage useca
 	return chat, nil
 }
 
-func GetChatsForUser(ctx context.Context, userID uint, chatsGRPC chats.ChatServiceClient, userStorage usecase.UserStore) []domain.Chat {
+func GetChatsForUser(ctx context.Context, userID uint, chatsGRPC chats2.ChatServiceClient, userStorage usecase.UserStore) []domain.Chat {
 	//logger := slog.With("requestID", ctx.Value("traceID"))
-	chatsResp, err := chatsGRPC.GetChatsForUser(ctx, &chats.UserID{UserID: uint64(userID)})
+	chatsResp, err := chatsGRPC.GetChatsForUser(ctx, &chats2.UserID{UserID: uint64(userID)})
 	if err != nil {
 		return nil
 	}
@@ -107,9 +107,9 @@ func GetChatsForUser(ctx context.Context, userID uint, chatsGRPC chats.ChatServi
 	return chatsRes
 }
 
-func CheckUserBelongsToChat(ctx context.Context, chatID uint, userRequestingID uint, chatsGRPC chats.ChatServiceClient) bool {
+func CheckUserBelongsToChat(ctx context.Context, chatID uint, userRequestingID uint, chatsGRPC chats2.ChatServiceClient) bool {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	belongsGRPC, err := chatsGRPC.CheckUserBelongsToChat(ctx, &chats.UserAndChatID{
+	belongsGRPC, err := chatsGRPC.CheckUserBelongsToChat(ctx, &chats2.UserAndChatID{
 		UserID: uint64(userRequestingID),
 		ChatID: uint64(chatID),
 	})
@@ -147,7 +147,7 @@ func GetCompanionNameForPrivateChat(ctx context.Context, chat domain.Chat, userR
 }
 
 // CreatePrivateChat created chat, or returns existing
-func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uint, chatsGRPC chats.ChatServiceClient, userStorage usecase.UserStore) (chatID uint, isNewChat bool, err error) {
+func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uint, chatsGRPC chats2.ChatServiceClient, userStorage usecase.UserStore) (chatID uint, isNewChat bool, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if creatingUserID == companionID {
 		return 0, false, fmt.Errorf("Диалог с самим собой пока не поддерживается")
@@ -159,7 +159,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 		logger.Error("CreatePrivateChat: user wasn't found", "companionID", companionID)
 		return 0, false, fmt.Errorf("Пользователь, с которым вы хотите создать диалог, не найден")
 	}
-	resp, err := chatsGRPC.CreatePrivateChat(ctx, &chats.TwoUserIDs{
+	resp, err := chatsGRPC.CreatePrivateChat(ctx, &chats2.TwoUserIDs{
 		ID1: uint64(creatingUserID),
 		ID2: uint64(companionID),
 	})
@@ -169,10 +169,10 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 	return uint(resp.GetChatID()), resp.GetIsNewChat(), nil
 }
 
-func DeleteChat(ctx context.Context, deletingUserID, chatID uint, chatsGRPC chats.ChatServiceClient) (wasDeleted bool, err error) {
+func DeleteChat(ctx context.Context, deletingUserID, chatID uint, chatsGRPC chats2.ChatServiceClient) (wasDeleted bool, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("DeleteChat: enter", "userID", deletingUserID, "chatID", chatID)
-	success, err := chatsGRPC.DeleteChat(ctx, &chats.UserAndChatID{
+	success, err := chatsGRPC.DeleteChat(ctx, &chats2.UserAndChatID{
 		UserID: uint64(deletingUserID),
 		ChatID: uint64(chatID),
 	})
@@ -182,16 +182,16 @@ func DeleteChat(ctx context.Context, deletingUserID, chatID uint, chatsGRPC chat
 	return success.Res, err
 }
 
-func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, chatName, description string, chatsGRPC chats.ChatServiceClient) (chatID uint, err error) {
+func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, chatName, description string, chatsGRPC chats2.ChatServiceClient) (chatID uint, err error) {
 	//logger := slog.With("requestID", ctx.Value("traceID"))
-	usersGRPC := make([]*chats.UserID, 0)
+	usersGRPC := make([]*chats2.UserID, 0)
 	for i := range usersIDs {
-		usersGRPC = append(usersGRPC, &chats.UserID{UserID: uint64(usersIDs[i])})
+		usersGRPC = append(usersGRPC, &chats2.UserID{UserID: uint64(usersIDs[i])})
 	}
 
-	resp, err := chatsGRPC.CreateGroupChat(ctx, &chats.CreateGroupReq{
+	resp, err := chatsGRPC.CreateGroupChat(ctx, &chats2.CreateGroupReq{
 		CreatingUserID: uint64(creatingUserID),
-		Users:          &chats.CreateGroupReq_UserArray{Users: usersGRPC},
+		Users:          &chats2.CreateGroupReq_UserArray{Users: usersGRPC},
 		Name:           chatName,
 		Description:    description,
 	})
@@ -201,9 +201,9 @@ func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, 
 	return uint(resp.GetChatID()), nil
 }
 
-func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatsGRPC chats.ChatServiceClient) (err error) {
+func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatsGRPC chats2.ChatServiceClient) (err error) {
 	//logger := slog.With("requestID", ctx.Value("traceID"))
-	_, err = chatsGRPC.UpdateGroupChat(ctx, &chats.UpdateGroupChatReq{
+	_, err = chatsGRPC.UpdateGroupChat(ctx, &chats2.UpdateGroupChatReq{
 		UserID:      uint64(userID),
 		ChatID:      uint64(chatID),
 		Name:        *name,
@@ -215,8 +215,8 @@ func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *strin
 	return nil
 }
 
-func GetMessagesByChatID(ctx context.Context, chatsGRPC chats.ChatServiceClient, chatID uint) []domain.Message {
-	resp, err := chatsGRPC.GetMessagesByChatID(ctx, &chats.ChatID{ChatID: uint64(chatID)})
+func GetMessagesByChatID(ctx context.Context, chatsGRPC chats2.ChatServiceClient, chatID uint) []domain.Message {
+	resp, err := chatsGRPC.GetMessagesByChatID(ctx, &chats2.ChatID{ChatID: uint64(chatID)})
 	if err != nil {
 		return nil
 	}
@@ -236,8 +236,8 @@ func GetMessagesByChatID(ctx context.Context, chatsGRPC chats.ChatServiceClient,
 	return messages
 }
 
-func GetPopularChannels(ctx context.Context, userID uint, chatsGRPC chats.ChatServiceClient) ([]domain.ChannelWithCounter, error) {
-	resp, err := chatsGRPC.GetPopularChannels(ctx, &chats.UserID{UserID: uint64(userID)})
+func GetPopularChannels(ctx context.Context, userID uint, chatsGRPC chats2.ChatServiceClient) ([]domain.ChannelWithCounter, error) {
+	resp, err := chatsGRPC.GetPopularChannels(ctx, &chats2.UserID{UserID: uint64(userID)})
 	if err != nil {
 		return nil, err
 	}
@@ -256,8 +256,8 @@ func GetPopularChannels(ctx context.Context, userID uint, chatsGRPC chats.ChatSe
 	return channels, nil
 }
 
-func JoinChannel(ctx context.Context, userID uint, channelID uint, chatsGRPC chats.ChatServiceClient) (err error) {
-	_, err = chatsGRPC.JoinChannel(ctx, &chats.UserAndChatID{
+func JoinChannel(ctx context.Context, userID uint, channelID uint, chatsGRPC chats2.ChatServiceClient) (err error) {
+	_, err = chatsGRPC.JoinChannel(ctx, &chats2.UserAndChatID{
 		UserID: uint64(userID),
 		ChatID: uint64(channelID),
 	})
@@ -267,8 +267,8 @@ func JoinChannel(ctx context.Context, userID uint, channelID uint, chatsGRPC cha
 	return nil
 }
 
-func LeaveChat(ctx context.Context, userID uint, channelID uint, chatsGRPC chats.ChatServiceClient) (err error) {
-	_, err = chatsGRPC.LeaveChat(ctx, &chats.UserAndChatID{
+func LeaveChat(ctx context.Context, userID uint, channelID uint, chatsGRPC chats2.ChatServiceClient) (err error) {
+	_, err = chatsGRPC.LeaveChat(ctx, &chats2.UserAndChatID{
 		UserID: uint64(userID),
 		ChatID: uint64(channelID),
 	})
@@ -278,8 +278,8 @@ func LeaveChat(ctx context.Context, userID uint, channelID uint, chatsGRPC chats
 	return nil
 }
 
-func CreateChannel(ctx context.Context, creatingUserID uint, chatName, description string, chatsGRPC chats.ChatServiceClient) (chatID uint, err error) {
-	channel, err := chatsGRPC.CreateChannel(ctx, &chats.CreateChannelReq{
+func CreateChannel(ctx context.Context, creatingUserID uint, chatName, description string, chatsGRPC chats2.ChatServiceClient) (chatID uint, err error) {
+	channel, err := chatsGRPC.CreateChannel(ctx, &chats2.CreateChannelReq{
 		UserID:      uint64(creatingUserID),
 		Name:        chatName,
 		Description: description,

@@ -1,9 +1,9 @@
 package main
 
 import (
-	session "ProjectMessenger/internal/sessions_service/proto"
-	"ProjectMessenger/internal/sessions_service/repository"
-	"ProjectMessenger/internal/sessions_service/usecase"
+	session "ProjectMessenger/microservices/sessions_service/proto"
+	"ProjectMessenger/microservices/sessions_service/repository"
+	"ProjectMessenger/microservices/sessions_service/usecase"
 	"database/sql"
 	"fmt"
 	"log"

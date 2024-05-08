@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	session2 "ProjectMessenger/internal/sessions_service/proto"
+	"ProjectMessenger/microservices/sessions_service/proto"
 	"context"
 	"fmt"
 	"mime/multipart"
@@ -22,8 +22,8 @@ type UserStore interface {
 	GetAvatarStoragePath() string
 }
 
-func CheckAuthorized(ctx context.Context, sessionID string, storage session2.AuthCheckerClient) (authorized bool, userID uint) {
-	response, err := storage.CheckAuthorizedRPC(context.Background(), &session2.Session{ID: sessionID})
+func CheckAuthorized(ctx context.Context, sessionID string, storage sessions.AuthCheckerClient) (authorized bool, userID uint) {
+	response, err := storage.CheckAuthorizedRPC(context.Background(), &sessions.Session{ID: sessionID})
 	if err != nil {
 		return false, 0
 	}
@@ -32,8 +32,8 @@ func CheckAuthorized(ctx context.Context, sessionID string, storage session2.Aut
 	return authorized, userID
 }
 
-func createSession(ctx context.Context, user domain.Person, storage session2.AuthCheckerClient) string {
-	sessionIDRPC, err := storage.CreateSessionRPC(context.Background(), &session2.User{ID: uint64(user.ID)})
+func createSession(ctx context.Context, user domain.Person, storage sessions.AuthCheckerClient) string {
+	sessionIDRPC, err := storage.CreateSessionRPC(context.Background(), &sessions.User{ID: uint64(user.ID)})
 	if err != nil {
 		return ""
 	}
@@ -41,7 +41,7 @@ func createSession(ctx context.Context, user domain.Person, storage session2.Aut
 	return sessionID
 }
 
-func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage UserStore, storage session2.AuthCheckerClient) (sessionID string, userID uint, err error) {
+func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage UserStore, storage sessions.AuthCheckerClient) (sessionID string, userID uint, err error) {
 	if user.Username == "" || user.Password == "" {
 		customErr := &domain.CustomError{
 			Type:    "userRegistration",
@@ -87,7 +87,7 @@ func RegisterAndLoginUser(ctx context.Context, user domain.Person, userStorage U
 	return sessionID, userID, nil
 }
 
-func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage session2.AuthCheckerClient) (sessionID string, err error) {
+func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, sessionStorage sessions.AuthCheckerClient) (sessionID string, err error) {
 	if user.Username == "" {
 		return "", fmt.Errorf("wrong json structure")
 	}
@@ -116,8 +116,8 @@ func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, s
 	return sessionID, nil
 }
 
-func LogoutUser(ctx context.Context, sessionID string, sessionStorage session2.AuthCheckerClient) {
-	sessionStorage.LogoutUserRPC(context.Background(), &session2.Session{ID: sessionID})
+func LogoutUser(ctx context.Context, sessionID string, sessionStorage sessions.AuthCheckerClient) {
+	sessionStorage.LogoutUserRPC(context.Background(), &sessions.Session{ID: sessionID})
 	return
 }
 

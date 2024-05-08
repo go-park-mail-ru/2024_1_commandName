@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	chats "ProjectMessenger/internal/chats_service/proto"
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,7 +30,7 @@ type MessageStore interface {
 	DeleteMessage(ctx context.Context, messageID uint) error
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats.ChatServiceClient) {
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats2.ChatServiceClient) {
 	ctx = wsStorage.AddConnection(ctx, connection, user.ID)
 	defer func() {
 		wsStorage.DeleteConnection(user.ID)
@@ -53,7 +53,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		userDecodedMessage.CreatedAt = time.Now().UTC()
 		userDecodedMessage.SenderUsername = user.Username
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
-		chatStorage.UpdateLastActionTime(ctx, &chats.LastAction{
+		chatStorage.UpdateLastActionTime(ctx, &chats2.LastAction{
 			ChatID: uint64(userDecodedMessage.ChatID),
 			Time:   timestamppb.New(userDecodedMessage.CreatedAt),
 		})
@@ -62,9 +62,9 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 	}
 }
 
-func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
+func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient) {
 	//chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
-	resp, _ := chatStorage.GetChatByChatID(ctx, &chats.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
+	resp, _ := chatStorage.GetChatByChatID(ctx, &chats2.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
 
 	chatUsers := make([]domain.ChatUser, 0)
 	for i := range resp.Users {

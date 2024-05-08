@@ -1,8 +1,8 @@
 package delivery
 
 import (
-	contacts "ProjectMessenger/internal/contacts_service/proto"
-	session "ProjectMessenger/internal/sessions_service/proto"
+	contacts "ProjectMessenger/microservices/contacts_service/proto"
+	session "ProjectMessenger/microservices/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
 	"errors"

@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	contacts "ProjectMessenger/internal/contacts_service/proto"
+	"ProjectMessenger/microservices/contacts_service/proto"
 	"context"
 	"fmt"
 	"io"
@@ -19,7 +19,7 @@ import (
 	authusecase "ProjectMessenger/internal/auth/usecase"
 )
 
-func convertToNormalUser(person *contacts.Person) domain.Person {
+func convertToNormalUser(person *chats.Person) domain.Person {
 	return domain.Person{
 		ID:           uint(person.GetID()),
 		Username:     person.GetUsername(),
@@ -145,8 +145,8 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 	return nil
 }
 
-func GetContacts(ctx context.Context, userID uint, contactGRPC contacts.ContactsClient) []domain.Person {
-	contactsResp, err := contactGRPC.GetContacts(ctx, &contacts.UserIDContacts{UserID: uint64(userID)})
+func GetContacts(ctx context.Context, userID uint, contactGRPC chats.ContactsClient) []domain.Person {
+	contactsResp, err := contactGRPC.GetContacts(ctx, &chats.UserIDContacts{UserID: uint64(userID)})
 	if err != nil {
 		return nil
 	}
@@ -157,13 +157,13 @@ func GetContacts(ctx context.Context, userID uint, contactGRPC contacts.Contacts
 	return res
 }
 
-func AddContactByUsername(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore, contactGRPC contacts.ContactsClient) (err error) {
+func AddContactByUsername(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore, contactGRPC chats.ContactsClient) (err error) {
 	userToAdd, found := userStorage.GetByUsername(ctx, usernameToAdd)
 	if !found {
 		return fmt.Errorf("Такого имени пользователя не существует")
 	}
 
-	_, err = contactGRPC.AddContactByUsername(ctx, &contacts.AddByUsernameReq{
+	_, err = contactGRPC.AddContactByUsername(ctx, &chats.AddByUsernameReq{
 		UserAddingID:  uint64(userAddingID),
 		UsernameToAdd: usernameToAdd,
 		UserToAddID:   uint64(userToAdd.ID),
@@ -174,18 +174,18 @@ func AddContactByUsername(ctx context.Context, userAddingID uint, usernameToAdd 
 	return nil
 }
 
-func AddToAllContacts(ctx context.Context, userAddingID uint, userStorage authusecase.UserStore, contactGRPC contacts.ContactsClient) (ok bool) {
+func AddToAllContacts(ctx context.Context, userAddingID uint, userStorage authusecase.UserStore, contactGRPC chats.ContactsClient) (ok bool) {
 	userIDs := userStorage.GetAllUserIDs(ctx)
 	if userIDs == nil {
 		return false
 	}
-	usersIDsReq := make([]*contacts.UserIDContacts, 0)
+	usersIDsReq := make([]*chats.UserIDContacts, 0)
 	for i := range userIDs {
-		usersIDsReq = append(usersIDsReq, &contacts.UserIDContacts{UserID: uint64(userIDs[i])})
+		usersIDsReq = append(usersIDsReq, &chats.UserIDContacts{UserID: uint64(userIDs[i])})
 	}
 
-	_, err := contactGRPC.AddToAllContacts(ctx, &contacts.AddToAllReq{
-		Users:        &contacts.UserIDArray{Users: usersIDsReq},
+	_, err := contactGRPC.AddToAllContacts(ctx, &chats.AddToAllReq{
+		Users:        &chats.UserIDArray{Users: usersIDsReq},
 		UserAddingID: uint64(userAddingID),
 	})
 	if err != nil {

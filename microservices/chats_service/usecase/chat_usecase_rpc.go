@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"ProjectMessenger/domain"
-	chats "ProjectMessenger/internal/chats_service/proto"
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"fmt"
 	"sort"
@@ -31,7 +31,7 @@ type ChatStore interface {
 }
 
 type ChatManager struct {
-	chats.UnimplementedChatServiceServer
+	chats2.UnimplementedChatServiceServer
 	storage ChatStore
 }
 
@@ -39,10 +39,10 @@ func NewChatManager(storage ChatStore) *ChatManager {
 	return &ChatManager{storage: storage}
 }
 
-func convertChat(chat domain.Chat) *chats.Chat {
-	messagesGRPC := make([]*chats.Message, 0)
+func convertChat(chat domain.Chat) *chats2.Chat {
+	messagesGRPC := make([]*chats2.Message, 0)
 	for i := range chat.Messages {
-		messagesGRPC = append(messagesGRPC, &chats.Message{
+		messagesGRPC = append(messagesGRPC, &chats2.Message{
 			Id:          uint64(chat.Messages[i].ID),
 			ChatId:      uint64(chat.Messages[i].ChatID),
 			UserId:      uint64(chat.Messages[i].UserID),
@@ -53,14 +53,14 @@ func convertChat(chat domain.Chat) *chats.Chat {
 			Username:    chat.Messages[i].SenderUsername,
 		})
 	}
-	usersGRPC := make([]*chats.ChatUser, 0)
+	usersGRPC := make([]*chats2.ChatUser, 0)
 	for i := range chat.Users {
-		usersGRPC = append(usersGRPC, &chats.ChatUser{
+		usersGRPC = append(usersGRPC, &chats2.ChatUser{
 			ChatId: uint64(chat.Users[i].ChatID),
 			UserId: uint64(chat.Users[i].UserID),
 		})
 	}
-	lastMessage := &chats.Message{
+	lastMessage := &chats2.Message{
 		Id:          uint64(chat.LastMessage.ID),
 		ChatId:      uint64(chat.LastMessage.ChatID),
 		UserId:      uint64(chat.LastMessage.UserID),
@@ -70,7 +70,7 @@ func convertChat(chat domain.Chat) *chats.Chat {
 		SentAt:      timestamppb.New(chat.LastMessage.CreatedAt),
 		Username:    chat.LastMessage.SenderUsername,
 	}
-	return &chats.Chat{
+	return &chats2.Chat{
 		Id:                 uint64(chat.ID),
 		Type:               chat.Type,
 		Name:               chat.Name,
@@ -120,12 +120,12 @@ func (cm *ChatManager) leaveChat(ctx context.Context, userID uint, channelID uin
 	return nil
 }
 
-func (cm *ChatManager) GetChatByChatID(ctx context.Context, in *chats.UserAndChatID) (*chats.Chat, error) {
+func (cm *ChatManager) GetChatByChatID(ctx context.Context, in *chats2.UserAndChatID) (*chats2.Chat, error) {
 	chatID := uint(in.GetChatID())
 	userID := uint(in.GetUserID())
 	chat, err := cm.storage.GetChatByChatID(ctx, chatID)
 	if err != nil {
-		return &chats.Chat{}, err
+		return &chats2.Chat{}, err
 	}
 	belongs := cm.checkUserBelongsToChat(ctx, chatID, userID)
 	if !belongs {
@@ -134,80 +134,80 @@ func (cm *ChatManager) GetChatByChatID(ctx context.Context, in *chats.UserAndCha
 	return convertChat(chat), nil
 }
 
-func (cm *ChatManager) GetChatsForUser(ctx context.Context, in *chats.UserID) (*chats.ChatArray, error) {
+func (cm *ChatManager) GetChatsForUser(ctx context.Context, in *chats2.UserID) (*chats2.ChatArray, error) {
 	userID := uint(in.GetUserID())
 	chatsForUser := cm.storage.GetChatsForUser(ctx, userID)
 
 	sort.Slice(chatsForUser, func(i, j int) bool {
 		return chatsForUser[j].LastActionDateTime.Before(chatsForUser[i].LastActionDateTime)
 	})
-	chatsGRPC := &chats.ChatArray{Chats: make([]*chats.Chat, 0)}
+	chatsGRPC := &chats2.ChatArray{Chats: make([]*chats2.Chat, 0)}
 	for i := range chatsForUser {
 		chatsGRPC.Chats = append(chatsGRPC.Chats, convertChat(chatsForUser[i]))
 	}
 	return chatsGRPC, nil
 }
 
-func (cm *ChatManager) CheckUserBelongsToChat(ctx context.Context, in *chats.UserAndChatID) (*chats.BoolResponse, error) {
+func (cm *ChatManager) CheckUserBelongsToChat(ctx context.Context, in *chats2.UserAndChatID) (*chats2.BoolResponse, error) {
 	belongs := cm.checkUserBelongsToChat(ctx, uint(in.GetChatID()), uint(in.GetUserID()))
-	return &chats.BoolResponse{Res: belongs}, nil
+	return &chats2.BoolResponse{Res: belongs}, nil
 }
 
-func (cm *ChatManager) CreatePrivateChat(ctx context.Context, in *chats.TwoUserIDs) (*chats.CreateChatResponse, error) {
+func (cm *ChatManager) CreatePrivateChat(ctx context.Context, in *chats2.TwoUserIDs) (*chats2.CreateChatResponse, error) {
 	creatingUserID := uint(in.GetID1())
 	companionID := uint(in.GetID2())
 	if creatingUserID == companionID {
-		return &chats.CreateChatResponse{}, status.Error(400, "Диалог с самим собой пока не поддерживается")
+		return &chats2.CreateChatResponse{}, status.Error(400, "Диалог с самим собой пока не поддерживается")
 	}
 
 	exists, chatID, err := cm.storage.CheckPrivateChatExists(ctx, creatingUserID, companionID)
 	if err != nil {
-		return &chats.CreateChatResponse{}, status.Error(500, "")
+		return &chats2.CreateChatResponse{}, status.Error(500, "")
 	}
 	if exists {
-		return &chats.CreateChatResponse{
+		return &chats2.CreateChatResponse{
 			ChatID:    uint64(chatID),
 			IsNewChat: false,
 		}, nil
 	}
 	chatID, err = cm.storage.CreateChat(ctx, "", "", creatingUserID, companionID)
 	if err != nil {
-		return &chats.CreateChatResponse{}, status.Error(500, "")
+		return &chats2.CreateChatResponse{}, status.Error(500, "")
 	}
-	return &chats.CreateChatResponse{
+	return &chats2.CreateChatResponse{
 		ChatID:    uint64(chatID),
 		IsNewChat: true,
 	}, nil
 }
 
-func (cm *ChatManager) DeleteChat(ctx context.Context, in *chats.UserAndChatID) (*chats.BoolResponse, error) {
+func (cm *ChatManager) DeleteChat(ctx context.Context, in *chats2.UserAndChatID) (*chats2.BoolResponse, error) {
 	chatID := uint(in.GetChatID())
 	deletingUserID := uint(in.GetUserID())
 	userBelongsToChat := cm.checkUserBelongsToChat(ctx, chatID, deletingUserID)
 	if !userBelongsToChat {
-		return &chats.BoolResponse{}, status.Error(400, "Неверный id для удаления")
+		return &chats2.BoolResponse{}, status.Error(400, "Неверный id для удаления")
 	}
 	chat, err := cm.storage.GetChatByChatID(ctx, chatID)
 	if err != nil {
-		return &chats.BoolResponse{}, status.Error(500, "")
+		return &chats2.BoolResponse{}, status.Error(500, "")
 	}
 	if (chat.Type == "3" || chat.Type == "2") && chat.CreatorID != deletingUserID {
 		err := cm.leaveChat(ctx, deletingUserID, chatID)
 		if err != nil {
-			return &chats.BoolResponse{}, status.Error(500, "")
+			return &chats2.BoolResponse{}, status.Error(500, "")
 		}
-		return &chats.BoolResponse{Res: true}, nil
+		return &chats2.BoolResponse{Res: true}, nil
 	}
 	wasDeleted, err := cm.storage.DeleteChat(ctx, chatID)
 	if err != nil {
 		//logger.Error("DeleteChat: error", "error", err.Error(), "wasDeleted", wasDeleted)
-		return &chats.BoolResponse{}, status.Error(500, "")
+		return &chats2.BoolResponse{}, status.Error(500, "")
 	}
 	//logger.Debug("DeleteChat: success", "wasDeleted", wasDeleted)
-	return &chats.BoolResponse{Res: wasDeleted}, nil
+	return &chats2.BoolResponse{Res: wasDeleted}, nil
 }
 
-func (cm *ChatManager) CreateGroupChat(ctx context.Context, in *chats.CreateGroupReq) (*chats.CreateChatResponse, error) {
+func (cm *ChatManager) CreateGroupChat(ctx context.Context, in *chats2.CreateGroupReq) (*chats2.CreateChatResponse, error) {
 	creatingUserID := uint(in.GetCreatingUserID())
 	chatName := in.GetName()
 	description := in.GetDescription()
@@ -236,22 +236,22 @@ func (cm *ChatManager) CreateGroupChat(ctx context.Context, in *chats.CreateGrou
 
 	chatID, err := cm.storage.CreateChat(ctx, chatName, description, usersIDs...)
 	if err != nil {
-		return &chats.CreateChatResponse{}, status.Error(500, "")
+		return &chats2.CreateChatResponse{}, status.Error(500, "")
 	}
-	return &chats.CreateChatResponse{ChatID: uint64(chatID)}, nil
+	return &chats2.CreateChatResponse{ChatID: uint64(chatID)}, nil
 }
 
-func (cm *ChatManager) UpdateGroupChat(ctx context.Context, in *chats.UpdateGroupChatReq) (*chats.Empty, error) {
+func (cm *ChatManager) UpdateGroupChat(ctx context.Context, in *chats2.UpdateGroupChatReq) (*chats2.Empty, error) {
 	chatID := uint(in.GetChatID())
 	userID := uint(in.GetUserID())
 	name := in.GetName()
 	desc := in.GetDescription()
 	chat, err := cm.storage.GetChatByChatID(ctx, chatID)
 	if chat.Type != "2" && chat.Type != "3" {
-		return &chats.Empty{}, status.Error(400, "")
+		return &chats2.Empty{}, status.Error(400, "")
 	}
 	if err != nil {
-		return &chats.Empty{}, status.Error(500, "")
+		return &chats2.Empty{}, status.Error(500, "")
 	}
 	userWasFound := false
 	for i := range chat.Users {
@@ -261,7 +261,7 @@ func (cm *ChatManager) UpdateGroupChat(ctx context.Context, in *chats.UpdateGrou
 		}
 	}
 	if !userWasFound {
-		return &chats.Empty{}, status.Error(400, "user does not belong to chat")
+		return &chats2.Empty{}, status.Error(400, "user does not belong to chat")
 	}
 	if name != "" {
 		chat.Name = name
@@ -272,17 +272,17 @@ func (cm *ChatManager) UpdateGroupChat(ctx context.Context, in *chats.UpdateGrou
 	ok := cm.storage.UpdateGroupChat(ctx, chat)
 	//logger.Info("UpdateGroupChat", "ok", ok)
 	if !ok {
-		return &chats.Empty{}, status.Error(500, "")
+		return &chats2.Empty{}, status.Error(500, "")
 	}
-	return &chats.Empty{Dummy: true}, nil
+	return &chats2.Empty{Dummy: true}, nil
 }
 
-func (cm *ChatManager) GetMessagesByChatID(ctx context.Context, in *chats.ChatID) (*chats.MessageArray, error) {
+func (cm *ChatManager) GetMessagesByChatID(ctx context.Context, in *chats2.ChatID) (*chats2.MessageArray, error) {
 	chatID := uint(in.GetChatID())
 	messages := cm.storage.GetMessagesByChatID(ctx, chatID)
-	messagesGRPC := make([]*chats.Message, 0)
+	messagesGRPC := make([]*chats2.Message, 0)
 	for i := range messages {
-		messagesGRPC = append(messagesGRPC, &chats.Message{
+		messagesGRPC = append(messagesGRPC, &chats2.Message{
 			Id:          uint64(messages[i].ID),
 			ChatId:      uint64(messages[i].ChatID),
 			UserId:      uint64(messages[i].UserID),
@@ -293,18 +293,18 @@ func (cm *ChatManager) GetMessagesByChatID(ctx context.Context, in *chats.ChatID
 			Username:    messages[i].SenderUsername,
 		})
 	}
-	return &chats.MessageArray{Messages: messagesGRPC}, nil
+	return &chats2.MessageArray{Messages: messagesGRPC}, nil
 }
 
-func (cm *ChatManager) GetPopularChannels(ctx context.Context, in *chats.UserID) (*chats.ChannelsArray, error) {
+func (cm *ChatManager) GetPopularChannels(ctx context.Context, in *chats2.UserID) (*chats2.ChannelsArray, error) {
 	userID := uint(in.GetUserID())
 	channels, err := cm.storage.GetNPopularChannels(ctx, userID, 10)
 	if err != nil {
-		return &chats.ChannelsArray{}, status.Error(500, "")
+		return &chats2.ChannelsArray{}, status.Error(500, "")
 	}
-	channelsGRPC := make([]*chats.ChannelWithCounter, 0)
+	channelsGRPC := make([]*chats2.ChannelWithCounter, 0)
 	for i := range channels {
-		channelsGRPC = append(channelsGRPC, &chats.ChannelWithCounter{
+		channelsGRPC = append(channelsGRPC, &chats2.ChannelWithCounter{
 			Id:          uint64(channels[i].ID),
 			Name:        channels[i].Name,
 			Description: channels[i].Description,
@@ -314,67 +314,67 @@ func (cm *ChatManager) GetPopularChannels(ctx context.Context, in *chats.UserID)
 			NumOfUsers:  int32(channels[i].NumOfUsers),
 		})
 	}
-	return &chats.ChannelsArray{Channels: channelsGRPC}, nil
+	return &chats2.ChannelsArray{Channels: channelsGRPC}, nil
 }
 
-func (cm *ChatManager) JoinChannel(ctx context.Context, in *chats.UserAndChatID) (*chats.Empty, error) {
+func (cm *ChatManager) JoinChannel(ctx context.Context, in *chats2.UserAndChatID) (*chats2.Empty, error) {
 	channelID := uint(in.GetChatID())
 	userID := uint(in.GetUserID())
 	channel, err := cm.storage.GetChatByChatID(ctx, channelID)
 	if err != nil {
-		return &chats.Empty{}, status.Error(500, "")
+		return &chats2.Empty{}, status.Error(500, "")
 	}
 	if channel.Type != "3" {
-		return &chats.Empty{}, status.Error(400, "Неверный id канала")
+		return &chats2.Empty{}, status.Error(400, "Неверный id канала")
 	}
 
 	belongs := cm.checkUserBelongsToChat(ctx, channelID, userID)
 	if belongs {
-		return &chats.Empty{}, status.Error(400, "Пользователь уже состоит в этом канале")
+		return &chats2.Empty{}, status.Error(400, "Пользователь уже состоит в этом канале")
 	}
 	err = cm.storage.AddUserToChat(ctx, userID, channelID)
 	if err != nil {
-		return &chats.Empty{}, status.Error(500, "")
+		return &chats2.Empty{}, status.Error(500, "")
 	}
-	return &chats.Empty{Dummy: true}, nil
+	return &chats2.Empty{Dummy: true}, nil
 }
 
-func (cm *ChatManager) LeaveChat(ctx context.Context, in *chats.UserAndChatID) (*chats.Empty, error) {
+func (cm *ChatManager) LeaveChat(ctx context.Context, in *chats2.UserAndChatID) (*chats2.Empty, error) {
 	userID := uint(in.GetUserID())
 	channelID := uint(in.GetChatID())
 	channel, err := cm.storage.GetChatByChatID(ctx, channelID)
 	if err != nil {
-		return &chats.Empty{}, status.Error(500, "")
+		return &chats2.Empty{}, status.Error(500, "")
 	}
 	if channel.Type != "3" && channel.Type != "2" {
-		return &chats.Empty{}, status.Error(400, "Неверный id чата")
+		return &chats2.Empty{}, status.Error(400, "Неверный id чата")
 	}
 
 	belongs := cm.checkUserBelongsToChat(ctx, channelID, userID)
 	if !belongs {
-		return &chats.Empty{}, status.Error(400, "Пользователь не состоит в этом чате")
+		return &chats2.Empty{}, status.Error(400, "Пользователь не состоит в этом чате")
 	}
 	err = cm.storage.RemoveUserFromChat(ctx, userID, channelID)
 	if err != nil {
-		return &chats.Empty{}, status.Error(500, "")
+		return &chats2.Empty{}, status.Error(500, "")
 	}
-	return &chats.Empty{Dummy: true}, nil
+	return &chats2.Empty{Dummy: true}, nil
 }
 
-func (cm *ChatManager) CreateChannel(ctx context.Context, in *chats.CreateChannelReq) (*chats.ChatID, error) {
+func (cm *ChatManager) CreateChannel(ctx context.Context, in *chats2.CreateChannelReq) (*chats2.ChatID, error) {
 	creatingUserID := uint(in.GetUserID())
 	chatName := in.GetName()
 	description := in.GetDescription()
 	chatID, err := cm.storage.CreateChat(ctx, chatName, description, creatingUserID)
 	if err != nil {
-		return &chats.ChatID{}, status.Error(500, "")
+		return &chats2.ChatID{}, status.Error(500, "")
 	}
-	return &chats.ChatID{ChatID: uint64(chatID)}, nil
+	return &chats2.ChatID{ChatID: uint64(chatID)}, nil
 }
 
-func (cm *ChatManager) UpdateLastActionTime(ctx context.Context, in *chats.LastAction) (*chats.Empty, error) {
+func (cm *ChatManager) UpdateLastActionTime(ctx context.Context, in *chats2.LastAction) (*chats2.Empty, error) {
 	chatID := uint(in.GetChatID())
 	timeUpdated := in.GetTime().AsTime()
 	cm.storage.UpdateLastActionTime(ctx, chatID, timeUpdated)
-	return &chats.Empty{Dummy: true}, nil
+	return &chats2.Empty{Dummy: true}, nil
 }

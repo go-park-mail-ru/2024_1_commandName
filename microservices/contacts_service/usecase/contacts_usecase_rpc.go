@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"ProjectMessenger/domain"
-	contacts "ProjectMessenger/internal/contacts_service/proto"
+	"ProjectMessenger/microservices/contacts_service/proto"
 	"context"
 
 	"google.golang.org/grpc/status"
@@ -15,7 +15,7 @@ type ContactStore interface {
 }
 
 type ContactsManager struct {
-	contacts.UnimplementedContactsServer
+	chats.UnimplementedContactsServer
 	storage ContactStore
 }
 
@@ -25,7 +25,7 @@ func NewContactsManager(storage ContactStore) *ContactsManager {
 	}
 }
 
-func convertToNormalUser(person *contacts.Person) domain.Person {
+func convertToNormalUser(person *chats.Person) domain.Person {
 	return domain.Person{
 		ID:           uint(person.GetID()),
 		Username:     person.GetUsername(),
@@ -41,8 +41,8 @@ func convertToNormalUser(person *contacts.Person) domain.Person {
 	}
 }
 
-func convertToGRPCUser(person domain.Person) *contacts.Person {
-	return &contacts.Person{
+func convertToGRPCUser(person domain.Person) *chats.Person {
+	return &chats.Person{
 		ID:           uint64(person.ID),
 		Username:     person.Username,
 		Email:        person.Email,
@@ -57,35 +57,35 @@ func convertToGRPCUser(person domain.Person) *contacts.Person {
 	}
 }
 
-func (cm *ContactsManager) GetContacts(ctx context.Context, in *contacts.UserIDContacts) (*contacts.PersonArray, error) {
+func (cm *ContactsManager) GetContacts(ctx context.Context, in *chats.UserIDContacts) (*chats.PersonArray, error) {
 	userID := uint(in.GetUserID())
 	contactsFromStorage := cm.storage.GetContacts(ctx, userID)
-	resp := &contacts.PersonArray{Persons: make([]*contacts.Person, 0)}
+	resp := &chats.PersonArray{Persons: make([]*chats.Person, 0)}
 	for i := range contactsFromStorage {
 		resp.Persons = append(resp.Persons, convertToGRPCUser(contactsFromStorage[i]))
 	}
 	return resp, nil
 }
 
-func (cm *ContactsManager) AddContactByUsername(ctx context.Context, in *contacts.AddByUsernameReq) (*contacts.EmptyContacts, error) {
+func (cm *ContactsManager) AddContactByUsername(ctx context.Context, in *chats.AddByUsernameReq) (*chats.EmptyContacts, error) {
 	usernameToAdd := in.GetUsernameToAdd()
 	userAddingID := uint(in.GetUserAddingID())
 	userToAddID := uint(in.GetUserToAddID())
 	contactsFromStorage := cm.storage.GetContacts(ctx, userAddingID)
 	for i := range contactsFromStorage {
 		if contactsFromStorage[i].Username == usernameToAdd {
-			return &contacts.EmptyContacts{}, status.Error(400, "Такой контакт уже существует")
+			return &chats.EmptyContacts{}, status.Error(400, "Такой контакт уже существует")
 		}
 	}
 
 	ok := cm.storage.AddContact(ctx, userAddingID, userToAddID)
 	if !ok {
-		return &contacts.EmptyContacts{}, status.Error(500, "")
+		return &chats.EmptyContacts{}, status.Error(500, "")
 	}
-	return &contacts.EmptyContacts{}, nil
+	return &chats.EmptyContacts{}, nil
 }
 
-func (cm *ContactsManager) AddToAllContacts(ctx context.Context, in *contacts.AddToAllReq) (*contacts.BoolResponseContacts, error) {
+func (cm *ContactsManager) AddToAllContacts(ctx context.Context, in *chats.AddToAllReq) (*chats.BoolResponseContacts, error) {
 	userAddingID := uint(in.GetUserAddingID())
 	userIDsRPC := in.Users.Users
 	userIDs := make([]uint, 0)
@@ -97,8 +97,8 @@ func (cm *ContactsManager) AddToAllContacts(ctx context.Context, in *contacts.Ad
 			continue
 		}
 		if !cm.storage.AddContact(ctx, userAddingID, userIDs[i]) {
-			return &contacts.BoolResponseContacts{Ok: false}, nil
+			return &chats.BoolResponseContacts{Ok: false}, nil
 		}
 	}
-	return &contacts.BoolResponseContacts{Ok: true}, nil
+	return &chats.BoolResponseContacts{Ok: true}, nil
 }

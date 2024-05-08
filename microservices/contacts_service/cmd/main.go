@@ -1,9 +1,9 @@
 package main
 
 import (
-	chats "ProjectMessenger/internal/chats_service/proto"
-	"ProjectMessenger/internal/chats_service/repository"
-	"ProjectMessenger/internal/chats_service/usecase"
+	contacts "ProjectMessenger/microservices/contacts_service/proto"
+	"ProjectMessenger/microservices/contacts_service/repository"
+	"ProjectMessenger/microservices/contacts_service/usecase"
 	"database/sql"
 	"fmt"
 	"log"
@@ -31,15 +31,16 @@ func СreateDatabase() *sql.DB {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":8082")
+	lis, err := net.Listen("tcp", ":8083")
 	if err != nil {
 		log.Fatalln("cant listen port", err)
 	}
 
 	server := grpc.NewServer()
 	dataBase := СreateDatabase()
-	chatStorage := repository.NewChatsStorage(dataBase)
-	chats.RegisterChatServiceServer(server, usecase.NewChatManager(chatStorage))
-	fmt.Println("starting server at :8081")
+	contactsStorage := repository.NewContactsStorage(dataBase)
+	contacts.RegisterContactsServer(server, usecase.NewContactsManager(contactsStorage))
+
+	fmt.Println("starting server at :8083")
 	server.Serve(lis)
 }

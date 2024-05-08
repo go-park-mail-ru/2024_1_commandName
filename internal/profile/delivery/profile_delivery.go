@@ -1,7 +1,7 @@
 package delivery
 
 import (
-	contacts "ProjectMessenger/internal/contacts_service/proto"
+	contacts "ProjectMessenger/microservices/contacts_service/proto"
 	"encoding/json"
 	"net/http"
 	"time"

@@ -2,6 +2,7 @@ package db
 
 import (
 	"ProjectMessenger/internal/chats/usecase"
+	"ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -15,7 +16,6 @@ import (
 	"ProjectMessenger/domain"
 	userRepo "ProjectMessenger/internal/auth/repository/db"
 	users "ProjectMessenger/internal/auth/usecase"
-	chats "ProjectMessenger/internal/chats_service/proto"
 	ws "ProjectMessenger/internal/messages/repository/db"
 	translatedelivery "ProjectMessenger/internal/translate/delivery"
 	translaterepo "ProjectMessenger/internal/translate/repository/db"

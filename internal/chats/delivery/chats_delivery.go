@@ -1,7 +1,7 @@
 package delivery
 
 import (
-	chats "ProjectMessenger/internal/chats_service/proto"
+	"ProjectMessenger/microservices/chats_service/proto"
 	"database/sql"
 	"encoding/json"
 	"fmt"
