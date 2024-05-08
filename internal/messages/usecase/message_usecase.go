@@ -53,19 +53,19 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		userDecodedMessage.SenderUsername = user.Username
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
 
-		SendMessageToOtherUsers(ctx, messageSaved, wsStorage, chatStorage)
+		SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
 	}
 }
 
-func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
+func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
 	//chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
-	resp, _ := chatStorage.GetChatByChatID(ctx, &chats.UserAndChatID{UserID: 0, ChatID: uint64(message.ChatID)})
+	resp, _ := chatStorage.GetChatByChatID(ctx, &chats.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
 
 	chatUsers := make([]domain.ChatUser, 0)
-	for i := range resp.Messages {
+	for i := range resp.Users {
 		chatUsers = append(chatUsers, domain.ChatUser{
-			ChatID: int(resp.Messages[i].ChatId),
-			UserID: uint(resp.Messages[i].UserId),
+			ChatID: int(resp.Users[i].ChatId),
+			UserID: uint(resp.Users[i].UserId),
 		})
 	}
 
