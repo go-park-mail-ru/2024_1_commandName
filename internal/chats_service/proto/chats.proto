@@ -1,5 +1,5 @@
 syntax = "proto3";
-package sessions;
+package chats;
 import "google/protobuf/timestamp.proto";
 
 
