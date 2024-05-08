@@ -20,7 +20,7 @@ type SearchStore interface {
 	DeleteSearchIndexes(ctx context.Context)
 	SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse)
 	SendMatchedChatsSearchResponse(response domain.ChatSearchResponse, userID uint)
-	SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse)
+	SearchMessages(ctx context.Context, word string, userID uint, chatID uint) (foundMessagesStructure domain.MessagesSearchResponse)
 	SendMatchedMessagesSearchResponse(response domain.MessagesSearchResponse, userID uint)
 	SearchContacts(ctx context.Context, word string, userID uint) (foundContactsStructure domain.ContactsSearchResponse)
 	SendMatchedContactsSearchResponse(response domain.ContactsSearchResponse, userID uint)
@@ -64,10 +64,15 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, s SearchSt
 		decodedSearchRequest.UserID = user.ID
 		logger.Debug("got ws message", "msg", decodedSearchRequest)
 		//TODO: валидация
+		conn := s.GetConnection(user.ID)
+		if conn == nil {
+			fmt.Println("conn was closed")
+			s.AddConnection(ctx, connection, user.ID)
+		}
 		if decodedSearchRequest.Type == "chat" {
 			SearchChats(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
 		} else if decodedSearchRequest.Type == "message" {
-			SearchMessages(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
+			SearchMessages(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID, decodedSearchRequest.ChatID)
 		} else if decodedSearchRequest.Type == "contact" {
 			SearchContacts(ctx, s, user, decodedSearchRequest.Word, decodedSearchRequest.UserID)
 		} else if decodedSearchRequest.Type == "channel" {
@@ -102,9 +107,9 @@ func SearchChannels(ctx context.Context, s SearchStore, user domain.Person, word
 	s.DeleteSearchIndexes(ctx)
 }
 
-func SearchMessages(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint) {
+func SearchMessages(ctx context.Context, s SearchStore, user domain.Person, word string, userID uint, chatID uint) {
 	s.AddSearchIndexes(ctx)
-	matchedMessagesStructure := s.SearchMessages(ctx, word, userID)
+	matchedMessagesStructure := s.SearchMessages(ctx, word, userID, chatID)
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("return messages:", "messages", matchedMessagesStructure)
 	s.SendMatchedMessagesSearchResponse(matchedMessagesStructure, user.ID)

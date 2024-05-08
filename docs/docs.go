@@ -136,6 +136,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/createChannel": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "creates channel",
+                "operationId": "CreateChannel",
+                "parameters": [
+                    {
+                        "description": "IDs of users to create group chat with",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.createChannelJson"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_chatIDStruct"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/createGroupChat": {
             "post": {
                 "consumes": [
@@ -265,6 +308,104 @@ const docTemplate = `{
                 }
             }
         },
+        "/deleteMessage": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "DeleteMessage",
+                "operationId": "deleteMessage",
+                "parameters": [
+                    {
+                        "description": "ID of message to delete",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.deleteMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "wrong json structure",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "405": {
+                        "description": "use POST",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/editMessage": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "EditMessage",
+                "operationId": "editMessage",
+                "parameters": [
+                    {
+                        "description": "ID of chat",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.editMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "wrong json structure",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "405": {
+                        "description": "use POST",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/getChat": {
             "post": {
                 "consumes": [
@@ -325,7 +466,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/delivery.RequestChatIDBody"
+                            "$ref": "#/definitions/delivery.requestChatIDBody"
                         }
                     }
                 ],
@@ -415,6 +556,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/getPopularChannels": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "gets 10 popular channels",
+                "operationId": "GetPopularChannels",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-delivery_getPopularChannelsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/getProfileInfo": {
             "get": {
                 "produces": [
@@ -427,6 +597,92 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-delivery_docsUserForGetProfile"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/joinChannel": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "joins channel",
+                "operationId": "JoinChannel",
+                "parameters": [
+                    {
+                        "description": "id of channel",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.chatIDStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/leaveChannel": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "exits from channel",
+                "operationId": "LeaveChannel",
+                "parameters": [
+                    {
+                        "description": "id of channel",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.chatIDStruct"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
                         }
                     },
                     "400": {
@@ -738,14 +994,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "delivery.RequestChatIDBody": {
-            "type": "object",
-            "properties": {
-                "chatID": {
-                    "type": "integer"
-                }
-            }
-        },
         "delivery.addContactStruct": {
             "type": "object",
             "properties": {
@@ -792,6 +1040,17 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.createChannelJson": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "delivery.createGroupJson": {
             "type": "object",
             "properties": {
@@ -814,6 +1073,14 @@ const docTemplate = `{
             "properties": {
                 "successfully_deleted": {
                     "type": "boolean"
+                }
+            }
+        },
+        "delivery.deleteMessageRequest": {
+            "type": "object",
+            "properties": {
+                "message_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -860,6 +1127,36 @@ const docTemplate = `{
                 }
             }
         },
+        "delivery.editMessageRequest": {
+            "type": "object",
+            "properties": {
+                "message_id": {
+                    "type": "integer"
+                },
+                "new_message_text": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.getPopularChannelsResponse": {
+            "type": "object",
+            "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.ChannelWithCounter"
+                    }
+                }
+            }
+        },
+        "delivery.requestChatIDBody": {
+            "type": "object",
+            "properties": {
+                "chatID": {
+                    "type": "integer"
+                }
+            }
+        },
         "delivery.updateChatJson": {
             "type": "object",
             "properties": {
@@ -893,7 +1190,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Chat": {
+        "domain.ChannelWithCounter": {
             "type": "object",
             "properties": {
                 "avatar": {
@@ -908,11 +1205,46 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_member": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "numOfUsers": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.Chat": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "creator": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "edited_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
                 "last_action_date_time": {
                     "type": "string"
                 },
                 "last_message": {
                     "$ref": "#/definitions/domain.Message"
+                },
+                "last_seen_message_id": {
+                    "type": "integer"
                 },
                 "messages": {
                     "type": "array",
@@ -1066,6 +1398,18 @@ const docTemplate = `{
             "properties": {
                 "body": {
                     "$ref": "#/definitions/delivery.docsUserForGetProfile"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.Response-delivery_getPopularChannelsResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "$ref": "#/definitions/delivery.getPopularChannelsResponse"
                 },
                 "status": {
                     "type": "integer",

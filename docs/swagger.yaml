@@ -1,10 +1,5 @@
 basePath: /
 definitions:
-  delivery.RequestChatIDBody:
-    properties:
-      chatID:
-        type: integer
-    type: object
   delivery.addContactStruct:
     properties:
       username_of_user_to_add:
@@ -34,6 +29,13 @@ definitions:
       chat:
         $ref: '#/definitions/domain.Chat'
     type: object
+  delivery.createChannelJson:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
   delivery.createGroupJson:
     properties:
       description:
@@ -49,6 +51,11 @@ definitions:
     properties:
       successfully_deleted:
         type: boolean
+    type: object
+  delivery.deleteMessageRequest:
+    properties:
+      message_id:
+        type: integer
     type: object
   delivery.docsContacts:
     properties:
@@ -78,6 +85,25 @@ definitions:
       username:
         type: string
     type: object
+  delivery.editMessageRequest:
+    properties:
+      message_id:
+        type: integer
+      new_message_text:
+        type: string
+    type: object
+  delivery.getPopularChannelsResponse:
+    properties:
+      channels:
+        items:
+          $ref: '#/definitions/domain.ChannelWithCounter'
+        type: array
+    type: object
+  delivery.requestChatIDBody:
+    properties:
+      chatID:
+        type: integer
+    type: object
   delivery.updateChatJson:
     properties:
       chat_id:
@@ -99,7 +125,7 @@ definitions:
       user_id:
         type: integer
     type: object
-  domain.Chat:
+  domain.ChannelWithCounter:
     properties:
       avatar:
         type: string
@@ -109,10 +135,33 @@ definitions:
         type: string
       id:
         type: integer
+      is_member:
+        type: boolean
+      name:
+        type: string
+      numOfUsers:
+        type: integer
+    type: object
+  domain.Chat:
+    properties:
+      avatar:
+        type: string
+      created_at:
+        type: string
+      creator:
+        type: integer
+      description:
+        type: string
+      edited_at:
+        type: string
+      id:
+        type: integer
       last_action_date_time:
         type: string
       last_message:
         $ref: '#/definitions/domain.Message'
+      last_seen_message_id:
+        type: integer
       messages:
         items:
           $ref: '#/definitions/domain.Message'
@@ -213,6 +262,14 @@ definitions:
     properties:
       body:
         $ref: '#/definitions/delivery.docsUserForGetProfile'
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.Response-delivery_getPopularChannelsResponse:
+    properties:
+      body:
+        $ref: '#/definitions/delivery.getPopularChannelsResponse'
       status:
         example: 200
         type: integer
@@ -334,6 +391,34 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: checks that user is authenticated
+  /createChannel:
+    post:
+      consumes:
+      - application/json
+      operationId: CreateChannel
+      parameters:
+      - description: IDs of users to create group chat with
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.createChannelJson'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_chatIDStruct'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: creates channel
   /createGroupChat:
     post:
       consumes:
@@ -420,6 +505,70 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: deletes chat
+  /deleteMessage:
+    post:
+      consumes:
+      - application/json
+      operationId: deleteMessage
+      parameters:
+      - description: ID of message to delete
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.deleteMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: wrong json structure
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: DeleteMessage
+  /editMessage:
+    post:
+      consumes:
+      - application/json
+      operationId: editMessage
+      parameters:
+      - description: ID of chat
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.editMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: wrong json structure
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: EditMessage
   /getChat:
     post:
       consumes:
@@ -459,7 +608,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/delivery.RequestChatIDBody'
+          $ref: '#/definitions/delivery.requestChatIDBody'
       produces:
       - application/json
       responses:
@@ -518,6 +667,25 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: returns contacts of user
+  /getPopularChannels:
+    get:
+      operationId: GetPopularChannels
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-delivery_getPopularChannelsResponse'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: gets 10 popular channels
   /getProfileInfo:
     get:
       operationId: GetProfileInfo
@@ -537,6 +705,62 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: gets profile info
+  /joinChannel:
+    post:
+      consumes:
+      - application/json
+      operationId: JoinChannel
+      parameters:
+      - description: id of channel
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.chatIDStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: joins channel
+  /leaveChannel:
+    post:
+      consumes:
+      - application/json
+      operationId: LeaveChannel
+      parameters:
+      - description: id of channel
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.chatIDStruct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: exits from channel
   /login:
     post:
       consumes:

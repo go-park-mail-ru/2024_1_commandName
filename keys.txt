@@ -11,3 +11,364 @@ cloud-id: b1gq9l1nh6v134nstu4m
 folder-id: b1gq4i9e5unl47m0kj5f
 
 TRANSLATE-TOKEN: t1.9euelZqSjI3ImYmRmJGXjZyRmI-YmO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl9PdNQFhO-e86AQfv3fT3DW9VTvnvOgEH783n9euelZrPkZGTxovOlcqOyozGi8mNme_8xeuelZrPkZGTxovOlcqOyozGi8mNmQ.O4GVYAf7g3v5xPfzw4qACh4IOxnioX_fBrPl-8h0uCCGbAi6bbc4TcQ4CsT2lWNsVgAkyhk8zV4w0dyhBh7bCg
+
+http://localhost:3000/dashboard/snapshot/Veo7CeyTL1hI5zyY2O9yuec84F54Fi7H
+
+Grafana JSON:
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fdl20f2dh2ozkf"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fdl20f2dh2ozkf"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "hits{path=~\"/login|/register\"}",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "{{path}} {{status}}",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "хиты",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fdl20f2dh2ozkf"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "displayMode": "basic",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fdl20f2dh2ozkf"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "http_request_duration_seconds_sum",
+          "format": "heatmap",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "{{ endpoint }}",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "тайминги по урлам",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fdl20f2dh2ozkf"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fdl20f2dh2ozkf"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "process_cpu_seconds_total",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "Общее кол-во процессорного времени",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "fdl20f2dh2ozkf"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "dark-red",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 2,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "fdl20f2dh2ozkf"
+          },
+          "disableTextWrap": false,
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "errors",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "{{ $metric }}  {{ error_type }}",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "ошибки",
+      "type": "bargauge"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Authorization Dashboard",
+  "uid": "edl20n6beuo74e",
+  "version": 20,
+  "weekStart": ""
+}

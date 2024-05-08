@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"ProjectMessenger/domain"
+	userRepo "ProjectMessenger/internal/auth/repository/db"
+	users "ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	ws "ProjectMessenger/internal/messages/repository/db"
@@ -28,6 +30,7 @@ type Search struct {
 	Chats       usecase.ChatStore
 	WebSocket   *ws.Websocket
 	Translate   tl.TranslateStore
+	Users       users.UserStore
 }
 
 func UpgradeConnection() websocket.Upgrader {
@@ -119,13 +122,16 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 				requestToSearchSyllable += wordsArr[i]
 			}
 
+			//usecase.GetCompanionNameForPrivateChat()
+
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
-    FROM chat.chat c
-    JOIN chat.chat_user cu ON c.id = cu.chat_id
-    WHERE (name ILIKE $1 || '%' OR name ILIKE $2 || '%' OR name ILIKE $3 || '%' OR name ILIKE $4 || '%') 
-    AND (cu.user_id = $5)
-	AND (($6 = 'chat' AND c.type_id IN ('1', '2')) OR ($6 = 'channel' AND c.type_id = '3'))`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
+				    FROM chat.chat c
+				    JOIN chat.chat_user cu ON c.id = cu.chat_id
+				    WHERE (name ILIKE '%' || $1 || '%' OR name ILIKE '%' || $2 || '%' OR name ILIKE '%' || $3 || '%' OR name ILIKE '%' || $4 || '%')
+				    AND (cu.user_id = $5)
+					AND (($6 = 'chat' AND c.type_id = '2') OR ($6 = 'channel' AND c.type_id = '3'))`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
+
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -135,6 +141,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 				fmt.Println(customErr.Error())
 				return foundChatsStructure
 			}
+
 			matchedChats := make([]domain.Chat, 0)
 			for rows.Next() {
 				var mChat domain.Chat
@@ -166,13 +173,63 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 				fmt.Println(customErr.Error())
 				return foundChatsStructure
 			}
+			fmt.Println("go to private chats")
+
+			privateChats := s.SearchPrivateChats(ctx, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
+			fmt.Println("found", privateChats)
+			foundChatsStructure.Chats = append(foundChatsStructure.Chats, privateChats...)
 		}
 	}
 	foundChatsStructure.Chats = DeleteDuplicatesChats(foundChatsStructure.Chats)
 	return foundChatsStructure
 }
 
-func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (foundMessagesStructure domain.MessagesSearchResponse) {
+func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable string, userID uint, chatType string) (foundChatsStructure []domain.Chat) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
+				    FROM chat.chat c
+				    JOIN chat.chat_user cu ON c.id = cu.chat_id
+				    WHERE cu.user_id = $1 AND c.type_id = '1'`, userID)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method searchChats, search.go",
+		}
+		fmt.Println(customErr.Error())
+		return foundChatsStructure
+	}
+	matchedChats := make([]domain.Chat, 0)
+	for rows.Next() {
+		var mChat domain.Chat
+		err = rows.Scan(&mChat.ID, &mChat.Type, &mChat.Name, &mChat.Description, &mChat.AvatarPath, &mChat.CreatedAt, &mChat.LastActionDateTime, &mChat.CreatorID)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method searchChats, search.go",
+			}
+			fmt.Println(customErr.Error())
+			return foundChatsStructure
+		}
+
+		chatName, _ := usecase.GetCompanionNameForPrivateChat(ctx, mChat.ID, userID, s.Chats, s.Users)
+
+		if strings.Contains(chatName, requestToSearchTranslator) || strings.Contains(chatName, requestToSearchOriginal) || strings.Contains(chatName, requestToSearchRune) || strings.Contains(chatName, requestToSearchSyllable) {
+			mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+			var messages []*domain.Message
+			for j := range mMessages {
+				messages = append(messages, &mMessages[j])
+			}
+			mChat.Messages = messages
+			mChat.Name = chatName
+			matchedChats = append(matchedChats, mChat)
+		}
+	}
+	return matchedChats
+}
+
+func (s *Search) SearchMessages(ctx context.Context, word string, userID uint, chatID uint) (foundMessagesStructure domain.MessagesSearchResponse) {
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
@@ -215,7 +272,11 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			}
 
 			rows, err := s.db.QueryContext(ctx,
-				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at FROM chat.message m WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%') AND m.user_id = $5`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+				`SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at, username 
+FROM chat.message m 
+JOIN auth.person ON m.user_id = person.id
+WHERE (m.message ILIKE '%' || $1 || '%' OR m.message ILIKE '%' || $2 || '%' OR m.message ILIKE '%' || $3 || '%' OR m.message ILIKE '%' || $4 || '%')
+AND (m.chat_id = $5 OR $5 = 0)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, chatID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -228,7 +289,7 @@ func (s *Search) SearchMessages(ctx context.Context, word string, userID uint) (
 			matchedMessages := make([]domain.Message, 0)
 			for rows.Next() {
 				var mMesssage domain.Message
-				err = rows.Scan(&mMesssage.ID, &mMesssage.UserID, &mMesssage.ChatID, &mMesssage.Message, &mMesssage.Edited, &mMesssage.CreatedAt)
+				err = rows.Scan(&mMesssage.ID, &mMesssage.UserID, &mMesssage.ChatID, &mMesssage.Message, &mMesssage.Edited, &mMesssage.CreatedAt, &mMesssage.SenderUsername)
 				if err != nil {
 					customErr := &domain.CustomError{
 						Type:    "database",
@@ -301,7 +362,7 @@ func (s *Search) SearchContacts(ctx context.Context, word string, userID uint) (
 				`SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path
 					FROM chat.contacts cc
 					JOIN auth.person ap ON cc.user1_id = ap.id or cc.user2_id = ap.id
-					WHERE (ap.name ILIKE '%' || $1 || '%' OR ap.name ILIKE '%' || $2 || '%' OR ap.name ILIKE '%' || $3 || '%' OR ap.name ILIKE '%' || $4 || '%') AND (cc.user1_id = $5 or cc.user2_id = $5)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
+					WHERE (ap.username ILIKE '%' || $1 || '%' OR ap.username ILIKE '%' || $2 || '%' OR ap.username ILIKE '%' || $3 || '%' OR ap.username ILIKE '%' || $4 || '%') AND (cc.user1_id = $5 or cc.user2_id = $5)`, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID)
 			if err != nil {
 				customErr := &domain.CustomError{
 					Type:    "database",
@@ -628,5 +689,6 @@ func NewSearchStorage(database *sql.DB) *Search {
 		Chats:       db.NewChatsStorage(database),
 		WebSocket:   ws.NewWsStorage(database),
 		Translate:   translaterepo.NewTranslateStorage(database, YandexConfig),
+		Users:       userRepo.NewUserStorage(database, ""),
 	}
 }

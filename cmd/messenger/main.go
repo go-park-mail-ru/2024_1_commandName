@@ -53,7 +53,7 @@ func loadConfig() domain.Config {
 }
 
 func refreshIAM() {
-	cmd := exec.Command("/bin/bash", "translate_key_refresh_unix.sh")
+	cmd := exec.Command("/bin/bash", "translate_key_refresh.sh")
 	err := cmd.Start()
 	if err != nil {
 		fmt.Println("Ошибка при выполнении скрипта:", err)
@@ -89,6 +89,8 @@ func Router(cfg domain.Config) {
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
 
+	router.HandleFunc("/metrics", authHandler.Metrics)
+
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
 	router.HandleFunc("/logout", authHandler.Logout)
@@ -101,6 +103,10 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)
 	router.HandleFunc("/updateGroupChat", chatsHandler.UpdateGroupChat)
 	router.HandleFunc("/deleteChat", chatsHandler.DeleteChat)
+	router.HandleFunc("/getPopularChannels", chatsHandler.GetPopularChannels)
+	router.HandleFunc("/createChannel", chatsHandler.CreateChannel)
+	router.HandleFunc("/joinChannel", chatsHandler.JoinChannel)
+	router.HandleFunc("/leaveChannel", chatsHandler.LeaveChannel)
 
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
 	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
@@ -111,6 +117,8 @@ func Router(cfg domain.Config) {
 
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
+	router.HandleFunc("/editMessage", messageHandler.EditMessage)
+	router.HandleFunc("/deleteMessage", messageHandler.DeleteMessage)
 
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)
@@ -126,5 +134,4 @@ func Router(cfg domain.Config) {
 		slog.Error("server failed with ", "error", err)
 		return
 	}
-
 }

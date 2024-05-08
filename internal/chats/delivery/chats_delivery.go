@@ -6,17 +6,20 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type ChatsHandler struct {
-	AuthHandler *authdelivery.AuthHandler
-	Chats       usecase.ChatStore
+	AuthHandler       *authdelivery.AuthHandler
+	Chats             usecase.ChatStore
+	prometheusMetrics *PrometheusMetrics
 }
 
 type chatIDIsNewJsonResponse struct {
@@ -46,6 +49,11 @@ type createGroupJson struct {
 	Users       []uint `json:"user_ids"`
 }
 
+type createChannelJson struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 type deleteChatJsonResponse struct {
 	SuccessfullyDeleted bool `json:"successfully_deleted"`
 }
@@ -56,10 +64,64 @@ type updateChatJson struct {
 	NewDescription *string `json:"new_description"`
 }
 
+type getPopularChannelsResponse struct {
+	Channels []domain.ChannelWithCounter `json:"channels"`
+}
+
+type PrometheusMetrics struct {
+	ActiveSessionsCount prometheus.Gauge
+	Hits                *prometheus.CounterVec
+	Errors              *prometheus.CounterVec
+	Methods             *prometheus.CounterVec
+	requestDuration     *prometheus.HistogramVec
+}
+
+func NewPrometheusMetrics() *PrometheusMetrics {
+	chats_hits := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_hits",
+			Help: "Total number of chats hits.",
+		}, []string{"status", "path"},
+	)
+
+	chats_errors := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_errors",
+			Help: "Number of errors some type.",
+		}, []string{"error_type"},
+	)
+
+	chats_methods := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_called_methods",
+			Help: "Number of called methods.",
+		}, []string{"method"},
+	)
+
+	chats_requestDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "chats_http_request_chats_duration_seconds",
+			Help:    "Histogram of request durations.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"endpoint"},
+	)
+
+	prometheus.MustRegister(chats_hits, chats_errors, chats_methods, chats_requestDuration)
+
+	return &PrometheusMetrics{
+		Hits:            chats_hits,
+		Errors:          chats_errors,
+		Methods:         chats_methods,
+		requestDuration: chats_requestDuration,
+	}
+}
+
 func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
-		AuthHandler: authHandler,
-		Chats:       db.NewChatsStorage(dataBase),
+		AuthHandler:       authHandler,
+		Chats:             db.NewChatsStorage(dataBase),
+		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
 
@@ -80,6 +142,7 @@ func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB)
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChats [get]
 func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
@@ -88,6 +151,9 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 
 	chats := usecase.GetChatsForUser(ctx, userID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
 	misc.WriteStatusJson(ctx, w, 200, domain.Chats{Chats: chats})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChats").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // GetChat gets one chat
@@ -102,9 +168,12 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChat [post]
 func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
+		chatsHandler.prometheusMetrics.Hits.WithLabelValues("405", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
@@ -117,6 +186,8 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 	chatIDStruct := chatIDStruct{}
 	err := decoder.Decode(&chatIDStruct)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
+		chatsHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -128,11 +199,13 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
-
 	misc.WriteStatusJson(ctx, w, 200, chatJsonResponse{Chat: chat})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChats").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // CreatePrivateChat creates dialogue
@@ -173,7 +246,7 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -210,19 +283,15 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	userBelongsToChat := usecase.CheckUserBelongsToChat(ctx, chatIDJson.ChatID, userID, chatsHandler.Chats)
-	if !userBelongsToChat {
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "User doesn't belong to chat"})
-		return
-	}
-	success, err := usecase.DeletePrivateChat(ctx, userID, chatIDJson.ChatID, chatsHandler.Chats)
+
+	success, err := usecase.DeleteChat(ctx, userID, chatIDJson.ChatID, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, deleteChatJsonResponse{success})
@@ -266,7 +335,7 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 			return
 		}
 		logger.Error(err.Error())
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
@@ -308,6 +377,158 @@ func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// GetPopularChannels updates group chat
+//
+// @Summary gets 10 popular channels
+// @ID GetPopularChannels
+// @Produce json
+// @Success 200 {object}  domain.Response[getPopularChannelsResponse]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /getPopularChannels [get]
+func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	channels, err := usecase.GetPopularChannels(ctx, userID, chatsHandler.Chats)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "Что-то пошло не так"})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, getPopularChannelsResponse{Channels: channels})
+}
+
+// JoinChannel joins channel
+//
+// @Summary joins channel
+// @ID JoinChannel
+// @Accept json
+// @Produce json
+// @Param user body chatIDStruct true "id of channel"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /joinChannel [post]
+func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	chatIDStruct := chatIDStruct{}
+	err := decoder.Decode(&chatIDStruct)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	err = usecase.JoinChannel(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// LeaveChannel exits from channel
+//
+// @Summary exits from channel
+// @ID LeaveChannel
+// @Accept json
+// @Produce json
+// @Param user body chatIDStruct true "id of channel"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /leaveChannel [post]
+func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	chatIDStruct := chatIDStruct{}
+	err := decoder.Decode(&chatIDStruct)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	err = usecase.LeaveChat(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// CreateChannel creates channel
+//
+// @Summary creates channel
+// @ID CreateChannel
+// @Accept json
+// @Produce json
+// @Param user body createChannelJson true "IDs of users to create group chat with"
+// @Success 200 {object}  domain.Response[chatIDStruct]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /createChannel [post]
+func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
+		return
+	}
+	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	channelRequest := createChannelJson{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&channelRequest)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+
+	chatID, err := usecase.CreateChannel(ctx, userID, channelRequest.Name, channelRequest.Description, chatsHandler.Chats)
+	if err != nil {
+		if err.Error() == "internal error" {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		logger.Error(err.Error())
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		return
+	}
+
+	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
 }
 
 func (chatsHandler ChatsHandler) GetMessages(w http.ResponseWriter, r *http.Request) {

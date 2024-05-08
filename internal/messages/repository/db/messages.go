@@ -1,12 +1,12 @@
 package db
 
 import (
+	"ProjectMessenger/domain"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
-
-	"ProjectMessenger/domain"
 )
 
 type Messages struct {
@@ -61,4 +61,45 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 		chatMessagesArr = append(chatMessagesArr, mess)
 	}
 	return chatMessagesArr
+}
+
+func (m *Messages) GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	message = domain.Message{}
+	err = m.db.QueryRowContext(ctx, "SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), created_at FROM chat.message WHERE id = $1", messageID).Scan(
+		&message.ID, &message.UserID, &message.ChatID, &message.Message, &message.Edited, &message.EditedAt, &message.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("EditMessage didn't found message", "messageID", messageID)
+			return message, fmt.Errorf("Такого сообщения не существует")
+		}
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetChatsForUser, chats.go",
+		}
+		logger.Error(err.Error(), "EditMessage db error", customErr.Message)
+		return message, fmt.Errorf("internal error")
+	}
+	return message, nil
+}
+
+func (m *Messages) UpdateMessageText(ctx context.Context, message domain.Message) (err error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	_, err = m.db.ExecContext(ctx, "UPDATE chat.message SET message = $1, edited = $2, edited_at = $3 WHERE id = $4", message.Message, message.Edited, message.EditedAt, message.ID)
+	if err != nil {
+		logger.Error("UpdateMessageText db error", "messageID", message.ID)
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}
+
+func (m *Messages) DeleteMessage(ctx context.Context, messageID uint) error {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	_, err := m.db.ExecContext(ctx, "DELETE FROM chat.message WHERE id = $1", messageID)
+	if err != nil {
+		logger.Error("DeleteMessage db error", "messageID", messageID)
+		return fmt.Errorf("internal error")
+	}
+	return nil
 }

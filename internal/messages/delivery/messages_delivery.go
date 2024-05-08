@@ -1,22 +1,32 @@
 package delivery
 
 import (
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/chats/delivery"
-	"ProjectMessenger/internal/misc"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/chats/delivery"
+	"ProjectMessenger/internal/misc"
+
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
 	repository "ProjectMessenger/internal/messages/repository/db"
 	"ProjectMessenger/internal/messages/usecase"
 )
 
-type RequestChatIDBody struct {
+type requestChatIDBody struct {
 	ChatID uint `json:"chatID"`
+}
+
+type editMessageRequest struct {
+	MessageID      uint   `json:"message_id"`
+	NewMessageText string `json:"new_message_text"`
+}
+
+type deleteMessageRequest struct {
+	MessageID uint `json:"message_id"`
 }
 
 type MessageHandler struct {
@@ -76,7 +86,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 // @ID getChatMessages
 // @Accept application/json
 // @Produce application/json
-// @Param user body  RequestChatIDBody true "ID of chat"
+// @Param user body  requestChatIDBody true "ID of chat"
 // @Success 200 {object}  domain.Response[domain.Messages]
 // @Failure 405 {object}  domain.Response[domain.Error] "use POST"
 // @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
@@ -90,7 +100,7 @@ func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var RequestChatID RequestChatIDBody
+	var RequestChatID requestChatIDBody
 	err := decoder.Decode(&RequestChatID)
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -99,4 +109,80 @@ func (messageHandler *MessageHandler) GetChatMessages(w http.ResponseWriter, r *
 	limit := 100
 	messages := usecase.GetChatMessages(r.Context(), limit, RequestChatID.ChatID, messageHandler.Messages)
 	misc.WriteStatusJson(ctx, w, 200, domain.Messages{Messages: messages})
+}
+
+// EditMessage edits message
+//
+// @Summary EditMessage
+// @ID editMessage
+// @Accept application/json
+// @Produce application/json
+// @Param user body  editMessageRequest true "ID of chat"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 405 {object}  domain.Response[domain.Error] "use POST"
+// @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /editMessage [post]
+func (messageHandler *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var json editMessageRequest
+	err := decoder.Decode(&json)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	err = usecase.EditMessage(ctx, userID, json.MessageID, json.NewMessageText, messageHandler.Messages)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		return
+	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// DeleteMessage deletes message
+//
+// @Summary DeleteMessage
+// @ID deleteMessage
+// @Accept application/json
+// @Produce application/json
+// @Param user body  deleteMessageRequest true "ID of message to delete"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 405 {object}  domain.Response[domain.Error] "use POST"
+// @Failure 400 {object}  domain.Response[domain.Error] "wrong json structure"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /deleteMessage [post]
+func (messageHandler *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var json deleteMessageRequest
+	err := decoder.Decode(&json)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	err = usecase.DeleteMessage(ctx, userID, json.MessageID, messageHandler.Messages)
+	if err != nil {
+		if err == fmt.Errorf("internal error") {
+			misc.WriteInternalErrorJson(ctx, w)
+			return
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		return
+	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
