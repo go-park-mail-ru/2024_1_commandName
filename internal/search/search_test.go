@@ -63,12 +63,12 @@ func TestSearchMessages(t *testing.T) {
 	searchRepo := database.NewSearchStorage(db)
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-	mock.ExpectQuery("SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at FROM chat.message m WHERE").
+	mock.ExpectQuery("SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at, username FROM chat.message m JOIN auth.person ON m.user_id = person.id WHERE").
 		WithArgs("new", "new", "new", "new", 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "created_at"}).AddRow(1, 1, 1, "new message", false, fixedTime))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "created_at", "username"}).AddRow(1, 1, 1, "new message", false, fixedTime, "username"))
 
 	ctx := context.Background()
-	foundMessage := searchRepo.SearchMessages(ctx, "new", 1)
+	foundMessage := searchRepo.SearchMessages(ctx, "new", 1, 1)
 	if len(foundMessage.Messages) == 0 {
 		t.Error("len is 0")
 	}
