@@ -29,5 +29,13 @@ services:
     image: prom/node-exporter:latest
     ports:
       - "9100:9100"
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    depends_on:
+      - prometheus
 
 
