@@ -100,7 +100,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 
 	chats_requestDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "chats_http_request_chats_duration_seconds",
+			Name:    "chats_http_request_duration_seconds",
 			Help:    "Histogram of request durations.",
 			Buckets: prometheus.DefBuckets,
 		},
@@ -204,7 +204,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 	}
 	misc.WriteStatusJson(ctx, w, 200, chatJsonResponse{Chat: chat})
 	duration := time.Since(start)
-	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChats").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChat").Observe(duration.Seconds())
 	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 

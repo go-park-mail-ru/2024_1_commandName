@@ -11,6 +11,10 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:9100']
 
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: [ 'host.docker.internal:9100' ]
+
 rule_files:
   - 'alerts.yml'
 
