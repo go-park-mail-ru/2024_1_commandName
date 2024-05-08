@@ -5,7 +5,7 @@ global:
 scrape_configs:
   - job_name: 'golang'
     static_configs:
-      - targets: ['127.0.0.1:8080']
+      - targets: ['127.0.0.1:8080/api/v1']
 
   - job_name: 'system'
     static_configs:
