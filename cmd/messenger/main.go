@@ -2,7 +2,7 @@ package main
 
 import (
 	chats "ProjectMessenger/internal/chats_service/proto"
-	"ProjectMessenger/internal/sessions_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"fmt"
 	"log"
 	"log/slog"

@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"ProjectMessenger/internal/sessions_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"context"
 )
 

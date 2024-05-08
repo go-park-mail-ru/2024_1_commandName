@@ -1,7 +1,7 @@
 package delivery
 
 import (
-	"ProjectMessenger/internal/sessions_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
 	"errors"

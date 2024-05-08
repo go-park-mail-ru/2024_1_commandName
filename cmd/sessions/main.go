@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ProjectMessenger/internal/sessions_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"ProjectMessenger/internal/sessions_service/repository"
 	"ProjectMessenger/internal/sessions_service/usecase"
 	"database/sql"
