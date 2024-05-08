@@ -281,7 +281,9 @@ func (cm *ChatManager) GetMessagesByChatID(ctx context.Context, in *chats.ChatID
 	messagesGRPC := make([]*chats.Message, 0)
 	for i := range messages {
 		messagesGRPC = append(messagesGRPC, &chats.Message{
+			Id:          uint64(messages[i].ID),
 			ChatId:      uint64(messages[i].ChatID),
+			UserId:      uint64(messages[i].UserID),
 			MessageText: messages[i].Message,
 			Edited:      messages[i].Edited,
 			EditedAt:    timestamppb.New(messages[i].EditedAt),
