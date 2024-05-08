@@ -136,7 +136,12 @@ func GetContacts(ctx context.Context, userID uint, userStorage authusecase.UserS
 func AddContactByUsername(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore) (err error) {
 	userToAdd, found := userStorage.GetByUsername(ctx, usernameToAdd)
 	if !found {
-		return fmt.Errorf("Такого имени пользователя не существует")
+		customErr := &domain.CustomError{
+			Type:    "non type",
+			Message: "Такого имени пользователя не существует",
+			Segment: "method AddContactByUsername, profile_usecase.go",
+		}
+		return customErr
 	}
 	contacts := GetContacts(ctx, userAddingID, userStorage)
 	for i := range contacts {

@@ -1,9 +1,12 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -478,6 +481,7 @@ func TestUser_Login(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg())
 
 	authHandler := authDelivery.NewRawAuthHandler(db, "")
+	fmt.Println(authHandler, w, req)
 	authHandler.Login(w, req)
 
 	if err := mock.ExpectationsWereMet(); err != nil {
@@ -537,5 +541,61 @@ func TestUser_Logout(t *testing.T) {
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestUser_Register(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	authHandler := authDelivery.NewRawAuthHandler(db, "")
+	reqBody := []byte(`{
+        "username": "testuser",
+        "password": "Testpassword123!",
+        "email": "testuser@example.com"
+    }`)
+	req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(reqBody))
+	req.Header.Set("Cookie", "session_id=yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	authHandler.Register(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d; got %d", http.StatusOK, w.Code)
+	}
+	cookies := w.Result().Cookies()
+	if len(cookies) != 0 {
+		t.Error("expected a session cookie; got none")
+	}
+}
+
+func TestUser_CheckAuth(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	authHandler := authDelivery.NewRawAuthHandler(db, "")
+	reqBody := []byte(`{
+        "username": "testuser",
+        "password": "Testpassword123!",
+        "email": "testuser@example.com"
+    }`)
+	req := httptest.NewRequest("POST", "/register", bytes.NewBuffer(reqBody))
+	req.Header.Set("Cookie", "session_id=yOQGFWqFFEkWwigIT29cP8N9HMtkGwDoo")
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	authHandler.CheckAuth(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d; got %d", http.StatusOK, w.Code)
+	}
+	cookies := w.Result().Cookies()
+	if len(cookies) != 0 {
+		t.Error("expected a session cookie; got none")
 	}
 }

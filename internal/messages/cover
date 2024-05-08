@@ -10,6 +10,17 @@ ProjectMessenger/internal/messages/repository/db/messages.go:50.18,52.142 2 1
 ProjectMessenger/internal/messages/repository/db/messages.go:52.142,60.4 3 0
 ProjectMessenger/internal/messages/repository/db/messages.go:61.3,61.50 1 1
 ProjectMessenger/internal/messages/repository/db/messages.go:63.2,63.24 1 1
+ProjectMessenger/internal/messages/repository/db/messages.go:66.104,71.16 4 0
+ProjectMessenger/internal/messages/repository/db/messages.go:71.16,72.36 1 0
+ProjectMessenger/internal/messages/repository/db/messages.go:72.36,75.4 2 0
+ProjectMessenger/internal/messages/repository/db/messages.go:76.3,82.47 3 0
+ProjectMessenger/internal/messages/repository/db/messages.go:84.2,84.21 1 0
+ProjectMessenger/internal/messages/repository/db/messages.go:87.95,90.16 3 0
+ProjectMessenger/internal/messages/repository/db/messages.go:90.16,93.3 2 0
+ProjectMessenger/internal/messages/repository/db/messages.go:94.2,94.12 1 0
+ProjectMessenger/internal/messages/repository/db/messages.go:97.77,100.16 3 0
+ProjectMessenger/internal/messages/repository/db/messages.go:100.16,103.3 2 0
+ProjectMessenger/internal/messages/repository/db/messages.go:104.2,104.12 1 0
 ProjectMessenger/internal/messages/repository/db/websocket.go:24.42,29.2 1 1
 ProjectMessenger/internal/messages/repository/db/websocket.go:31.45,33.43 1 0
 ProjectMessenger/internal/messages/repository/db/websocket.go:33.43,35.4 1 0
