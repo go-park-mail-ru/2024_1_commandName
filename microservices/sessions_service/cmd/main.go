@@ -31,7 +31,7 @@ func СreateDatabase() *sql.DB {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":8082")
+	lis, err := net.Listen("tcp", ":8081")
 	if err != nil {
 		log.Fatalln("cant listen port", err)
 	}

@@ -40,6 +40,6 @@ func main() {
 	dataBase := СreateDatabase()
 	chatStorage := repository.NewChatsStorage(dataBase)
 	chats.RegisterChatServiceServer(server, usecase.NewChatManager(chatStorage))
-	fmt.Println("starting server at :8081")
+	fmt.Println("starting server at :8082")
 	server.Serve(lis)
 }
