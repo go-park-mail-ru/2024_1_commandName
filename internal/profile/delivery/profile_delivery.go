@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	contacts "ProjectMessenger/internal/contacts_service/proto"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -12,7 +13,8 @@ import (
 )
 
 type ProfileHandler struct {
-	AuthHandler *authdelivery.AuthHandler
+	AuthHandler  *authdelivery.AuthHandler
+	ContactsGRPC contacts.ContactsClient
 }
 
 // Response[T]
@@ -30,8 +32,8 @@ type addContactStruct struct {
 	UsernameOfUserToAdd string `json:"username_of_user_to_add"`
 }
 
-func NewProfileHandler(authHandler *authdelivery.AuthHandler) *ProfileHandler {
-	return &ProfileHandler{AuthHandler: authHandler}
+func NewProfileHandler(authHandler *authdelivery.AuthHandler, ContactsGRPC contacts.ContactsClient) *ProfileHandler {
+	return &ProfileHandler{AuthHandler: authHandler, ContactsGRPC: ContactsGRPC}
 }
 
 type docsUserForGetProfile struct {
@@ -225,7 +227,7 @@ func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
 	if !authorized {
 		return
 	}
-	contacts := usecase.GetContacts(ctx, userID, p.AuthHandler.Users)
+	contacts := usecase.GetContacts(ctx, userID, p.ContactsGRPC)
 	misc.WriteStatusJson(ctx, w, 200, domain.Contacts{Contacts: contacts})
 }
 
@@ -254,7 +256,7 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	err = usecase.AddContactByUsername(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users)
+	err = usecase.AddContactByUsername(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users, p.ContactsGRPC)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)

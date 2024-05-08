@@ -1,0 +1,57 @@
+syntax = "proto3";
+package chats;
+import "google/protobuf/timestamp.proto";
+
+
+option go_package = "./;chats";
+
+message UserIDContacts{
+  uint64 userID = 1;
+}
+
+message UserIDArray{
+  repeated UserIDContacts users = 1;
+}
+
+message AddToAllReq{
+  UserIDArray users = 1;
+  uint64 userAddingID = 2;
+}
+
+message Person{
+  uint64 ID = 1;
+  string Username = 2;
+  string Email = 3;
+  string Name = 4;
+  string Surname = 5;
+  string About = 6;
+  string Password = 7;
+  google.protobuf.Timestamp CreateTime = 8;
+  google.protobuf.Timestamp LastSeenDate = 9;
+  string AvatarPath = 10;
+  string PasswordSalt = 11;
+}
+
+message PersonArray{
+  repeated Person Persons = 1;
+}
+
+message AddByUsernameReq{
+  uint64 UserAddingID = 1;
+  string UsernameToAdd = 2;
+  uint64 UserToAddID = 3;
+}
+
+message EmptyContacts{
+  bool Dummy = 1;
+}
+
+message BoolResponseContacts{
+  bool ok = 1;
+}
+
+service Contacts {
+  rpc GetContacts (UserIDContacts) returns (PersonArray);
+  rpc AddContactByUsername(AddByUsernameReq) returns (EmptyContacts);
+  rpc AddToAllContacts(AddToAllReq) returns (BoolResponseContacts);
+}

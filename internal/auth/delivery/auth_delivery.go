@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	contacts "ProjectMessenger/internal/contacts_service/proto"
 	session "ProjectMessenger/internal/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
@@ -23,14 +24,16 @@ import (
 )
 
 type AuthHandler struct {
-	Sessions session.AuthCheckerClient
-	Users    usecase.UserStore
+	Sessions     session.AuthCheckerClient
+	Users        usecase.UserStore
+	ContactsGRPC contacts.ContactsClient
 }
 
-func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string) *AuthHandler {
+func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string, ContactsGRPC contacts.ContactsClient) *AuthHandler {
 	handler := AuthHandler{
-		Sessions: sessions,
-		Users:    db.NewUserStorage(dataBase, avatarPath),
+		Sessions:     sessions,
+		Users:        db.NewUserStorage(dataBase, avatarPath),
+		ContactsGRPC: ContactsGRPC,
 	}
 	return &handler
 }
@@ -174,7 +177,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ok := profileUsecase.AddToAllContacts(ctx, userID, authHandler.Users)
+	ok := profileUsecase.AddToAllContacts(ctx, userID, authHandler.Users, authHandler.ContactsGRPC)
 	if !ok {
 		logger.Error("Register: contacts failed", "userID", userID)
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	chats "ProjectMessenger/internal/chats_service/proto"
+	contacts "ProjectMessenger/internal/contacts_service/proto"
 	session "ProjectMessenger/internal/sessions_service/proto"
 	"fmt"
 	"log"
@@ -79,26 +80,35 @@ func refreshIAM() {
 func Router(cfg domain.Config) {
 	router := mux.NewRouter()
 
-	grcpConn, err := grpc.Dial(
+	grcpSessions, err := grpc.Dial(
 		"127.0.0.1:8081",
 		grpc.WithInsecure(),
 	)
 	if err != nil {
 		log.Fatalf("cant connect to grpc")
 	}
-	defer grcpConn.Close()
-	sessManager := session.NewAuthCheckerClient(grcpConn)
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
 
-	grcpConn1, err := grpc.Dial(
+	grcpChats, err := grpc.Dial(
 		"127.0.0.1:8082",
 		grpc.WithInsecure(),
 	)
 	if err != nil {
 		log.Fatalf("cant connect to grpc")
 	}
-	defer grcpConn1.Close()
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
 
-	chatsManager := chats.NewChatServiceClient(grcpConn1)
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contacts.NewContactsClient(grcpContacts)
 
 	var authHandler *authdelivery.AuthHandler
 	var chatsHandler *chatsdelivery.ChatsHandler
@@ -108,10 +118,10 @@ func Router(cfg domain.Config) {
 	var translateHandler *translatedelivery.TranslateHandler
 
 	dataBase := database.СreateDatabase()
-	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath)
+	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath, contactsManager)
 	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, chatsManager)
 	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
-	profileHandler = profiledelivery.NewProfileHandler(authHandler)
+	profileHandler = profiledelivery.NewProfileHandler(authHandler, contactsManager)
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
 
@@ -135,6 +145,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
 	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
 	router.HandleFunc("/changePassword", profileHandler.ChangePassword)
+
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
 	router.HandleFunc("/getContacts", profileHandler.GetContacts)
 	router.HandleFunc("/addContact", profileHandler.AddContact)

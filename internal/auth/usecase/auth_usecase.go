@@ -18,8 +18,6 @@ type UserStore interface {
 	StoreAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (path string, err error)
 	GetByUsername(ctx context.Context, username string) (user domain.Person, found bool)
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
-	GetContacts(ctx context.Context, userID uint) []domain.Person
-	AddContact(ctx context.Context, userID1, userID2 uint) (ok bool)
 	GetAllUserIDs(ctx context.Context) (userIDs []uint)
 	GetAvatarStoragePath() string
 }
