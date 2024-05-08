@@ -1,6 +1,7 @@
 package main
 
 import (
+	chats "ProjectMessenger/internal/chats_service/proto"
 	"ProjectMessenger/internal/sessions_service/proto"
 	"fmt"
 	"log"
@@ -88,6 +89,17 @@ func Router(cfg domain.Config) {
 	defer grcpConn.Close()
 	sessManager := session.NewAuthCheckerClient(grcpConn)
 
+	grcpConn1, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpConn1.Close()
+
+	chatsManager := chats.NewChatServiceClient(grcpConn1)
+
 	var authHandler *authdelivery.AuthHandler
 	var chatsHandler *chatsdelivery.ChatsHandler
 	var profileHandler *profiledelivery.ProfileHandler
@@ -97,7 +109,7 @@ func Router(cfg domain.Config) {
 
 	dataBase := database.СreateDatabase()
 	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath)
-	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
+	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, chatsManager)
 	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler)
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)

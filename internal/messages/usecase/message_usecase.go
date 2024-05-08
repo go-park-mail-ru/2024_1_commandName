@@ -1,14 +1,13 @@
 package usecase
 
 import (
+	chats "ProjectMessenger/internal/chats_service/proto"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"sync"
 	"time"
-
-	"ProjectMessenger/internal/chats/usecase"
 
 	"ProjectMessenger/domain"
 
@@ -30,7 +29,7 @@ type MessageStore interface {
 	DeleteMessage(ctx context.Context, messageID uint) error
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage usecase.ChatStore) {
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats.ChatServiceClient) {
 	ctx = wsStorage.AddConnection(ctx, connection, user.ID)
 	defer func() {
 		wsStorage.DeleteConnection(user.ID)
@@ -58,8 +57,18 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 	}
 }
 
-func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStorage WebsocketStore, chatStorage usecase.ChatStore) {
-	chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
+func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
+	//chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
+	resp, _ := chatStorage.GetChatByChatID(ctx, &chats.UserAndChatID{UserID: 0, ChatID: uint64(message.ChatID)})
+
+	chatUsers := make([]domain.ChatUser, 0)
+	for i := range resp.Messages {
+		chatUsers = append(chatUsers, domain.ChatUser{
+			ChatID: int(resp.Messages[i].ChatId),
+			UserID: uint(resp.Messages[i].UserId),
+		})
+	}
+
 	wg := &sync.WaitGroup{}
 	for i := range chatUsers {
 		wg.Add(1)

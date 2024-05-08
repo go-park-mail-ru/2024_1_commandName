@@ -1,6 +1,8 @@
 package db
 
 import (
+	"ProjectMessenger/internal/chats/usecase"
+	"ProjectMessenger/internal/chats_service/repository"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -14,12 +16,12 @@ import (
 	"ProjectMessenger/domain"
 	userRepo "ProjectMessenger/internal/auth/repository/db"
 	users "ProjectMessenger/internal/auth/usecase"
-	"ProjectMessenger/internal/chats/repository/db"
-	"ProjectMessenger/internal/chats/usecase"
+	chats "ProjectMessenger/internal/chats_service/usecase"
 	ws "ProjectMessenger/internal/messages/repository/db"
 	translatedelivery "ProjectMessenger/internal/translate/delivery"
 	translaterepo "ProjectMessenger/internal/translate/repository/db"
 	tl "ProjectMessenger/internal/translate/usecase"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -27,7 +29,7 @@ type Search struct {
 	db          *sql.DB
 	Connections map[uint]*websocket.Conn
 	mu          sync.RWMutex
-	Chats       usecase.ChatStore
+	Chats       chats.ChatStore
 	WebSocket   *ws.Websocket
 	Translate   tl.TranslateStore
 	Users       users.UserStore
@@ -213,8 +215,7 @@ func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslat
 			return foundChatsStructure
 		}
 
-		chatName, _ := usecase.GetCompanionNameForPrivateChat(ctx, mChat.ID, userID, s.Chats, s.Users)
-
+		chatName, _ := usecase.GetCompanionNameForPrivateChat(ctx, mChat, userID, s.Users)
 		if strings.Contains(chatName, requestToSearchTranslator) || strings.Contains(chatName, requestToSearchOriginal) || strings.Contains(chatName, requestToSearchRune) || strings.Contains(chatName, requestToSearchSyllable) {
 			mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
 			var messages []*domain.Message
@@ -686,7 +687,7 @@ func NewSearchStorage(database *sql.DB) *Search {
 	return &Search{
 		db:          database,
 		Connections: make(map[uint]*websocket.Conn),
-		Chats:       db.NewChatsStorage(database),
+		Chats:       repository.NewChatsStorage(database),
 		WebSocket:   ws.NewWsStorage(database),
 		Translate:   translaterepo.NewTranslateStorage(database, YandexConfig),
 		Users:       userRepo.NewUserStorage(database, ""),
