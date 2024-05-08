@@ -200,3 +200,31 @@ func TestSendMatchedChatsSearchResponse1(t *testing.T) {
 	searchRepo.SendMatchedChatsSearchResponse(response, userID)
 
 }*/
+
+func TestSearchPrivateChats(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	searchRepo := database.NewSearchStorage(db)
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	mock.ExpectQuery("SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id\n    FROM chat.chat c\n    JOIN chat.chat_user cu ON").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "type_id", "name", "description", "avatar_path", "created_at", "edited_at", "creator_id"}).
+			AddRow(1, "1", "name", "desc", "", fixedTime, fixedTime, 1))
+
+	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
+			AddRow(1, 1).
+			AddRow(2, 2))
+
+	ctx := context.Background()
+	foundChats := searchRepo.SearchPrivateChats(ctx, "name", "name", "name", "name", uint(1), "1")
+	if len(foundChats) != 0 {
+		t.Error("len is 0")
+	}
+}

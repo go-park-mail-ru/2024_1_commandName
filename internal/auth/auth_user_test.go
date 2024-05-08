@@ -27,7 +27,6 @@ func TestNewUserRepo(t *testing.T) {
 
 	userRepo := database.NewUserStorage(db, "")
 
-	// Утверждение ожидания запроса к базе данных
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
 		WithArgs(6).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
@@ -50,17 +49,13 @@ func TestNewUserRepo(t *testing.T) {
 }
 
 func TestUserRepo_GetByUserID_ErrNoRows(t *testing.T) {
-	// Создание mock базы данных
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("cant create mock: %s", err)
 	}
 	defer db.Close()
 
-	// Создание userRepo с mock базы данных
 	userRepo := database.NewRawUserStorage(db, "")
-
-	// Утверждение ожидания запроса к базе данных
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
 		WithArgs(6).
 		WillReturnError(sql.ErrNoRows)
@@ -84,10 +79,8 @@ func TestUserRepo_GetByUserID_CustomError(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Создание userRepo с mock базы данных
 	userRepo := database.NewRawUserStorage(db, "")
 
-	// Утверждение ожидания запроса к базе данных
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
 		WithArgs(6).
 		WillReturnError(errors.New("some database error"))
@@ -111,10 +104,8 @@ func TestUserRepo_GetByUsername(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Создание userRepo с mock базы данных
 	userRepo := database.NewRawUserStorage(db, "")
 
-	// Утверждение ожидания запроса к базе данных
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE username = ?").
 		WithArgs("TestUser").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
@@ -144,10 +135,8 @@ func TestUserRepo_GetByUsername_ErrNoRows(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Создание userRepo с mock базы данных
 	userRepo := database.NewRawUserStorage(db, "")
 
-	// Утверждение ожидания запроса к базе данных
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE username = ?").
 		WithArgs("TestUser").
 		WillReturnError(sql.ErrNoRows)
@@ -164,17 +153,13 @@ func TestUserRepo_GetByUsername_ErrNoRows(t *testing.T) {
 }
 
 func TestUserRepo_GetByUsername_CustomError(t *testing.T) {
-	// Создание mock базы данных
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("cant create mock: %s", err)
 	}
 	defer db.Close()
 
-	// Создание userRepo с mock базы данных
 	userRepo := database.NewRawUserStorage(db, "")
-
-	// Утверждение ожидания запроса к базе данных
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE username = ?").
 		WithArgs("TestUser").
 		WillReturnError(errors.New("some database error"))
@@ -223,7 +208,6 @@ func TestUserRepo_CreateUser(t *testing.T) {
 		t.Error("err:", err, " ", id)
 	}
 
-	// Проверка выполнения всех ожиданий
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
@@ -320,7 +304,6 @@ func TestUserRepo_UpdateUser_UserNotFound(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Создание userRepo с mock базы данных
 	userRepo := database.NewRawUserStorage(db, "")
 
 	// Утверждение ожидания запроса к базе данных и возвращение пустого результата
