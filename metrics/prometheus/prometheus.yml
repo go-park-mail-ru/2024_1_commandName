@@ -1,0 +1,21 @@
+global:
+  scrape_interval:     10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  - job_name: 'golang'
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+
+  - job_name: 'system'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+
+rule_files:
+  - 'alerts.yml'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093

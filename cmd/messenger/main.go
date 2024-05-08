@@ -13,7 +13,6 @@ import (
 	"strconv"
 
 	"ProjectMessenger/domain"
-
 	"github.com/gorilla/mux"
 	_ "github.com/swaggo/echo-swagger/example/docs"
 	"google.golang.org/grpc"
@@ -125,6 +124,8 @@ func Router(cfg domain.Config) {
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
 
+	router.HandleFunc("/metrics", authHandler.Metrics)
+
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
 	router.HandleFunc("/logout", authHandler.Logout)
@@ -169,5 +170,4 @@ func Router(cfg domain.Config) {
 		slog.Error("server failed with ", "error", err)
 		return
 	}
-
 }
