@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
@@ -70,28 +71,49 @@ type getPopularChannelsResponse struct {
 type PrometheusMetrics struct {
 	ActiveSessionsCount prometheus.Gauge
 	Hits                *prometheus.CounterVec
+	Errors              *prometheus.CounterVec
+	Methods             *prometheus.CounterVec
+	requestDuration     *prometheus.HistogramVec
 }
 
 func NewPrometheusMetrics() *PrometheusMetrics {
-	activeSessionsCount := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "active_sessions_total",
-			Help: "Total number of active sessions.",
-		},
-	)
-
-	hits := prometheus.NewCounterVec(
+	chats_hits := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "hits",
-			Help: "Total number of hits.",
+			Name: "chats_hits",
+			Help: "Total number of chats hits.",
 		}, []string{"status", "path"},
 	)
 
-	prometheus.MustRegister(activeSessionsCount, hits)
+	chats_errors := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_errors",
+			Help: "Number of errors some type.",
+		}, []string{"error_type"},
+	)
+
+	chats_methods := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_called_methods",
+			Help: "Number of called methods.",
+		}, []string{"method"},
+	)
+
+	chats_requestDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "chats_http_request_chats_duration_seconds",
+			Help:    "Histogram of request durations.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"endpoint"},
+	)
+
+	prometheus.MustRegister(chats_hits, chats_errors, chats_methods, chats_requestDuration)
 
 	return &PrometheusMetrics{
-		ActiveSessionsCount: activeSessionsCount,
-		Hits:                hits,
+		Hits:            chats_hits,
+		Errors:          chats_errors,
+		Methods:         chats_methods,
+		requestDuration: chats_requestDuration,
 	}
 }
 
@@ -120,6 +142,7 @@ func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB)
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChats [get]
 func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
@@ -128,6 +151,9 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 
 	chats := usecase.GetChatsForUser(ctx, userID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
 	misc.WriteStatusJson(ctx, w, 200, domain.Chats{Chats: chats})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChats").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // GetChat gets one chat
@@ -142,9 +168,12 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChat [post]
 func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
+		chatsHandler.prometheusMetrics.Hits.WithLabelValues("405", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
@@ -157,6 +186,8 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 	chatIDStruct := chatIDStruct{}
 	err := decoder.Decode(&chatIDStruct)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
+		chatsHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -171,8 +202,10 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
-
 	misc.WriteStatusJson(ctx, w, 200, chatJsonResponse{Chat: chat})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChats").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // CreatePrivateChat creates dialogue

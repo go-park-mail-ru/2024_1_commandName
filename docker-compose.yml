@@ -26,12 +26,4 @@ services:
     volumes:
       - "./metrics/prometheus:/etc/prometheus"
 
-  grafana:
-    image: grafana/grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=Artem557
-    depends_on:
-      - prometheus
 
