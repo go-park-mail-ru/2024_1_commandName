@@ -21,13 +21,13 @@ services:
 
   prometheus:
     image: prom/prometheus
-    expose:
-      - 9090
+    ports:
+      - "9090:9090"
     volumes:
       - "./metrics/prometheus:/etc/prometheus"
   node-exporter:
     image: prom/node-exporter:latest
-    expose:
-      - 9100
+    ports:
+      - "9100:9100"
 
 
