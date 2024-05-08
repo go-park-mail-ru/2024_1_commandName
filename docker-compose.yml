@@ -30,12 +30,10 @@ services:
     ports:
       - "9100:9100"
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
     ports:
-      - "3000:3000"
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
+      - '3000:3000'
 
 
