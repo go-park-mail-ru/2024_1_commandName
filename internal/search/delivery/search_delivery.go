@@ -21,7 +21,7 @@ type SearchHandler struct {
 func NewSearchHandler(chatsHandler *delivery.ChatsHandler, database *sql.DB) *SearchHandler {
 	return &SearchHandler{
 		ChatsHandler: chatsHandler,
-		Search:       repository.NewSearchStorage(database),
+		Search:       repository.NewSearchStorage(database, chatsHandler.Chats),
 	}
 }
 

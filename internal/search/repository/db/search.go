@@ -2,7 +2,6 @@ package db
 
 import (
 	"ProjectMessenger/internal/chats/usecase"
-	"ProjectMessenger/internal/chats_service/repository"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -16,7 +15,7 @@ import (
 	"ProjectMessenger/domain"
 	userRepo "ProjectMessenger/internal/auth/repository/db"
 	users "ProjectMessenger/internal/auth/usecase"
-	chats "ProjectMessenger/internal/chats_service/usecase"
+	chats "ProjectMessenger/internal/chats_service/proto"
 	ws "ProjectMessenger/internal/messages/repository/db"
 	translatedelivery "ProjectMessenger/internal/translate/delivery"
 	translaterepo "ProjectMessenger/internal/translate/repository/db"
@@ -29,7 +28,7 @@ type Search struct {
 	db          *sql.DB
 	Connections map[uint]*websocket.Conn
 	mu          sync.RWMutex
-	Chats       chats.ChatStore
+	Chats       chats.ChatServiceClient
 	WebSocket   *ws.Websocket
 	Translate   tl.TranslateStore
 	Users       users.UserStore
@@ -157,12 +156,12 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 					fmt.Println(customErr.Error())
 					return foundChatsStructure
 				}
-				mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+				/*mMessages, _ := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
 				var messages []*domain.Message
 				for j := range mMessages {
 					messages = append(messages, &mMessages[j])
-				}
-				mChat.Messages = messages
+				}*/
+				// mChat.Messages = messages
 				matchedChats = append(matchedChats, mChat)
 				foundChatsStructure.Chats = append(foundChatsStructure.Chats, mChat)
 			}
@@ -214,16 +213,15 @@ func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslat
 			fmt.Println(customErr.Error())
 			return foundChatsStructure
 		}
-
-		chatName, _ := usecase.GetCompanionNameForPrivateChat(ctx, mChat, userID, s.Users)
-		if strings.Contains(chatName, requestToSearchTranslator) || strings.Contains(chatName, requestToSearchOriginal) || strings.Contains(chatName, requestToSearchRune) || strings.Contains(chatName, requestToSearchSyllable) {
-			mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
+		chat, _ := usecase.GetChatByChatID(ctx, userID, mChat.ID, s.Users, s.Chats)
+		if strings.Contains(chat.Name, requestToSearchTranslator) || strings.Contains(chat.Name, requestToSearchOriginal) || strings.Contains(chat.Name, requestToSearchRune) || strings.Contains(chat.Name, requestToSearchSyllable) {
+			/*mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
 			var messages []*domain.Message
 			for j := range mMessages {
 				messages = append(messages, &mMessages[j])
 			}
-			mChat.Messages = messages
-			mChat.Name = chatName
+			mChat.Messages = messages*/
+			mChat.Name = chat.Name
 			matchedChats = append(matchedChats, mChat)
 		}
 	}
@@ -675,7 +673,7 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 	return translatedWords
 }
 
-func NewSearchStorage(database *sql.DB) *Search {
+func NewSearchStorage(database *sql.DB, chatsManager chats.ChatServiceClient) *Search {
 	slog.Info("created search storage")
 	cfg := translatedelivery.LoadConfig()
 	var YandexConfig domain.YandexConfig
@@ -687,7 +685,7 @@ func NewSearchStorage(database *sql.DB) *Search {
 	return &Search{
 		db:          database,
 		Connections: make(map[uint]*websocket.Conn),
-		Chats:       repository.NewChatsStorage(database),
+		Chats:       chatsManager,
 		WebSocket:   ws.NewWsStorage(database),
 		Translate:   translaterepo.NewTranslateStorage(database, YandexConfig),
 		Users:       userRepo.NewUserStorage(database, ""),
