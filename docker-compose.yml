@@ -25,4 +25,9 @@ services:
       - "9090:9090"
     volumes:
       - "./metrics/prometheus:/etc/prometheus"
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+
 
