@@ -2,7 +2,7 @@ syntax = "proto3";
 package sessions;
 
 
-option go_package = "./;session";
+option go_package = "./;sessions";
 
 
 message Session {
