@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,11 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"ProjectMessenger/internal/chats/usecase"
-
 	"ProjectMessenger/domain"
 
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type WebsocketStore interface {
@@ -30,7 +30,7 @@ type MessageStore interface {
 	DeleteMessage(ctx context.Context, messageID uint) error
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage usecase.ChatStore) {
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats2.ChatServiceClient) {
 	ctx = wsStorage.AddConnection(ctx, connection, user.ID)
 	defer func() {
 		wsStorage.DeleteConnection(user.ID)
@@ -53,13 +53,27 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		userDecodedMessage.CreatedAt = time.Now().UTC()
 		userDecodedMessage.SenderUsername = user.Username
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
+		chatStorage.UpdateLastActionTime(ctx, &chats2.LastAction{
+			ChatID: uint64(userDecodedMessage.ChatID),
+			Time:   timestamppb.New(userDecodedMessage.CreatedAt),
+		})
 
-		SendMessageToOtherUsers(ctx, messageSaved, wsStorage, chatStorage)
+		SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
 	}
 }
 
-func SendMessageToOtherUsers(ctx context.Context, message domain.Message, wsStorage WebsocketStore, chatStorage usecase.ChatStore) {
-	chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
+func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient) {
+	//chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
+	resp, _ := chatStorage.GetChatByChatID(ctx, &chats2.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
+
+	chatUsers := make([]domain.ChatUser, 0)
+	for i := range resp.Users {
+		chatUsers = append(chatUsers, domain.ChatUser{
+			ChatID: int(resp.Users[i].ChatId),
+			UserID: uint(resp.Users[i].UserId),
+		})
+	}
+
 	wg := &sync.WaitGroup{}
 	for i := range chatUsers {
 		wg.Add(1)

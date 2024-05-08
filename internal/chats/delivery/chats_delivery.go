@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"ProjectMessenger/microservices/chats_service/proto"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -9,14 +10,13 @@ import (
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
-	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 )
 
 type ChatsHandler struct {
 	AuthHandler *authdelivery.AuthHandler
-	Chats       usecase.ChatStore
+	Chats       chats.ChatServiceClient
 }
 
 type chatIDIsNewJsonResponse struct {
@@ -65,17 +65,17 @@ type getPopularChannelsResponse struct {
 	Channels []domain.ChannelWithCounter `json:"channels"`
 }
 
-func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
+func NewChatsHandler(authHandler *authdelivery.AuthHandler, chats chats.ChatServiceClient) *ChatsHandler {
 	return &ChatsHandler{
+		Chats:       chats,
 		AuthHandler: authHandler,
-		Chats:       db.NewChatsStorage(dataBase),
 	}
 }
 
 func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		Chats:       db.NewRawChatsStorage(dataBase),
+		//Chats:       repository.NewRawChatsStorage(dataBase),
 	}
 }
 
@@ -130,7 +130,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	chat, err := usecase.GetChatByChatID(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
+	chat, err := usecase.GetChatByChatID(ctx, userID, chatIDStruct.ChatID, chatsHandler.AuthHandler.Users, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
 			misc.WriteInternalErrorJson(ctx, w)

@@ -1,94 +1,129 @@
 package usecase
 
 import (
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/auth/usecase"
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"fmt"
 	"log/slog"
 	"sort"
 
-	"ProjectMessenger/internal/auth/usecase"
-
-	"ProjectMessenger/domain"
+	"google.golang.org/grpc/status"
 )
 
-type ChatStore interface {
-	GetChatsForUser(ctx context.Context, userID uint) []domain.Chat
-	GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain.ChatUser
-	CheckPrivateChatExists(ctx context.Context, userID1, userID2 uint) (exists bool, chatID uint, err error)
-	GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error)
-	CreateChat(ctx context.Context, name, description string, userIDs ...uint) (chatID uint, err error)
-	DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, err error)
-	UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (ok bool)
-	GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int)
-	GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int)
-
-	GetNPopularChannels(ctx context.Context, userID uint, n int) ([]domain.ChannelWithCounter, error)
-	AddUserToChat(ctx context.Context, userID uint, chatID uint) (err error)
-	RemoveUserFromChat(ctx context.Context, userID uint, chatID uint) (err error)
-	GetMessagesByChatID(ctx context.Context, chatID uint) []domain.Message
+func convertChat(chat *chats2.Chat) domain.Chat {
+	messages := make([]*domain.Message, 0)
+	for i := range chat.Messages {
+		messages = append(messages, &domain.Message{
+			ID:             uint(chat.Messages[i].GetId()),
+			ChatID:         uint(chat.Messages[i].GetChatId()),
+			UserID:         uint(chat.Messages[i].GetUserId()),
+			Message:        chat.Messages[i].GetMessageText(),
+			Edited:         chat.Messages[i].GetEdited(),
+			EditedAt:       chat.Messages[i].EditedAt.AsTime(),
+			CreatedAt:      chat.Messages[i].SentAt.AsTime(),
+			SenderUsername: chat.Messages[i].Username,
+		})
+	}
+	users := make([]*domain.ChatUser, 0)
+	for i := range chat.Users {
+		users = append(users, &domain.ChatUser{
+			ChatID: int(chat.Users[i].ChatId),
+			UserID: uint(chat.Users[i].UserId),
+		})
+	}
+	lastMessage := domain.Message{
+		ID:             uint(chat.LastMessage.GetId()),
+		ChatID:         uint(chat.LastMessage.GetChatId()),
+		UserID:         uint(chat.LastMessage.GetUserId()),
+		Message:        chat.LastMessage.GetMessageText(),
+		Edited:         chat.LastMessage.GetEdited(),
+		EditedAt:       chat.LastMessage.EditedAt.AsTime(),
+		CreatedAt:      chat.LastMessage.SentAt.AsTime(),
+		SenderUsername: chat.LastMessage.Username,
+	}
+	return domain.Chat{
+		ID:                 uint(chat.GetId()),
+		Type:               chat.GetType(),
+		Name:               chat.GetName(),
+		Description:        chat.GetDescription(),
+		AvatarPath:         chat.GetAvatarPath(),
+		CreatorID:          uint(chat.GetCreatorId()),
+		Messages:           messages,
+		Users:              users,
+		CreatedAt:          chat.CreatedAt.AsTime(),
+		EditedAt:           chat.EditedAt.AsTime(),
+		LastActionDateTime: chat.LastActionDateTime.AsTime(),
+		LastMessage:        lastMessage,
+		LastSeenMessageID:  int(chat.GetLastSeenMessageId()),
+	}
 }
 
-func GetChatByChatID(ctx context.Context, userID, chatID uint, chatStorage ChatStore, userStorage usecase.UserStore) (domain.Chat, error) {
-	logger := slog.With("requestID", ctx.Value("traceID"))
-	chat, err := chatStorage.GetChatByChatID(ctx, chatID)
+func GetChatByChatID(ctx context.Context, userID, chatID uint, userStorage usecase.UserStore, chatsGRPC chats2.ChatServiceClient) (domain.Chat, error) {
+	chatGRPC, err := chatsGRPC.GetChatByChatID(ctx, &chats2.UserAndChatID{UserID: uint64(userID), ChatID: uint64(chatID)})
 	if err != nil {
-		return domain.Chat{}, err
-	}
-	belongs := CheckUserBelongsToChat(ctx, chatID, userID, chatStorage)
-	if !belongs {
-		logger.Info("GetChatByChatID: user does not belong", "userID", userID, "chatID", chatID)
-
-		customErr := &domain.CustomError{
-			Type:    "internal",
-			Message: "user does not belong to chat",
-			Segment: "method CheckUserBelongsToChat, chat_usecase.go",
+		if e, ok := status.FromError(err); ok {
+			switch e.Code() {
+			case 500:
+				return domain.Chat{}, fmt.Errorf("internal error")
+			case 400:
+				return domain.Chat{}, fmt.Errorf(e.Message())
+			}
 		}
-		return domain.Chat{}, customErr
 	}
+	chat := convertChat(chatGRPC)
 
 	if chat.Type == "1" {
-		name, _ := GetCompanionNameForPrivateChat(ctx, chatID, userID, chatStorage, userStorage)
+		name, _ := GetCompanionNameForPrivateChat(ctx, chat, userID, userStorage)
 		chat.Name = name
 	}
 	return chat, nil
 }
 
-func GetChatsForUser(ctx context.Context, userID uint, chatStorage ChatStore, userStorage usecase.UserStore) []domain.Chat {
-	logger := slog.With("requestID", ctx.Value("traceID"))
-	chats := chatStorage.GetChatsForUser(ctx, userID)
-	for i := range chats {
-		if chats[i].Type == "1" {
-			name, ok := GetCompanionNameForPrivateChat(ctx, chats[i].ID, userID, chatStorage, userStorage)
+func GetChatsForUser(ctx context.Context, userID uint, chatsGRPC chats2.ChatServiceClient, userStorage usecase.UserStore) []domain.Chat {
+	//logger := slog.With("requestID", ctx.Value("traceID"))
+	chatsResp, err := chatsGRPC.GetChatsForUser(ctx, &chats2.UserID{UserID: uint64(userID)})
+	if err != nil {
+		return nil
+	}
+	chatsRes := make([]domain.Chat, 0)
+	for i := range chatsResp.Chats {
+		current := convertChat(chatsResp.Chats[i])
+		if chatsResp.Chats[i].Type == "1" {
+			name, ok := GetCompanionNameForPrivateChat(ctx, current, userID, userStorage)
 			if !ok {
-				logger.Debug("GetChatsForUser: getchatname failed", "userID", userID, "chatID", chats[i].ID)
+				//logger.Debug("GetChatsForUser: getchatname failed", "userID", userID, "chatID", chats[i].ID)
 				continue
 			}
-			chats[i].Name = name
+			current.Name = name
 		}
+		chatsRes = append(chatsRes, current)
 	}
 
-	sort.Slice(chats, func(i, j int) bool {
-		return chats[j].LastActionDateTime.Before(chats[i].LastActionDateTime)
+	sort.Slice(chatsRes, func(i, j int) bool {
+		return chatsRes[j].LastActionDateTime.Before(chatsRes[i].LastActionDateTime)
 	})
-	return chats
+	return chatsRes
 }
 
-func CheckUserBelongsToChat(ctx context.Context, chatID uint, userRequestingID uint, chatStorage ChatStore) bool {
+func CheckUserBelongsToChat(ctx context.Context, chatID uint, userRequestingID uint, chatsGRPC chats2.ChatServiceClient) bool {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	usersOfChat := chatStorage.GetChatUsersByChatID(ctx, chatID)
-	for i := range usersOfChat {
-		if usersOfChat[i].UserID == userRequestingID {
-			logger.Debug("CheckUserBelongsToChat: true", "chatID", chatID, "userID", userRequestingID)
-			return true
-		}
+	belongsGRPC, err := chatsGRPC.CheckUserBelongsToChat(ctx, &chats2.UserAndChatID{
+		UserID: uint64(userRequestingID),
+		ChatID: uint64(chatID),
+	})
+	if err != nil {
+		return false
 	}
 	logger.Debug("CheckUserBelongsToChat: false", "chatID", chatID, "userID", userRequestingID)
-	return false
+	return belongsGRPC.Res
 }
 
-func GetCompanionNameForPrivateChat(ctx context.Context, chatID uint, userRequestingID uint, chatStorage ChatStore, userStorage usecase.UserStore) (companionUsername string, belongs bool) {
+func GetCompanionNameForPrivateChat(ctx context.Context, chat domain.Chat, userRequestingID uint, userStorage usecase.UserStore) (companionUsername string, belongs bool) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
-	usersOfChat := chatStorage.GetChatUsersByChatID(ctx, chatID)
+
+	usersOfChat := chat.Users
 	if len(usersOfChat) != 2 {
 		logger.Error("GetCompanionNameForPrivateChat: number of users in private chat doesn't equal two")
 		return "", false
@@ -112,7 +147,7 @@ func GetCompanionNameForPrivateChat(ctx context.Context, chatID uint, userReques
 }
 
 // CreatePrivateChat created chat, or returns existing
-func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uint, chatStorage ChatStore, userStorage usecase.UserStore) (chatID uint, isNewChat bool, err error) {
+func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uint, chatsGRPC chats2.ChatServiceClient, userStorage usecase.UserStore) (chatID uint, isNewChat bool, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if creatingUserID == companionID {
 		return 0, false, fmt.Errorf("Диалог с самим собой пока не поддерживается")
@@ -124,161 +159,133 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 		logger.Error("CreatePrivateChat: user wasn't found", "companionID", companionID)
 		return 0, false, fmt.Errorf("Пользователь, с которым вы хотите создать диалог, не найден")
 	}
-	exists, chatID, err := chatStorage.CheckPrivateChatExists(ctx, creatingUserID, companion.ID)
+	resp, err := chatsGRPC.CreatePrivateChat(ctx, &chats2.TwoUserIDs{
+		ID1: uint64(creatingUserID),
+		ID2: uint64(companionID),
+	})
 	if err != nil {
 		return 0, false, err
 	}
-	if exists {
-		return chatID, false, nil
-	}
-	chatID, err = chatStorage.CreateChat(ctx, companion.Username, "", creatingUserID, companion.ID)
-	if err != nil {
-		return 0, false, err
-	}
-	return chatID, true, nil
+	return uint(resp.GetChatID()), resp.GetIsNewChat(), nil
 }
 
-func DeleteChat(ctx context.Context, deletingUserID, chatID uint, chatStorage ChatStore) (wasDeleted bool, err error) {
+func DeleteChat(ctx context.Context, deletingUserID, chatID uint, chatsGRPC chats2.ChatServiceClient) (wasDeleted bool, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	logger.Debug("DeleteChat: enter", "userID", deletingUserID, "chatID", chatID)
-
-	userBelongsToChat := CheckUserBelongsToChat(ctx, chatID, deletingUserID, chatStorage)
-	if !userBelongsToChat {
-		return false, fmt.Errorf("Неверный id для удаления")
-	}
-	chat, err := chatStorage.GetChatByChatID(ctx, chatID)
+	success, err := chatsGRPC.DeleteChat(ctx, &chats2.UserAndChatID{
+		UserID: uint64(deletingUserID),
+		ChatID: uint64(chatID),
+	})
 	if err != nil {
 		return false, err
 	}
-	if (chat.Type == "3" || chat.Type == "2") && chat.CreatorID != deletingUserID {
-		err := LeaveChat(ctx, deletingUserID, chatID, chatStorage)
-		if err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	wasDeleted, err = chatStorage.DeleteChat(ctx, chatID)
-	if err != nil {
-		logger.Error("DeleteChat: error", "error", err.Error(), "wasDeleted", wasDeleted)
-		return false, err
-	}
-	logger.Debug("DeleteChat: success", "wasDeleted", wasDeleted)
-	return wasDeleted, err
+	return success.Res, err
 }
 
-func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, chatName, description string, chatStorage ChatStore) (chatID uint, err error) {
-	logger := slog.With("requestID", ctx.Value("traceID"))
-	if len(usersIDs) < 3 {
-		logger.Info("CreateGroupChat: len < 3", "users", usersIDs)
-	}
-	userMap := make(map[uint]bool)
-	if usersIDs[0] != creatingUserID {
-
-	}
+func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, chatName, description string, chatsGRPC chats2.ChatServiceClient) (chatID uint, err error) {
+	//logger := slog.With("requestID", ctx.Value("traceID"))
+	usersGRPC := make([]*chats2.UserID, 0)
 	for i := range usersIDs {
-		if userMap[usersIDs[i]] == true {
-			logger.Info("user id is duplicated", "userID", usersIDs[i])
-			break
-		}
-		userMap[usersIDs[i]] = true
-	}
-	usersIDs = append(usersIDs, creatingUserID)
-	usersIDs[0], usersIDs[len(usersIDs)-1] = usersIDs[len(usersIDs)-1], usersIDs[0]
-
-	chatID, err = chatStorage.CreateChat(ctx, chatName, description, usersIDs...)
-	if err != nil {
-		return 0, nil
-	}
-	return chatID, nil
-}
-
-func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatStorage ChatStore) (err error) {
-	logger := slog.With("requestID", ctx.Value("traceID"))
-	chat, err := chatStorage.GetChatByChatID(ctx, chatID)
-	if chat.Type != "2" && chat.Type != "3" {
-		return fmt.Errorf("internal error")
-	}
-	if err != nil {
-		return fmt.Errorf("internal error")
-	}
-	userWasFound := false
-	for i := range chat.Users {
-		if chat.Users[i].UserID == userID {
-			userWasFound = true
-			break
-		}
-	}
-	if !userWasFound {
-		return fmt.Errorf("user does not belong to chat")
-	}
-	if name != nil {
-		chat.Name = *name
-	}
-	if desc != nil {
-		chat.Description = *desc
-	}
-	ok := chatStorage.UpdateGroupChat(ctx, chat)
-	logger.Info("UpdateGroupChat", "ok", ok)
-	if !ok {
-		return fmt.Errorf("internal error")
-	}
-	return nil
-}
-
-func GetMessagesByChatID(ctx context.Context, chatStorage ChatStore, chatID uint) []domain.Message {
-	messages := chatStorage.GetMessagesByChatID(ctx, chatID)
-	return messages
-}
-
-func GetPopularChannels(ctx context.Context, userID uint, chatStorage ChatStore) ([]domain.ChannelWithCounter, error) {
-	channels, err := chatStorage.GetNPopularChannels(ctx, userID, 10)
-	return channels, err
-}
-
-func JoinChannel(ctx context.Context, userID uint, channelID uint, chatStorage ChatStore) (err error) {
-	channel, err := chatStorage.GetChatByChatID(ctx, channelID)
-	if err != nil {
-		return err
-	}
-	if channel.Type != "3" {
-		return fmt.Errorf("Неверный id канала")
+		usersGRPC = append(usersGRPC, &chats2.UserID{UserID: uint64(usersIDs[i])})
 	}
 
-	belongs := CheckUserBelongsToChat(ctx, channelID, userID, chatStorage)
-	if belongs {
-		return fmt.Errorf("Пользователь уже состоит в этом канале")
-	}
-	err = chatStorage.AddUserToChat(ctx, userID, channelID)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func LeaveChat(ctx context.Context, userID uint, channelID uint, chatStorage ChatStore) (err error) {
-	channel, err := chatStorage.GetChatByChatID(ctx, channelID)
-	if err != nil {
-		return err
-	}
-	if channel.Type != "3" && channel.Type != "2" {
-		return fmt.Errorf("Неверный id чата")
-	}
-
-	belongs := CheckUserBelongsToChat(ctx, channelID, userID, chatStorage)
-	if !belongs {
-		return fmt.Errorf("Пользователь не состоит в этом чате")
-	}
-	err = chatStorage.RemoveUserFromChat(ctx, userID, channelID)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func CreateChannel(ctx context.Context, creatingUserID uint, chatName, description string, chatStorage ChatStore) (chatID uint, err error) {
-	chatID, err = chatStorage.CreateChat(ctx, chatName, description, creatingUserID)
+	resp, err := chatsGRPC.CreateGroupChat(ctx, &chats2.CreateGroupReq{
+		CreatingUserID: uint64(creatingUserID),
+		Users:          &chats2.CreateGroupReq_UserArray{Users: usersGRPC},
+		Name:           chatName,
+		Description:    description,
+	})
 	if err != nil {
 		return 0, err
 	}
-	return chatID, nil
+	return uint(resp.GetChatID()), nil
+}
+
+func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatsGRPC chats2.ChatServiceClient) (err error) {
+	//logger := slog.With("requestID", ctx.Value("traceID"))
+	_, err = chatsGRPC.UpdateGroupChat(ctx, &chats2.UpdateGroupChatReq{
+		UserID:      uint64(userID),
+		ChatID:      uint64(chatID),
+		Name:        *name,
+		Description: *desc,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetMessagesByChatID(ctx context.Context, chatsGRPC chats2.ChatServiceClient, chatID uint) []domain.Message {
+	resp, err := chatsGRPC.GetMessagesByChatID(ctx, &chats2.ChatID{ChatID: uint64(chatID)})
+	if err != nil {
+		return nil
+	}
+	messages := make([]domain.Message, 0)
+	for i := range resp.Messages {
+		messages = append(messages, domain.Message{
+			ID:             uint(resp.Messages[i].GetId()),
+			ChatID:         uint(resp.Messages[i].GetChatId()),
+			UserID:         uint(resp.Messages[i].GetUserId()),
+			Message:        resp.Messages[i].GetMessageText(),
+			Edited:         resp.Messages[i].GetEdited(),
+			EditedAt:       resp.Messages[i].GetEditedAt().AsTime(),
+			CreatedAt:      resp.Messages[i].GetSentAt().AsTime(),
+			SenderUsername: resp.Messages[i].GetUsername(),
+		})
+	}
+	return messages
+}
+
+func GetPopularChannels(ctx context.Context, userID uint, chatsGRPC chats2.ChatServiceClient) ([]domain.ChannelWithCounter, error) {
+	resp, err := chatsGRPC.GetPopularChannels(ctx, &chats2.UserID{UserID: uint64(userID)})
+	if err != nil {
+		return nil, err
+	}
+	channels := make([]domain.ChannelWithCounter, 0)
+	for i := range resp.Channels {
+		channels = append(channels, domain.ChannelWithCounter{
+			ID:          uint(resp.Channels[i].GetId()),
+			Name:        resp.Channels[i].GetName(),
+			Description: resp.Channels[i].GetDescription(),
+			CreatorID:   uint(resp.Channels[i].GetCreatorId()),
+			Avatar:      resp.Channels[i].GetAvatar(),
+			IsMember:    resp.Channels[i].GetIsMember(),
+			NumOfUsers:  int(resp.Channels[i].GetNumOfUsers()),
+		})
+	}
+	return channels, nil
+}
+
+func JoinChannel(ctx context.Context, userID uint, channelID uint, chatsGRPC chats2.ChatServiceClient) (err error) {
+	_, err = chatsGRPC.JoinChannel(ctx, &chats2.UserAndChatID{
+		UserID: uint64(userID),
+		ChatID: uint64(channelID),
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func LeaveChat(ctx context.Context, userID uint, channelID uint, chatsGRPC chats2.ChatServiceClient) (err error) {
+	_, err = chatsGRPC.LeaveChat(ctx, &chats2.UserAndChatID{
+		UserID: uint64(userID),
+		ChatID: uint64(channelID),
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func CreateChannel(ctx context.Context, creatingUserID uint, chatName, description string, chatsGRPC chats2.ChatServiceClient) (chatID uint, err error) {
+	channel, err := chatsGRPC.CreateChannel(ctx, &chats2.CreateChannelReq{
+		UserID:      uint64(creatingUserID),
+		Name:        chatName,
+		Description: description,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return uint(channel.GetChatID()), nil
 }
