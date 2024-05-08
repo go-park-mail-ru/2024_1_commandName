@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -21,6 +22,7 @@ type ChatStore interface {
 	UpdateGroupChat(ctx context.Context, updatedChat domain.Chat) (ok bool)
 	GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int)
 	GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int)
+	UpdateLastActionTime(ctx context.Context, chatID uint, time time.Time)
 
 	GetNPopularChannels(ctx context.Context, userID uint, n int) ([]domain.ChannelWithCounter, error)
 	AddUserToChat(ctx context.Context, userID uint, chatID uint) (err error)
@@ -368,4 +370,11 @@ func (cm *ChatManager) CreateChannel(ctx context.Context, in *chats.CreateChanne
 		return &chats.ChatID{}, status.Error(500, "")
 	}
 	return &chats.ChatID{ChatID: uint64(chatID)}, nil
+}
+
+func (cm *ChatManager) UpdateLastActionTime(ctx context.Context, in *chats.LastAction) (*chats.Empty, error) {
+	chatID := uint(in.GetChatID())
+	timeUpdated := in.GetTime().AsTime()
+	cm.storage.UpdateLastActionTime(ctx, chatID, timeUpdated)
+	return &chats.Empty{Dummy: true}, nil
 }

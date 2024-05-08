@@ -113,6 +113,11 @@ message CreateChannelReq{
   string description = 3;
 }
 
+message LastAction{
+  uint64 chatID = 1;
+  google.protobuf.Timestamp time = 2;
+}
+
 service ChatService{
   rpc GetChatByChatID(UserAndChatID) returns (Chat);
   rpc GetChatsForUser(UserID) returns (ChatArray);
@@ -126,4 +131,5 @@ service ChatService{
   rpc JoinChannel(UserAndChatID) returns (Empty);
   rpc LeaveChat(UserAndChatID) returns (Empty);
   rpc CreateChannel(CreateChannelReq) returns (ChatID);
+  rpc UpdateLastActionTime(LastAction) returns (Empty);
 }

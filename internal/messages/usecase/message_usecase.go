@@ -12,6 +12,7 @@ import (
 	"ProjectMessenger/domain"
 
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type WebsocketStore interface {
@@ -52,6 +53,10 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		userDecodedMessage.CreatedAt = time.Now().UTC()
 		userDecodedMessage.SenderUsername = user.Username
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
+		chatStorage.UpdateLastActionTime(ctx, &chats.LastAction{
+			ChatID: uint64(userDecodedMessage.ChatID),
+			Time:   timestamppb.New(userDecodedMessage.CreatedAt),
+		})
 
 		SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
 	}

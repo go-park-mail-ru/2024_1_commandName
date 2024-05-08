@@ -31,6 +31,7 @@ const (
 	ChatService_JoinChannel_FullMethodName            = "/chats.ChatService/JoinChannel"
 	ChatService_LeaveChat_FullMethodName              = "/chats.ChatService/LeaveChat"
 	ChatService_CreateChannel_FullMethodName          = "/chats.ChatService/CreateChannel"
+	ChatService_UpdateLastActionTime_FullMethodName   = "/chats.ChatService/UpdateLastActionTime"
 )
 
 // ChatServiceClient is the client API for ChatService service.
@@ -49,6 +50,7 @@ type ChatServiceClient interface {
 	JoinChannel(ctx context.Context, in *UserAndChatID, opts ...grpc.CallOption) (*Empty, error)
 	LeaveChat(ctx context.Context, in *UserAndChatID, opts ...grpc.CallOption) (*Empty, error)
 	CreateChannel(ctx context.Context, in *CreateChannelReq, opts ...grpc.CallOption) (*ChatID, error)
+	UpdateLastActionTime(ctx context.Context, in *LastAction, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type chatServiceClient struct {
@@ -167,6 +169,15 @@ func (c *chatServiceClient) CreateChannel(ctx context.Context, in *CreateChannel
 	return out, nil
 }
 
+func (c *chatServiceClient) UpdateLastActionTime(ctx context.Context, in *LastAction, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, ChatService_UpdateLastActionTime_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatServiceServer is the server API for ChatService service.
 // All implementations must embed UnimplementedChatServiceServer
 // for forward compatibility
@@ -183,6 +194,7 @@ type ChatServiceServer interface {
 	JoinChannel(context.Context, *UserAndChatID) (*Empty, error)
 	LeaveChat(context.Context, *UserAndChatID) (*Empty, error)
 	CreateChannel(context.Context, *CreateChannelReq) (*ChatID, error)
+	UpdateLastActionTime(context.Context, *LastAction) (*Empty, error)
 	mustEmbedUnimplementedChatServiceServer()
 }
 
@@ -225,6 +237,9 @@ func (UnimplementedChatServiceServer) LeaveChat(context.Context, *UserAndChatID)
 }
 func (UnimplementedChatServiceServer) CreateChannel(context.Context, *CreateChannelReq) (*ChatID, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateChannel not implemented")
+}
+func (UnimplementedChatServiceServer) UpdateLastActionTime(context.Context, *LastAction) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateLastActionTime not implemented")
 }
 func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
 
@@ -455,6 +470,24 @@ func _ChatService_CreateChannel_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_UpdateLastActionTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LastAction)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).UpdateLastActionTime(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_UpdateLastActionTime_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).UpdateLastActionTime(ctx, req.(*LastAction))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -509,6 +542,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateChannel",
 			Handler:    _ChatService_CreateChannel_Handler,
+		},
+		{
+			MethodName: "UpdateLastActionTime",
+			Handler:    _ChatService_UpdateLastActionTime_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

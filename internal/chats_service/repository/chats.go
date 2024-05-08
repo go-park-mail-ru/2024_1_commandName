@@ -435,6 +435,15 @@ func (c *Chats) RemoveUserFromChat(ctx context.Context, userID uint, chatID uint
 	return nil
 }
 
+func (c *Chats) UpdateLastActionTime(ctx context.Context, chatID uint, time time.Time) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "UPDATE chat.chat SET edited_at = $1 WHERE id = $2"
+	_, err := c.db.ExecContext(ctx, query, time, chatID)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+}
+
 func addFakeChatUsers(db *sql.DB) {
 	_, err := db.Exec("DELETE FROM chat.chat_user")
 	_, err = db.Exec("DELETE FROM chat.message")
