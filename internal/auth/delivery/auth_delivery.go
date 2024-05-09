@@ -1,16 +1,16 @@
 package delivery
 
 import (
-	contacts "ProjectMessenger/internal/contacts_service/proto"
-	session "ProjectMessenger/internal/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+
+	contacts "ProjectMessenger/internal/contacts_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 
 	profileUsecase "ProjectMessenger/internal/profile/usecase"
 
@@ -104,7 +104,7 @@ func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatar
 func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
 		//Sessions: repository.NewSessionStorage(dataBase),
-		Users: db.NewRawUserStorage(dataBase, avatarPath),
+		Users:             db.NewRawUserStorage(dataBase, avatarPath),
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 	return &handler
