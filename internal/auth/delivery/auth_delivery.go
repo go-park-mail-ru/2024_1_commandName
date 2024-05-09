@@ -80,7 +80,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		[]string{"endpoint"},
 	)
 
-	//prometheus.MustRegister(activeSessionsCount, hits, errorsInProject, methods, requestDuration)
+	prometheus.MustRegister(activeSessionsCount, hits, errorsInProject, methods, requestDuration)
 
 	return &PrometheusMetrics{
 		ActiveSessionsCount: activeSessionsCount,
@@ -103,8 +103,8 @@ func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatar
 
 func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
-		Sessions:          db.NewSessionStorage(dataBase),
-		Users:             db.NewRawUserStorage(dataBase, avatarPath),
+		//Sessions: repository.NewSessionStorage(dataBase),
+		Users: db.NewRawUserStorage(dataBase, avatarPath),
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 	return &handler
@@ -130,8 +130,8 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	sessionHttp, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
-		authHandler.prometheusMetrics.Methods.WithLabelValues("CheckAuthorized").Inc()
 		sessionExists, _ := usecase.CheckAuthorized(ctx, sessionHttp.Value, authHandler.Sessions)
+		authHandler.prometheusMetrics.Methods.WithLabelValues("CheckAuthorized").Inc()
 		if sessionExists {
 			authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 			authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()

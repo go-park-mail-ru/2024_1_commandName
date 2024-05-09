@@ -13,6 +13,7 @@ import (
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -128,7 +129,7 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, chats chats.ChatServ
 func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		//Chats:       repository.NewRawChatsStorage(dataBase),
+		//Chats:       db.NewRawChatsStorage(dataBase),
 	}
 }
 
@@ -196,7 +197,6 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 
 	chat, err := usecase.GetChatByChatID(ctx, userID, chatIDStruct.ChatID, chatsHandler.AuthHandler.Users, chatsHandler.Chats)
 	if err != nil {
-
 		if err.Error() == "internal error" {
 			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
@@ -207,6 +207,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, chatJsonResponse{Chat: chat})
 	duration := time.Since(start)
 	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/getChat").Observe(duration.Seconds())
@@ -260,6 +261,7 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, chatIDIsNewJsonResponse{ChatID: chatID, IsNewChat: isNewChat})
 	duration := time.Since(start)
 	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/createPrivateChat").Observe(duration.Seconds())
@@ -366,6 +368,7 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
 	duration := time.Since(start)
 	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/createGroupChat").Observe(duration.Seconds())

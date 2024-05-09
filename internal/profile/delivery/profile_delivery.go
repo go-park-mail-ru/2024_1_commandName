@@ -14,7 +14,7 @@ import (
 )
 
 type ProfileHandler struct {
-	AuthHandler       *authdelivery.AuthHandler
+	AuthHandler *authdelivery.AuthHandler
 	ContactsGRPC contacts.ContactsClient
 	prometheusMetrics *PrometheusMetrics
 }
