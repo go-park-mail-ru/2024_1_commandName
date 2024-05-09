@@ -54,9 +54,9 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		}, []string{"error_type"},
 	)
 
-	profile_methods_duartion := prometheus.NewCounterVec(
+	profile_methods := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "profile_methods_duartion",
+			Name: "profile_methods",
 			Help: "Histogram of methods durations",
 		}, []string{"method"},
 	)
@@ -70,12 +70,12 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		[]string{"endpoint"},
 	)
 
-	prometheus.MustRegister(profile_hits, profile_errors, profile_methods_duartion, profile_requests_duartion)
+	prometheus.MustRegister(profile_hits, profile_errors, profile_methods, profile_requests_duartion)
 
 	return &PrometheusMetrics{
 		Hits:            profile_hits,
 		Errors:          profile_errors,
-		Methods:         profile_methods_duartion,
+		Methods:         profile_methods,
 		requestDuration: profile_requests_duartion,
 	}
 }
@@ -113,13 +113,13 @@ type docsContacts struct {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getProfileInfo [get]
 func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) {
+	p.prometheusMetrics.Methods.WithLabelValues("GetProfileInfo").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
-	p.prometheusMetrics.Methods.WithLabelValues("GetProfileInfo").Inc()
 	user, found := usecase.GetProfileInfo(r.Context(), userID, p.AuthHandler.Users)
 	if !found {
 		p.prometheusMetrics.Errors.WithLabelValues("500").Inc()
@@ -147,6 +147,7 @@ func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /updateProfileInfo [post]
 func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Request) {
+	p.prometheusMetrics.Methods.WithLabelValues("UpdateProfileInfo").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
@@ -175,8 +176,6 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-
-	p.prometheusMetrics.Methods.WithLabelValues("UpdateProfileInfo").Inc()
 	err = usecase.UpdateProfileInfo(ctx, jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
@@ -203,6 +202,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /changePassword [post]
 func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	p.prometheusMetrics.Methods.WithLabelValues("ChangePassword").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
@@ -232,7 +232,6 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	p.prometheusMetrics.Methods.WithLabelValues("ChangePassword").Inc()
 	err = usecase.ChangePassword(r.Context(), passwordsJson.OldPassword, passwordsJson.NewPassword, userID, p.AuthHandler.Users)
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
@@ -258,6 +257,7 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /uploadAvatar [post]
 func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	p.prometheusMetrics.Methods.WithLabelValues("UploadAvatar").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
@@ -289,7 +289,6 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	defer avatar.Close()
 
-	p.prometheusMetrics.Methods.WithLabelValues("ChangeAvatar").Inc()
 	err = usecase.ChangeAvatar(r.Context(), avatar, handler, userID, p.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
@@ -319,13 +318,13 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getContacts [get]
 func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
+	p.prometheusMetrics.Methods.WithLabelValues("GetContacts").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
 		return
 	}
-	p.prometheusMetrics.Methods.WithLabelValues("GetContacts").Inc()
 	contacts := usecase.GetContacts(ctx, userID, p.AuthHandler.Users)
 	p.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 	misc.WriteStatusJson(ctx, w, 200, domain.Contacts{Contacts: contacts})
@@ -345,6 +344,7 @@ func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /addContact [post]
 func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
+	p.prometheusMetrics.Methods.WithLabelValues("AddContact").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
@@ -361,7 +361,6 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	p.prometheusMetrics.Methods.WithLabelValues("AddContactByUsername").Inc()
 	err = usecase.AddContactByUsername(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
