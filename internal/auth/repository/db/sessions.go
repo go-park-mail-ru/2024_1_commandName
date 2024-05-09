@@ -50,7 +50,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		[]string{"method"},
 	)
 
-	prometheus.MustRegister(sessionErrors, sessionMethods, sessionMethodDuration)
+	//prometheus.MustRegister(sessionErrors, sessionMethods, sessionMethodDuration)
 
 	return &PrometheusMetrics{
 		Errors:          sessionErrors,
@@ -83,6 +83,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 		s.prometheusMetrics.Errors.WithLabelValues("database").Inc()
 		return 0, false
 	}
+	fmt.Println("found user by session userID", userID, "sessionID", sessionID)
 	logger.Debug("found user by session", "userID", userID, "sessionID", sessionID)
 	duration := time.Since(start)
 	s.prometheusMetrics.requestDuration.WithLabelValues("GetUserIDbySessionID").Observe(duration.Seconds())
