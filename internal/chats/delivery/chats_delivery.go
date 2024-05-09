@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	chats "ProjectMessenger/internal/chats_service/proto"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -10,16 +11,15 @@ import (
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
-	"ProjectMessenger/internal/chats/repository/db"
 	"ProjectMessenger/internal/chats/usecase"
 	"ProjectMessenger/internal/misc"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type ChatsHandler struct {
-	AuthHandler       *authdelivery.AuthHandler
-	Chats             usecase.ChatStore
 	prometheusMetrics *PrometheusMetrics
+	AuthHandler *authdelivery.AuthHandler
+	Chats       chats.ChatServiceClient
 }
 
 type chatIDIsNewJsonResponse struct {
@@ -117,10 +117,10 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 	}
 }
 
-func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
+func NewChatsHandler(authHandler *authdelivery.AuthHandler, chats chats.ChatServiceClient) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler:       authHandler,
-		Chats:             db.NewChatsStorage(dataBase),
+		Chats:             chats,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
@@ -128,7 +128,7 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *C
 func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		Chats:       db.NewRawChatsStorage(dataBase),
+		//Chats:       repository.NewRawChatsStorage(dataBase),
 	}
 }
 
@@ -194,7 +194,7 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	chat, err := usecase.GetChatByChatID(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
+	chat, err := usecase.GetChatByChatID(ctx, userID, chatIDStruct.ChatID, chatsHandler.AuthHandler.Users, chatsHandler.Chats)
 	if err != nil {
 
 		if err.Error() == "internal error" {
@@ -446,6 +446,7 @@ func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *ht
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "Что-то пошло не так"})
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, getPopularChannelsResponse{Channels: channels})
 	duration := time.Since(start)
 	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/updateGroupChat").Observe(duration.Seconds())
@@ -492,6 +493,7 @@ func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Requ
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, nil)
 	duration := time.Since(start)
 	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/joinChannel").Observe(duration.Seconds())
@@ -538,6 +540,7 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, nil)
 	duration := time.Since(start)
 	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/leaveChannel").Observe(duration.Seconds())
@@ -591,6 +594,7 @@ func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Re
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
 	duration := time.Since(start)
 	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/createChannel").Observe(duration.Seconds())

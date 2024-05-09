@@ -1,0 +1,135 @@
+syntax = "proto3";
+package chats;
+import "google/protobuf/timestamp.proto";
+
+
+option go_package = "./;chats";
+
+message Message {
+  uint64 id = 7;
+  uint64 chat_id = 1;
+  uint64 user_id = 8;
+  string message_text = 2;
+  bool edited = 3;
+  google.protobuf.Timestamp edited_at = 4;
+  google.protobuf.Timestamp sent_at = 5;
+  string username = 6;
+}
+
+message ChatUser {
+  uint64 chat_id = 1;
+  uint64 user_id = 2;
+}
+
+message Chat {
+  uint64 id = 1;
+  string type = 2;
+  string name = 3;
+  string description = 4;
+  string avatar_path = 5;
+  uint64 creator_id = 6;
+  repeated Message messages = 7;
+  repeated ChatUser users = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp edited_at = 10;
+  google.protobuf.Timestamp last_action_date_time = 11;
+  Message last_message = 12;
+  int64 last_seen_message_id = 13;
+}
+
+message UserAndChatID{
+  uint64 userID = 1;
+  uint64 chatID = 2;
+}
+
+message UserID{
+  uint64 UserID = 1;
+}
+
+message ChatID{
+  uint64 ChatID = 1;
+}
+
+message ChatArray{
+  repeated Chat chats = 1;
+}
+
+message BoolResponse{
+  bool res = 1;
+}
+
+message TwoUserIDs{
+  uint64 ID1 = 1;
+  uint64 ID2 = 2;
+}
+
+message CreateChatResponse{
+  uint64 chatID = 1;
+  bool isNewChat = 2;
+}
+
+message CreateGroupReq{
+  uint64 creatingUserID = 1;
+  message UserArray{
+    repeated UserID users = 1;
+  }
+  UserArray users = 2;
+  string name = 3;
+  string description = 4;
+}
+
+message UpdateGroupChatReq{
+  uint64 userID = 1;
+  uint64 chatID = 2;
+  string name = 3;
+  string description = 4;
+}
+
+message Empty{
+  bool dummy = 1;
+}
+
+message MessageArray{
+  repeated Message messages = 1;
+}
+
+message ChannelWithCounter {
+  uint64 id = 1;
+  string name = 2;
+  string description = 3;
+  uint32 creator_id = 4;
+  string avatar = 5;
+  bool is_member = 6;
+  int32 num_of_users = 7;
+}
+
+message ChannelsArray {
+  repeated ChannelWithCounter channels = 1;
+}
+
+message CreateChannelReq{
+  uint64 userID = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message LastAction{
+  uint64 chatID = 1;
+  google.protobuf.Timestamp time = 2;
+}
+
+service ChatService{
+  rpc GetChatByChatID(UserAndChatID) returns (Chat);
+  rpc GetChatsForUser(UserID) returns (ChatArray);
+  rpc CheckUserBelongsToChat(UserAndChatID) returns (BoolResponse);
+  rpc CreatePrivateChat(TwoUserIDs) returns (CreateChatResponse);
+  rpc DeleteChat(UserAndChatID) returns (BoolResponse);
+  rpc CreateGroupChat(CreateGroupReq) returns(CreateChatResponse);
+  rpc UpdateGroupChat(UpdateGroupChatReq) returns (Empty);
+  rpc GetMessagesByChatID(ChatID) returns (MessageArray);
+  rpc GetPopularChannels(UserID) returns (ChannelsArray);
+  rpc JoinChannel(UserAndChatID) returns (Empty);
+  rpc LeaveChat(UserAndChatID) returns (Empty);
+  rpc CreateChannel(CreateChannelReq) returns (ChatID);
+  rpc UpdateLastActionTime(LastAction) returns (Empty);
+}

@@ -1,4 +1,4 @@
-package db
+package repository
 
 import (
 	"context"
@@ -76,7 +76,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetUserIDbySessionID, sessions.go",
+			Segment: "method GetUserIDbySessionID, proto.go",
 		}
 		fmt.Println(customErr.Error())
 		logger.Error(customErr.Error())
@@ -102,7 +102,7 @@ func (s *Sessions) CreateSession(ctx context.Context, userID uint) (sessionID st
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method CreateSession, sessions.go",
+			Segment: "method CreateSession, proto.go",
 		}
 		fmt.Println(customErr.Error())
 		logger.Error(customErr.Error())
@@ -125,7 +125,7 @@ func (s *Sessions) DeleteSession(ctx context.Context, sessionID string) {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method DeleteSession, sessions.go",
+			Segment: "method DeleteSession, proto.go",
 		}
 		fmt.Println(customErr.Error())
 		logger.Error(customErr.Error())

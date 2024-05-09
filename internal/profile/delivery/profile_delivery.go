@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	contacts "ProjectMessenger/internal/contacts_service/proto"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 type ProfileHandler struct {
 	AuthHandler       *authdelivery.AuthHandler
+	ContactsGRPC contacts.ContactsClient
 	prometheusMetrics *PrometheusMetrics
 }
 
@@ -80,9 +82,10 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 	}
 }
 
-func NewProfileHandler(authHandler *authdelivery.AuthHandler) *ProfileHandler {
+func NewProfileHandler(authHandler *authdelivery.AuthHandler, ContactsGRPC contacts.ContactsClient) *ProfileHandler {
 	return &ProfileHandler{
 		AuthHandler:       authHandler,
+		ContactsGRPC: ContactsGRPC,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
@@ -129,6 +132,7 @@ func (p *ProfileHandler) GetProfileInfo(w http.ResponseWriter, r *http.Request) 
 	}
 	user.Password = ""
 	user.PasswordSalt = ""
+
 	misc.WriteStatusJson(ctx, w, 200, domain.User{User: user})
 	p.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 	duration := time.Since(start)
@@ -176,6 +180,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
+
 	err = usecase.UpdateProfileInfo(ctx, jsonUser.User, jsonUser.NumOfUpdatedFields, userID, p.AuthHandler.Users)
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
@@ -302,6 +307,7 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
 	misc.WriteStatusJson(ctx, w, 200, nil)
 	p.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 	duration := time.Since(start)
@@ -325,8 +331,8 @@ func (p *ProfileHandler) GetContacts(w http.ResponseWriter, r *http.Request) {
 	if !authorized {
 		return
 	}
-	contacts := usecase.GetContacts(ctx, userID, p.AuthHandler.Users)
 	p.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
+	contacts := usecase.GetContacts(ctx, userID, p.ContactsGRPC)
 	misc.WriteStatusJson(ctx, w, 200, domain.Contacts{Contacts: contacts})
 	duration := time.Since(start)
 	p.prometheusMetrics.requestDuration.WithLabelValues("/ChangePassword").Observe(duration.Seconds())
@@ -361,7 +367,7 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	err = usecase.AddContactByUsername(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users)
+	err = usecase.AddContactByUsername(ctx, userID, contact.UsernameOfUserToAdd, p.AuthHandler.Users, p.ContactsGRPC)
 	if err != nil {
 		if err.Error() == "internal error" {
 			p.prometheusMetrics.Errors.WithLabelValues("500").Inc()

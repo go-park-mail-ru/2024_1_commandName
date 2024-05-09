@@ -1,6 +1,8 @@
 package delivery
 
 import (
+	contacts "ProjectMessenger/internal/contacts_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -11,6 +13,7 @@ import (
 	"time"
 
 	profileUsecase "ProjectMessenger/internal/profile/usecase"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	_ "github.com/lib/pq"
@@ -20,12 +23,14 @@ import (
 	"ProjectMessenger/internal/auth/repository/db"
 	"ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type AuthHandler struct {
-	Sessions          usecase.SessionStore
+	Sessions          session.AuthCheckerClient
 	Users             usecase.UserStore
+	ContactsGRPC      contacts.ContactsClient
 	prometheusMetrics *PrometheusMetrics
 }
 
@@ -86,10 +91,11 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 	}
 }
 
-func NewAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
+func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string, ContactsGRPC contacts.ContactsClient) *AuthHandler {
 	handler := AuthHandler{
-		Sessions:          db.NewSessionStorage(dataBase),
+		Sessions:          sessions,
 		Users:             db.NewUserStorage(dataBase, avatarPath),
+		ContactsGRPC:      ContactsGRPC,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 	return &handler
@@ -122,11 +128,10 @@ func (authHandler *AuthHandler) Metrics(w http.ResponseWriter, r *http.Request) 
 func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	ctx := r.Context()
-	session, err := r.Cookie("session_id")
+	sessionHttp, err := r.Cookie("session_id")
 	if !errors.Is(err, http.ErrNoCookie) {
-		sessionExists, _ := usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
-		fmt.Println("here")
 		authHandler.prometheusMetrics.Methods.WithLabelValues("CheckAuthorized").Inc()
+		sessionExists, _ := usecase.CheckAuthorized(ctx, sessionHttp.Value, authHandler.Sessions)
 		if sessionExists {
 			authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 			authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
@@ -159,6 +164,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	authHandler.prometheusMetrics.Methods.WithLabelValues("LoginUser").Inc()
 	sessionID, err := usecase.LoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
+
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
@@ -271,7 +277,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	}
 
 	authHandler.prometheusMetrics.Methods.WithLabelValues("AddToAllContacts").Inc()
-	ok := profileUsecase.AddToAllContacts(ctx, userID, authHandler.Users)
+	ok := profileUsecase.AddToAllContacts(ctx, userID, authHandler.Users, authHandler.ContactsGRPC)
 	if !ok {
 		logger.Error("Register: contacts failed", "userID", userID)
 	}

@@ -1,7 +1,11 @@
 package main
 
 import (
+	chats "ProjectMessenger/internal/chats_service/proto"
+	contacts "ProjectMessenger/internal/contacts_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,6 +15,7 @@ import (
 	"ProjectMessenger/domain"
 	"github.com/gorilla/mux"
 	_ "github.com/swaggo/echo-swagger/example/docs"
+	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 
 	authdelivery "ProjectMessenger/internal/auth/delivery"
@@ -74,6 +79,36 @@ func refreshIAM() {
 func Router(cfg domain.Config) {
 	router := mux.NewRouter()
 
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contacts.NewContactsClient(grcpContacts)
+
 	var authHandler *authdelivery.AuthHandler
 	var chatsHandler *chatsdelivery.ChatsHandler
 	var profileHandler *profiledelivery.ProfileHandler
@@ -82,10 +117,10 @@ func Router(cfg domain.Config) {
 	var translateHandler *translatedelivery.TranslateHandler
 
 	dataBase := database.СreateDatabase()
-	authHandler = authdelivery.NewAuthHandler(dataBase, cfg.App.AvatarPath)
-	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, dataBase)
+	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath, contactsManager)
+	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, chatsManager)
 	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
-	profileHandler = profiledelivery.NewProfileHandler(authHandler)
+	profileHandler = profiledelivery.NewProfileHandler(authHandler, contactsManager)
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
 
@@ -111,6 +146,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/getProfileInfo", profileHandler.GetProfileInfo)
 	router.HandleFunc("/updateProfileInfo", profileHandler.UpdateProfileInfo)
 	router.HandleFunc("/changePassword", profileHandler.ChangePassword)
+
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
 	router.HandleFunc("/getContacts", profileHandler.GetContacts)
 	router.HandleFunc("/addContact", profileHandler.AddContact)
@@ -129,7 +165,7 @@ func Router(cfg domain.Config) {
 	router.Use(middleware.AccessLogMiddleware)
 
 	slog.Info("http server starting on " + strconv.Itoa(cfg.Server.Port))
-	err := http.ListenAndServe(cfg.Server.Host+":"+strconv.Itoa(cfg.Server.Port), router)
+	err = http.ListenAndServe(cfg.Server.Host+":"+strconv.Itoa(cfg.Server.Port), router)
 	if err != nil {
 		slog.Error("server failed with ", "error", err)
 		return
