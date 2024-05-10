@@ -30,10 +30,19 @@ services:
     ports:
       - "9100:9100"
   grafana:
-    image: grafana/grafana-enterprise
-    container_name: grafana
-    restart: unless-stopped
+    image: grafana/grafana:latest
     ports:
-      - '3000:3000'
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=Artem557 # Задайте свой пароль
+      - GF_SECURITY_ADMIN_USER=admin     # Задайте свое имя пользователя
+    depends_on:
+      - prometheus
+volumes:
+  grafana_data:
+
+
 
 

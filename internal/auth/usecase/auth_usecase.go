@@ -1,12 +1,13 @@
 package usecase
 
 import (
-	session2 "ProjectMessenger/internal/sessions_service/proto"
 	"context"
 	"fmt"
 	"mime/multipart"
 	"regexp"
 	"time"
+
+	session2 "ProjectMessenger/internal/sessions_service/proto"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -112,6 +113,7 @@ func LoginUser(ctx context.Context, user domain.Person, userStorage UserStore, s
 		fmt.Println(customErr.Error())
 		return "", customErr
 	}
+	fmt.Println("before create session")
 	sessionID = createSession(ctx, userFromStorage, sessionStorage)
 	return sessionID, nil
 }

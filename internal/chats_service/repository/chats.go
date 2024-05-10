@@ -10,15 +10,67 @@ import (
 	"time"
 
 	"ProjectMessenger/domain"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Chats struct {
-	db *sql.DB
+	db                *sql.DB
+	prometheusMetrics *PrometheusMetrics
+}
+
+type PrometheusMetrics struct {
+	ActiveSessionsCount prometheus.Gauge
+	Hits                *prometheus.CounterVec
+	Errors              *prometheus.CounterVec
+	Methods             *prometheus.CounterVec
+	requestDuration     *prometheus.HistogramVec
+}
+
+func NewPrometheusMetrics() *PrometheusMetrics {
+	chats_hits := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_hits",
+			Help: "Total number of chats hits.",
+		}, []string{"status", "path"},
+	)
+
+	chats_errors := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_errors",
+			Help: "Number of errors some type.",
+		}, []string{"error_type"},
+	)
+
+	chats_methods := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_called_methods",
+			Help: "Number of called methods.",
+		}, []string{"method"},
+	)
+
+	chats_requestDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "chats_http_request_duration_seconds",
+			Help:    "Histogram of request durations.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"endpoint"},
+	)
+
+	prometheus.MustRegister(chats_hits, chats_errors, chats_methods, chats_requestDuration)
+	fmt.Println("registered")
+	return &PrometheusMetrics{
+		Hits:            chats_hits,
+		Errors:          chats_errors,
+		Methods:         chats_methods,
+		requestDuration: chats_requestDuration,
+	}
 }
 
 func NewChatsStorage(db *sql.DB) *Chats {
 	return &Chats{
-		db: fillTablesMessageAndChatWithFakeData(db),
+		db:                fillTablesMessageAndChatWithFakeData(db),
+		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
 
@@ -29,6 +81,8 @@ func NewRawChatsStorage(db *sql.DB) *Chats {
 }
 
 func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error) {
+	fmt.Println("GetChatByChatID")
+	c.prometheusMetrics.Methods.WithLabelValues("GetChatByChatID").Inc()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chat := domain.Chat{}
 	err := c.db.QueryRowContext(ctx, "SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat WHERE id = $1", chatID).Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.CreatedAt, &chat.LastActionDateTime, &chat.CreatorID)
@@ -192,7 +246,9 @@ func (c *Chats) DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, e
 }
 
 func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat {
-	fmt.Println("here")
+
+	c.prometheusMetrics.Methods.WithLabelValues("GetChatsForUser").Inc()
+	fmt.Println("GetChatsForUser")
 	chats := make([]domain.Chat, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
 	if err != nil {
@@ -232,6 +288,7 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 func (c *Chats) GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int) {
 	fmt.Println("Do for ", chatID, userID)
 	err := c.db.QueryRowContext(ctx, "SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = $1 and chat_id = $2", userID, chatID).Scan(&lastSeenMessageID)
+	c.prometheusMetrics.Methods.WithLabelValues("GetLastSeenMessageId").Inc()
 	fmt.Println("LSID:", lastSeenMessageID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -245,6 +302,7 @@ func (c *Chats) GetLastSeenMessageId(ctx context.Context, chatID uint, userID ui
 }
 
 func (c *Chats) GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int) {
+	c.prometheusMetrics.Methods.WithLabelValues("GetFirstChatMessageID").Inc()
 	fmt.Println("call func with chat_id = ", chatID)
 	err := c.db.QueryRowContext(ctx, "SELECT id FROM chat.message WHERE chat_id = $1 ORDER BY created_at LIMIT 1", chatID).Scan(&firstMessageID)
 	fmt.Println("FMI = ", firstMessageID)
@@ -263,6 +321,8 @@ func (c *Chats) GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMe
 }
 
 func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain.ChatUser {
+	fmt.Println("GetChatUsersByChatID")
+	c.prometheusMetrics.Methods.WithLabelValues("GetChatUsersByChatID").Inc()
 	chatUsers := make([]*domain.ChatUser, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {

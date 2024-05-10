@@ -4,10 +4,13 @@ import (
 	session "ProjectMessenger/internal/sessions_service/proto"
 	"ProjectMessenger/internal/sessions_service/repository"
 	"ProjectMessenger/internal/sessions_service/usecase"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"database/sql"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 
 	_ "github.com/lib/pq"
 
@@ -31,6 +34,12 @@ func СreateDatabase() *sql.DB {
 }
 
 func main() {
+	go func() {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		fmt.Println("starting metrics server at :9091")
+		log.Fatal(http.ListenAndServe(":9091", mux))
+	}()
 	lis, err := net.Listen("tcp", ":8081")
 	if err != nil {
 		log.Fatalln("cant listen port", err)

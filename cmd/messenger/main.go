@@ -1,9 +1,6 @@
 package main
 
 import (
-	chats "ProjectMessenger/internal/chats_service/proto"
-	contacts "ProjectMessenger/internal/contacts_service/proto"
-	session "ProjectMessenger/internal/sessions_service/proto"
 	"fmt"
 	"log"
 	"log/slog"
@@ -11,6 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+
+	chats "ProjectMessenger/internal/chats_service/proto"
+	contacts "ProjectMessenger/internal/contacts_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 
 	"ProjectMessenger/domain"
 	"github.com/gorilla/mux"
