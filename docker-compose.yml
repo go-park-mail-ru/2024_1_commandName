@@ -35,6 +35,7 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - "./metrics/grafana.ini:/etc/grafana/grafana.ini"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=Artem557 # Задайте свой пароль
       - GF_SECURITY_ADMIN_USER=admin     # Задайте свое имя пользователя
