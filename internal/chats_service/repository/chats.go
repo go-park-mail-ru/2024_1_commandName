@@ -503,8 +503,8 @@ func (c *Chats) UpdateLastActionTime(ctx context.Context, chatID uint, time time
 func addFakeChatUsers(db *sql.DB) {
 	_, err := db.Exec("DELETE FROM chat.chat_user")
 	_, err = db.Exec("DELETE FROM chat.message")
-	//_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
-	//_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
+	_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
+	_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
 
 	if err != nil {
 		customErr := &domain.CustomError{

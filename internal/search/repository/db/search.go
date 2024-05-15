@@ -1,7 +1,6 @@
 package db
 
 import (
-	"ProjectMessenger/internal/chats/usecase"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -15,6 +14,7 @@ import (
 	"ProjectMessenger/domain"
 	userRepo "ProjectMessenger/internal/auth/repository/db"
 	users "ProjectMessenger/internal/auth/usecase"
+	"ProjectMessenger/internal/chats/usecase"
 	chats "ProjectMessenger/internal/chats_service/proto"
 	ws "ProjectMessenger/internal/messages/repository/db"
 	translatedelivery "ProjectMessenger/internal/translate/delivery"
@@ -82,6 +82,7 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 }
 
 func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse) {
+	fmt.Println("In search chats", word)
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)

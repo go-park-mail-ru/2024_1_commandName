@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS chat.message
     message         TEXT CHECK (length(message) <= 1000) DEFAULT '',
     edited         BOOLEAN NOT NULL DEFAULT false,
     edited_at          TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT current_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT current_TIMESTAMP,
+    file_path TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS chat.chat_user

@@ -11,4 +11,5 @@ type Message struct {
 	EditedAt       time.Time `json:"edited_at" swaggerignore:"true"`
 	CreatedAt      time.Time `json:"sent_at" swaggerignore:"true"`
 	SenderUsername string    `json:"username"`
+	FilePath       []string  `json:"file"`
 }
