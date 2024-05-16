@@ -1,16 +1,20 @@
 package usecase
 
 import (
+	users "ProjectMessenger/internal/auth/usecase"
 	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"sync"
 	"time"
 
 	"ProjectMessenger/domain"
 
+	firebase "firebase.google.com/go"
+	"firebase.google.com/go/messaging"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -30,7 +34,7 @@ type MessageStore interface {
 	DeleteMessage(ctx context.Context, messageID uint) error
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats2.ChatServiceClient) {
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App) {
 	ctx = wsStorage.AddConnection(ctx, connection, user.ID)
 	defer func() {
 		wsStorage.DeleteConnection(user.ID)
@@ -58,11 +62,41 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 			Time:   timestamppb.New(userDecodedMessage.CreatedAt),
 		})
 
-		SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
+		SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
 	}
 }
 
-func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient) {
+func SendNotification(app *firebase.App, token string) {
+	// Obtain a messaging.Client from the App.
+	ctx := context.Background()
+	client, err := app.Messaging(ctx)
+	if err != nil {
+		log.Fatalf("error getting Messaging client: %v\n", err)
+	}
+
+	// This registration token comes from the client FCM SDKs.
+	registrationToken := token
+
+	// See documentation on defining a message payload.
+	message := &messaging.Message{
+		Data: map[string]string{
+			"score": "850",
+			"time":  "2:45",
+		},
+		Token: registrationToken,
+	}
+
+	// Send a message to the device corresponding to the provided
+	// registration token.
+	response, err := client.Send(ctx, message)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// Response is a message ID string.
+	fmt.Println("Successfully sent message:", response)
+}
+
+func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App) {
 	//chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
 	resp, _ := chatStorage.GetChatByChatID(ctx, &chats2.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
 
@@ -77,7 +111,7 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 	wg := &sync.WaitGroup{}
 	for i := range chatUsers {
 		wg.Add(1)
-		go func(userID uint, i int, message domain.Message) {
+		go func(userID uint, i int, senderID uint, message domain.Message) {
 			defer wg.Done()
 			conn := wsStorage.GetConnection(chatUsers[i].UserID)
 			if conn != nil {
@@ -90,7 +124,13 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 					return
 				}
 			}
-		}(chatUsers[i].UserID, i, message)
+			if userID != senderID {
+				tokensForUser, _ := userStorage.GetTokensForUser(ctx, userID)
+				for j := range tokensForUser {
+					SendNotification(firebase, tokensForUser[j])
+				}
+			}
+		}(chatUsers[i].UserID, i, userID, message)
 	}
 	wg.Wait()
 }

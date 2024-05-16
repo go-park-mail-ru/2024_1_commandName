@@ -1,8 +1,6 @@
 package delivery
 
 import (
-	contacts "ProjectMessenger/microservices/contacts_service/proto"
-	session "ProjectMessenger/microservices/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -12,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	profileUsecase "ProjectMessenger/internal/profile/usecase"
-
+	firebase "firebase.google.com/go"
 	_ "github.com/lib/pq"
 	_ "github.com/swaggo/http-swagger"
 
@@ -21,19 +18,24 @@ import (
 	"ProjectMessenger/internal/auth/repository/db"
 	"ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
+	profileUsecase "ProjectMessenger/internal/profile/usecase"
+	contacts "ProjectMessenger/microservices/contacts_service/proto"
+	session "ProjectMessenger/microservices/sessions_service/proto"
 )
 
 type AuthHandler struct {
 	Sessions     session.AuthCheckerClient
 	Users        usecase.UserStore
 	ContactsGRPC contacts.ContactsClient
+	Firebase     *firebase.App
 }
 
-func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string, ContactsGRPC contacts.ContactsClient) *AuthHandler {
+func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string, ContactsGRPC contacts.ContactsClient, app *firebase.App) *AuthHandler {
 	handler := AuthHandler{
 		Sessions:     sessions,
 		Users:        db.NewUserStorage(dataBase, avatarPath),
 		ContactsGRPC: ContactsGRPC,
+		Firebase:     app,
 	}
 	return &handler
 }

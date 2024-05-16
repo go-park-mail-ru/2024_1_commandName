@@ -865,6 +865,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/setFirebaseToken": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "changes profile password",
+                "operationId": "SetFirebaseToken",
+                "parameters": [
+                    {
+                        "description": "token",
+                        "name": "Password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.firebaseToken"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/updateGroupChat": {
             "post": {
                 "consumes": [
@@ -1134,6 +1171,14 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "new_message_text": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.firebaseToken": {
+            "type": "object",
+            "properties": {
+                "token": {
                     "type": "string"
                 }
             }

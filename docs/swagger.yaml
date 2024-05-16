@@ -92,6 +92,11 @@ definitions:
       new_message_text:
         type: string
     type: object
+  delivery.firebaseToken:
+    properties:
+      token:
+        type: string
+    type: object
   delivery.getPopularChannelsResponse:
     properties:
       channels:
@@ -870,6 +875,30 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: SendMessage
+  /setFirebaseToken:
+    post:
+      consumes:
+      - application/json
+      operationId: SetFirebaseToken
+      parameters:
+      - description: token
+        in: body
+        name: Password
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.firebaseToken'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: changes profile password
   /updateGroupChat:
     post:
       consumes:

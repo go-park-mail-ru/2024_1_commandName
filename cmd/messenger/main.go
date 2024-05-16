@@ -4,6 +4,7 @@ import (
 	"ProjectMessenger/microservices/chats_service/proto"
 	contacts "ProjectMessenger/microservices/contacts_service/proto"
 	session "ProjectMessenger/microservices/sessions_service/proto"
+	"context"
 	"fmt"
 	"log"
 	"log/slog"
@@ -14,8 +15,10 @@ import (
 
 	"ProjectMessenger/domain"
 
+	firebase "firebase.google.com/go"
 	"github.com/gorilla/mux"
 	_ "github.com/swaggo/echo-swagger/example/docs"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 
@@ -69,7 +72,17 @@ func refreshIAM() {
 	fmt.Println("Bash-скрипт запушен в фоновом режиме")
 }
 
-// swag init -d cmd/messenger/,domain/,internal/
+func initializeNotifications() *firebase.App {
+	opt := option.WithCredentialsFile("./chatme-45ce9-firebase-adminsdk-eo0po-6987003c9b.json")
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		slog.Error("Error initializing firebase server app")
+		return nil
+	}
+	return app
+}
+
+// swag init -d cmd/messenger/,domain/,internal/,microservices/chats_service/cmd,microservices/sessions_service/cmd,microservices/contacts_service/cmd
 
 // Router
 // @Title Messenger authorization API
@@ -117,8 +130,10 @@ func Router(cfg domain.Config) {
 	var searchHandler *searchdelivery.SearchHandler
 	var translateHandler *translatedelivery.TranslateHandler
 
+	firebaseApp := initializeNotifications()
+
 	dataBase := database.СreateDatabase()
-	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath, contactsManager)
+	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath, contactsManager, firebaseApp)
 	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, chatsManager)
 	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler, contactsManager)
@@ -149,6 +164,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/uploadAvatar", profileHandler.UploadAvatar)
 	router.HandleFunc("/getContacts", profileHandler.GetContacts)
 	router.HandleFunc("/addContact", profileHandler.AddContact)
+	router.HandleFunc("/setFirebaseToken", profileHandler.SetFirebaseToken)
 
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
 	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)

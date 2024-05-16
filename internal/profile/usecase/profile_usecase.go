@@ -193,3 +193,11 @@ func AddToAllContacts(ctx context.Context, userAddingID uint, userStorage authus
 	}
 	return true
 }
+
+func SetFirebaseToken(ctx context.Context, userID uint, token string, userStorage authusecase.UserStore) (err error) {
+	ok := userStorage.SetFirebaseToken(ctx, userID, token)
+	if !ok {
+		return fmt.Errorf("internal error")
+	}
+	return nil
+}

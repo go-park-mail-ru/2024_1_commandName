@@ -20,6 +20,8 @@ type UserStore interface {
 	CreateUser(ctx context.Context, user domain.Person) (userID uint, err error)
 	GetAllUserIDs(ctx context.Context) (userIDs []uint)
 	GetAvatarStoragePath() string
+	GetTokensForUser(ctx context.Context, userID uint) ([]string, error)
+	SetFirebaseToken(ctx context.Context, userID uint, token string) (ok bool)
 }
 
 func CheckAuthorized(ctx context.Context, sessionID string, storage sessions.AuthCheckerClient) (authorized bool, userID uint) {

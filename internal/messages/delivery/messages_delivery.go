@@ -77,7 +77,7 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
 		return
 	}
-	usecase.HandleWebSocket(ctx, connection, user, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats)
+	usecase.HandleWebSocket(ctx, connection, user, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.ChatsHandler.AuthHandler.Firebase)
 }
 
 // GetChatMessages returns messages of some chat

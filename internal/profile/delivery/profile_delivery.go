@@ -28,6 +28,10 @@ type changePasswordStruct struct {
 	NewPassword string `json:"newPassword"`
 }
 
+type firebaseToken struct {
+	Token string `json:"token"`
+}
+
 type addContactStruct struct {
 	UsernameOfUserToAdd string `json:"username_of_user_to_add"`
 }
@@ -264,6 +268,42 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 			return
 		}
+	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+// SetFirebaseToken changes profile password
+//
+// @Summary changes profile password
+// @ID SetFirebaseToken
+// @Accept json
+// @Produce json
+// @Param Password body  firebaseToken true "token"
+// @Success 200 {object}  domain.Response[int]
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /setFirebaseToken [post]
+func (p *ProfileHandler) SetFirebaseToken(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, userID := p.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+	if r.Method != http.MethodPost {
+		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var jsonFromUser firebaseToken
+	err := decoder.Decode(&jsonFromUser)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	err = usecase.SetFirebaseToken(ctx, userID, jsonFromUser.Token, p.AuthHandler.Users)
+	if err != nil {
+		misc.WriteInternalErrorJson(ctx, w)
+		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
