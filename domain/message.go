@@ -13,3 +13,8 @@ type Message struct {
 	SenderUsername string    `json:"username"`
 	FilePath       []string  `json:"file"`
 }
+
+type File struct {
+	MessageID uint `json:"message_id"`
+	ChatID    uint `json:"chat_id"`
+}

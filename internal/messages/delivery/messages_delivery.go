@@ -80,6 +80,47 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 	usecase.HandleWebSocket(ctx, connection, user, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats)
 }
 
+func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	_, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
+	if !found {
+		logger.Info("could not upgrade connection :user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
+		return
+	}
+
+	var requestToSetFile domain.File
+	err := r.ParseMultipartForm(10000)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	files := r.MultipartForm.File["files"]
+	jsonString := r.MultipartForm.Value["json"]
+	json.Unmarshal([]byte(jsonString[0]), &requestToSetFile)
+
+	for _, fileHeader := range files {
+		file, err := fileHeader.Open()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		fmt.Fprintf(w, "Uploaded File: %+v\n", fileHeader.Filename)
+		fmt.Fprintf(w, "File Size: %+v\n", fileHeader.Size)
+		fmt.Fprintf(w, "MIME Header: %+v\n", fileHeader.Header)
+
+		usecase.SetFile(messageHandler.Messages, ctx, file, userID, requestToSetFile.MessageID, messageHandler.ChatsHandler.AuthHandler.Users, fileHeader)
+	}
+}
+
 //func (messageHandler *MessageHandler)
 
 // GetChatMessages returns messages of some chat

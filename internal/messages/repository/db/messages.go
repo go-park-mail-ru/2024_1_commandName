@@ -40,7 +40,7 @@ func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (mess
 	return message
 }
 
-func (m *Messages) SetFiles(ctx context.Context, multipartFiles []multipart.File, userID uint, messageID uint, userStorage authusecase.UserStore) error {
+func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error {
 	_, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		customErr := domain.CustomError{
@@ -51,47 +51,51 @@ func (m *Messages) SetFiles(ctx context.Context, multipartFiles []multipart.File
 		fmt.Println(customErr)
 		return customErr
 	}
-	for _, multipartFile := range multipartFiles {
-		buff := make([]byte, 512)
-		if _, err := multipartFile.Read(buff); err != nil {
-			customErr := domain.CustomError{
-				Type:    "read multipart file",
-				Message: err.Error(),
-				Segment: "SetFiles, messages.go",
-			}
-			fmt.Println(customErr)
-			return customErr
+	buff := make([]byte, 512)
+	if _, err := multipartFile.Read(buff); err != nil {
+		customErr := domain.CustomError{
+			Type:    "read multipart file",
+			Message: err.Error(),
+			Segment: "SetFiles, messages.go",
 		}
-		seek, err := multipartFile.Seek(0, io.SeekStart)
-		if err != nil || seek != 0 {
-			customErr := domain.CustomError{
-				Type:    "seek multipart file",
-				Message: err.Error(),
-				Segment: "SetFiles, messages.go",
-			}
-			fmt.Println(customErr)
-			return customErr
+		fmt.Println(customErr)
+		return customErr
+	}
+	seek, err := multipartFile.Seek(0, io.SeekStart)
+	if err != nil || seek != 0 {
+		customErr := domain.CustomError{
+			Type:    "seek multipart file",
+			Message: err.Error(),
+			Segment: "SetFiles, messages.go",
 		}
-		mimeType := http.DetectContentType(buff)
-		fmt.Println(mimeType)
+		fmt.Println(customErr)
+		return customErr
+	}
+	mimeType := http.DetectContentType(buff)
+	fmt.Println(mimeType)
 
-		//TODO check type of file
-		/*
-			if mimeType != "image/png" && mimeType != "image/jpeg" && mimeType != "image/pjpeg" && mimeType != "image/webp" {
-				return fmt.Errorf("Файл не является изображением")
-			}*/
-		query := "INSERT INTO chat.file (user_id, message_id, file_path) VALUES($1, $2, $3)"
-		dbErr := m.db.QueryRowContext(ctx, query, userID, messageID, "")
-		if dbErr != nil {
-			// TODO
-			fmt.Println(err)
-			return domain.Message{}
+	//TODO check type of file
+	/*
+		if mimeType != "image/png" && mimeType != "image/jpeg" && mimeType != "image/pjpeg" && mimeType != "image/webp" {
+			return fmt.Errorf("Файл не является изображением")
+		}*/
+	filePath, err := m.StoreFile(ctx, multipartFile, fileHandler)
+	query := "INSERT INTO chat.file (user_id, message_id, file_path) VALUES($1, $2, $3)"
+	dbErr := m.db.QueryRowContext(ctx, query, userID, messageID, filePath)
+	if dbErr != nil {
+		customErr := domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "SetFiles, messages.go",
 		}
+		fmt.Println(customErr)
+		return customErr
 	}
 
+	return nil
 }
 
-func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (name string, err error) {
+func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (filePath string, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	originalName := fileHandler.Filename
 	fileNameSlice := strings.Split(originalName, ".")
@@ -102,7 +106,7 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 	extension := fileNameSlice[len(fileNameSlice)-1]
 
 	filename := misc.RandStringRunes(20)
-	filePath := "files/" + filename + "." + extension
+	filePath = "files/" + filename + "." + extension
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -117,7 +121,7 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 		return "", fmt.Errorf("internal error")
 	}
 	logger.Debug("StoreFile success", "path", filePath)
-	return filename + "." + extension, nil
+	return filePath, nil
 }
 
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {

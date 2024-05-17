@@ -1,13 +1,16 @@
 package usecase
 
 import (
-	chats "ProjectMessenger/internal/chats_service/proto"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"mime/multipart"
 	"sync"
 	"time"
+
+	authusecase "ProjectMessenger/internal/auth/usecase"
+	chats "ProjectMessenger/internal/chats_service/proto"
 
 	"ProjectMessenger/domain"
 
@@ -28,6 +31,7 @@ type MessageStore interface {
 	GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error)
 	UpdateMessageText(ctx context.Context, message domain.Message) (err error)
 	DeleteMessage(ctx context.Context, messageID uint) error
+	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
 }
 
 func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats.ChatServiceClient) {
@@ -93,6 +97,10 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 		}(chatUsers[i].UserID, i, message)
 	}
 	wg.Wait()
+}
+
+func SetFile(messageStorage MessageStore, ctx context.Context, file multipart.File, userID, messageID uint, userStorage authusecase.UserStore, fileHeader *multipart.FileHeader) {
+	messageStorage.SetFile(ctx, file, userID, messageID, userStorage, fileHeader)
 }
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
