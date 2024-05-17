@@ -80,6 +80,8 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 	usecase.HandleWebSocket(ctx, connection, user, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats)
 }
 
+//func (messageHandler *MessageHandler)
+
 // GetChatMessages returns messages of some chat
 //
 // @Summary GetChatMessages
