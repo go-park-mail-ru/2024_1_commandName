@@ -51,7 +51,7 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 		fmt.Println(customErr)
 		return customErr
 	}
-	buff := make([]byte, 512)
+	buff := make([]byte, 8192)
 	if _, err := multipartFile.Read(buff); err != nil {
 		customErr := domain.CustomError{
 			Type:    "read multipart file",
@@ -81,11 +81,13 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 		}*/
 	filePath, err := m.StoreFile(ctx, multipartFile, fileHandler)
 	query := "INSERT INTO chat.file (user_id, message_id, file_path) VALUES($1, $2, $3)"
-	dbErr := m.db.QueryRowContext(ctx, query, userID, messageID, filePath)
-	if dbErr != nil {
+	row := m.db.QueryRowContext(ctx, query, userID, messageID, filePath)
+	fmt.Println("INSERTING", userID, messageID, filePath)
+	if row.Err() != nil {
+		fmt.Println("ERR:")
 		customErr := domain.CustomError{
 			Type:    "database",
-			Message: err.Error(),
+			Message: row.Err().Error(),
 			Segment: "SetFiles, messages.go",
 		}
 		fmt.Println(customErr)
@@ -110,6 +112,7 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
+		fmt.Println(err)
 		logger.Error("StoreAvatar failed to open a file", "path", filePath)
 		return "", fmt.Errorf("internal error")
 	}
