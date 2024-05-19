@@ -15,6 +15,7 @@ import (
 	"ProjectMessenger/domain"
 	authDelivery "ProjectMessenger/internal/auth/delivery"
 	database "ProjectMessenger/internal/auth/repository/db"
+	contacts "ProjectMessenger/internal/contacts_service/repository"
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
@@ -390,17 +391,16 @@ func TestUserRepo_AddContact(t *testing.T) {
 	}
 	defer db.Close()
 
-	userRepo := database.NewRawUserStorage(db, "")
-
 	ctx := context.Background()
 
 	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
+	contactsRepo := contacts.NewContactsStorage(db)
 
 	mock.ExpectQuery(`INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`).
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	ok := userRepo.AddContact(ctx, 1, 2)
+	ok := contactsRepo.AddContact(ctx, 1, 2)
 	if !ok {
 		t.Error("err:", err)
 	}
@@ -418,8 +418,7 @@ func TestUserRepo_AddContact_CustomError(t *testing.T) {
 	}
 	defer db.Close()
 
-	userRepo := database.NewRawUserStorage(db, "")
-
+	contactsRepo := contacts.NewContactsStorage(db)
 	ctx := context.Background()
 
 	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
@@ -428,7 +427,7 @@ func TestUserRepo_AddContact_CustomError(t *testing.T) {
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnError(errors.New("some database error"))
 
-	ok := userRepo.AddContact(ctx, 1, 2)
+	ok := contactsRepo.AddContact(ctx, 1, 2)
 	if ok {
 		t.Error("expected err, got ok")
 	}
