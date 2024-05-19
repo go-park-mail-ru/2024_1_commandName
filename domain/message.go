@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"os"
+	"time"
+)
 
 type Message struct {
 	ID             uint      `json:"id" swaggerignore:"true"`
@@ -17,4 +20,9 @@ type Message struct {
 type File struct {
 	MessageID uint `json:"message_id"`
 	ChatID    uint `json:"chat_id"`
+}
+
+type FileWithInfo struct {
+	FileInfo os.FileInfo
+	File     *os.File
 }

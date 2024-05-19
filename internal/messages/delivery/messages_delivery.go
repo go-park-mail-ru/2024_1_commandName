@@ -1,9 +1,12 @@
 package delivery
 
 import (
+	"archive/zip"
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -90,8 +93,8 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 
 	_, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
 	if !found {
-		logger.Info("could not upgrade connection :user wasn't found")
-		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
+		logger.Info("user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "user wasn't found"})
 		return
 	}
 
@@ -118,6 +121,69 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 		fmt.Fprintf(w, "MIME Header: %+v\n", fileHeader.Header)
 
 		usecase.SetFile(messageHandler.Messages, ctx, file, userID, requestToSetFile.MessageID, messageHandler.ChatsHandler.AuthHandler.Users, fileHeader)
+	}
+}
+
+func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	_, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
+	if !found {
+		logger.Info("user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "user not found"})
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var fileRequest domain.File
+	err := decoder.Decode(&fileRequest)
+	if err != nil {
+		//TODO
+		fmt.Println(err)
+	}
+	files := usecase.GetFile(ctx, messageHandler.Messages, fileRequest.MessageID)
+	fmt.Println("GOT FILES: ", files)
+	buffer := new(bytes.Buffer)
+
+	zipWriter := zip.NewWriter(buffer)
+	for _, fileWithInfo := range files {
+		// Создайте запись в архиве для файла
+		zipFile, err := zipWriter.Create("files/" + fileWithInfo.FileInfo.Name())
+		if err != nil {
+			http.Error(w, "Could not create zip file.", http.StatusInternalServerError)
+			return
+		}
+		_, err = io.Copy(zipFile, fileWithInfo.File)
+		if err != nil {
+			http.Error(w, "Could not write to zip file.", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	err = zipWriter.Close()
+	if err != nil {
+		http.Error(w, "Could not close zip file.", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Disposition", "attachment; filename=files.zip")
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", buffer.Len()))
+
+	_, err = io.Copy(w, buffer)
+	if err != nil {
+		http.Error(w, "Could not send zip file.", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = io.Copy(w, buffer)
+	if err != nil {
+		http.Error(w, "Could not read file.", http.StatusInternalServerError)
 	}
 }
 

@@ -93,8 +93,48 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 		fmt.Println(customErr)
 		return customErr
 	}
-
 	return nil
+}
+
+func (m *Messages) GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string) {
+	query := "SELECT file_path FROM chat.file WHERE message_id =$1"
+	rows, err := m.db.QueryContext(ctx, query, messageID)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	filePath = make([]string, 0)
+	i := 0
+	for rows.Next() {
+		path := ""
+		err = rows.Scan(&path)
+		filePath = append(filePath, path)
+		if err != nil {
+			//TODO
+			fmt.Println(err)
+		}
+		i++
+	}
+	fmt.Println()
+	fmt.Println("FilePath is ", filePath)
+	fmt.Println()
+	return filePath
+}
+
+func (m *Messages) GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo) {
+	file, err := os.Open(filePath)
+	fmt.Println(filePath)
+	if err != nil {
+		//TODO
+		fmt.Println(err)
+	}
+	fileInfo, err = file.Stat()
+	if err != nil {
+		//TODO
+		fmt.Println(err)
+	}
+	fmt.Println("fileInfo:", fileInfo)
+	return file, fileInfo
 }
 
 func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader) (filePath string, err error) {

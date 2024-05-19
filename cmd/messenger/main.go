@@ -157,6 +157,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/editMessage", messageHandler.EditMessage)
 	router.HandleFunc("/deleteMessage", messageHandler.DeleteMessage)
 	router.HandleFunc("/uploadFiles", messageHandler.SetFile)
+	router.HandleFunc("/getFiles", messageHandler.GetFile)
 
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)
