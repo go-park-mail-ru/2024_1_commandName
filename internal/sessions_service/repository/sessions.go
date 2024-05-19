@@ -50,7 +50,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		[]string{"method"},
 	)
 
-	prometheus.MustRegister(sessionErrors, sessionMethods, sessionMethodDuration)
+	//prometheus.MustRegister(sessionErrors, sessionMethods, sessionMethodDuration)
 
 	return &PrometheusMetrics{
 		Errors:          sessionErrors,

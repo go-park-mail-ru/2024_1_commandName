@@ -80,7 +80,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		[]string{"endpoint"},
 	)
 
-	prometheus.MustRegister(activeSessionsCount, hits, errorsInProject, methods, requestDuration)
+	//prometheus.MustRegister(activeSessionsCount, hits, errorsInProject, methods, requestDuration)
 
 	return &PrometheusMetrics{
 		ActiveSessionsCount: activeSessionsCount,
@@ -101,10 +101,11 @@ func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatar
 	return &handler
 }
 
-func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
+func NewRawAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string, ContactsGRPC contacts.ContactsClient) *AuthHandler {
 	handler := AuthHandler{
-		//Sessions: repository.NewSessionStorage(dataBase),
-		Users:             db.NewRawUserStorage(dataBase, avatarPath),
+		Sessions:          sessions,
+		Users:             db.NewUserStorage(dataBase, avatarPath),
+		ContactsGRPC:      ContactsGRPC,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 	return &handler
