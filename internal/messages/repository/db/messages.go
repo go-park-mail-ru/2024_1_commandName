@@ -31,8 +31,12 @@ func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (mess
 	var messageID uint
 	err := m.db.QueryRowContext(ctx, query, message.UserID, message.ChatID, message.Message, message.EditedAt, message.CreatedAt).Scan(&messageID)
 	if err != nil {
-		// TODO
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "SetMessage, messages.go",
+		}
+		fmt.Println(customErr.Error())
 		return domain.Message{}
 	}
 	message.ID = messageID
@@ -48,7 +52,7 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 			Message: "user not found",
 			Segment: "SetFiles, messages.go",
 		}
-		fmt.Println(customErr)
+		fmt.Println(customErr.Error())
 		return customErr
 	}
 	buff := make([]byte, 8192)
@@ -58,7 +62,7 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 			Message: err.Error(),
 			Segment: "SetFiles, messages.go",
 		}
-		fmt.Println(customErr)
+		fmt.Println(customErr.Error())
 		return customErr
 	}
 	seek, err := multipartFile.Seek(0, io.SeekStart)
@@ -68,7 +72,7 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 			Message: err.Error(),
 			Segment: "SetFiles, messages.go",
 		}
-		fmt.Println(customErr)
+		fmt.Println(customErr.Error())
 		return customErr
 	}
 	mimeType := http.DetectContentType(buff)
@@ -90,7 +94,7 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 			Message: row.Err().Error(),
 			Segment: "SetFiles, messages.go",
 		}
-		fmt.Println(customErr)
+		fmt.Println(customErr.Error())
 		return customErr
 	}
 	return nil
@@ -100,7 +104,12 @@ func (m *Messages) GetFilePathByMessageID(ctx context.Context, messageID uint) (
 	query := "SELECT file_path FROM chat.file WHERE message_id =$1"
 	rows, err := m.db.QueryContext(ctx, query, messageID)
 	if err != nil {
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "GetFilePathByMessageID",
+			Message: err.Error(),
+			Segment: "SetFiles, messages.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 
 	filePath = make([]string, 0)
@@ -110,30 +119,37 @@ func (m *Messages) GetFilePathByMessageID(ctx context.Context, messageID uint) (
 		err = rows.Scan(&path)
 		filePath = append(filePath, path)
 		if err != nil {
-			//TODO
-			fmt.Println(err)
+			customErr := domain.CustomError{
+				Type:    "GetFilePathByMessageID",
+				Message: err.Error(),
+				Segment: "SetFiles, messages.go",
+			}
+			fmt.Println(customErr.Error())
 		}
 		i++
 	}
-	fmt.Println()
-	fmt.Println("FilePath is ", filePath)
-	fmt.Println()
 	return filePath
 }
 
 func (m *Messages) GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo) {
 	file, err := os.Open(filePath)
-	fmt.Println(filePath)
 	if err != nil {
-		//TODO
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "GetFileByPath",
+			Message: err.Error(),
+			Segment: "SetFiles, messages.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	fileInfo, err = file.Stat()
 	if err != nil {
-		//TODO
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "GetFileByPath",
+			Message: err.Error(),
+			Segment: "SetFiles, messages.go",
+		}
+		fmt.Println(customErr.Error())
 	}
-	fmt.Println("fileInfo:", fileInfo)
 	return file, fileInfo
 }
 
@@ -152,7 +168,12 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		fmt.Println(err)
+		customErr := &domain.CustomError{
+			Type:    "os open file",
+			Message: err.Error(),
+			Segment: "method StoreFile, messages.go",
+		}
+		fmt.Println(customErr.Error())
 		logger.Error("StoreAvatar failed to open a file", "path", filePath)
 		return "", fmt.Errorf("internal error")
 	}
@@ -214,7 +235,7 @@ func (m *Messages) GetMessage(ctx context.Context, messageID uint) (message doma
 			Segment: "method GetChatsForUser, chats.go",
 		}
 		logger.Error(err.Error(), "EditMessage db error", customErr.Message)
-		return message, fmt.Errorf("internal error")
+		return message, customErr
 	}
 	return message, nil
 }

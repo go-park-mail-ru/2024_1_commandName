@@ -57,7 +57,12 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		var userDecodedMessage domain.Message
 		err = json.Unmarshal(message, &userDecodedMessage)
 		if err != nil {
-			fmt.Println(err)
+			customErr := domain.CustomError{
+				Type:    "json.Unmarshal",
+				Message: err.Error(),
+				Segment: "HandleWebSocket, messages_usecase.go",
+			}
+			fmt.Println(customErr.Error())
 			continue
 		}
 		logger.Debug("got ws message", "msg", userDecodedMessage)

@@ -9,11 +9,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/misc"
-
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
 	repository "ProjectMessenger/internal/messages/repository/db"
 	"ProjectMessenger/internal/messages/usecase"
@@ -101,7 +101,12 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 	var requestToSetFile domain.File
 	err := r.ParseMultipartForm(10000)
 	if err != nil {
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "ParseMultipartForm",
+			Message: err.Error(),
+			Segment: "SetFile, messages_delivery.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 
 	files := r.MultipartForm.File["files"]
@@ -143,16 +148,20 @@ func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Req
 	var fileRequest domain.File
 	err := decoder.Decode(&fileRequest)
 	if err != nil {
-		//TODO
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "decoder.Decode",
+			Message: err.Error(),
+			Segment: "GetFile, messages_delivery.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 	files := usecase.GetFile(ctx, messageHandler.Messages, fileRequest.MessageID)
-	fmt.Println("GOT FILES: ", files)
+	logStr := "find for userID = " + strconv.Itoa(int(userID)) + " and message id = " + strconv.Itoa(int(fileRequest.MessageID)) + " files: " + strconv.Itoa(len(files))
+	logger.Info(logStr)
 	buffer := new(bytes.Buffer)
 
 	zipWriter := zip.NewWriter(buffer)
 	for _, fileWithInfo := range files {
-		// Создайте запись в архиве для файла
 		zipFile, err := zipWriter.Create("files/" + fileWithInfo.FileInfo.Name())
 		if err != nil {
 			http.Error(w, "Could not create zip file.", http.StatusInternalServerError)
@@ -186,8 +195,6 @@ func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Req
 		http.Error(w, "Could not read file.", http.StatusInternalServerError)
 	}
 }
-
-//func (messageHandler *MessageHandler)
 
 // GetChatMessages returns messages of some chat
 //

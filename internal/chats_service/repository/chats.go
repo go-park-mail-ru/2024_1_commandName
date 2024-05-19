@@ -579,7 +579,12 @@ func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
 func fillTableChatType(db *sql.DB) {
 	_, err := db.Exec("INSERT INTO chat.chat_type (id, name) VALUES ('1', 'private'), ('2', 'group'), ('3', 'channel');")
 	if err != nil {
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "fillTableChatType, chats.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 }
 
