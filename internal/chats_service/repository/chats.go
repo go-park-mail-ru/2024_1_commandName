@@ -57,7 +57,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		[]string{"endpoint"},
 	)
 
-	prometheus.MustRegister(chats_hits, chats_errors, chats_methods, chats_requestDuration)
+	//prometheus.MustRegister(chats_hits, chats_errors, chats_methods, chats_requestDuration)
 	fmt.Println("registered")
 	return &PrometheusMetrics{
 		Hits:            chats_hits,
@@ -76,7 +76,8 @@ func NewChatsStorage(db *sql.DB) *Chats {
 
 func NewRawChatsStorage(db *sql.DB) *Chats {
 	return &Chats{
-		db: db,
+		db:                db,
+		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
 

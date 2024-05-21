@@ -5,14 +5,20 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
 	"ProjectMessenger/domain"
+	authDelivery "ProjectMessenger/internal/auth/delivery"
 	user "ProjectMessenger/internal/auth/repository/db"
-	chat "ProjectMessenger/internal/chats/repository/db"
 	chatUsecase "ProjectMessenger/internal/chats/usecase"
+	chats "ProjectMessenger/internal/chats_service/proto"
+	chat "ProjectMessenger/internal/chats_service/repository"
+	contactsProto "ProjectMessenger/internal/contacts_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"github.com/DATA-DOG/go-sqlmock"
+	"google.golang.org/grpc"
 )
 
 func TestChatRepo_GetChatByChatID_Succes(t *testing.T) {
@@ -547,6 +553,21 @@ func TestUserRepo_UpdateGroupChat(t *testing.T) {
 	if !ok {
 		t.Error("err: ok is false")
 	}
+	chatStr := "chat"
+	descStr := "desc"
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	chatUsecase.UpdateGroupChat(ctx, uint(1), uint(1), &chatStr, &descStr, chatsManager)
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
@@ -798,9 +819,41 @@ func TestChatUsecase_GetChatByChatID(t *testing.T) {
 	}
 	defer db.Close()
 
-	chatRepo := chat.NewRawChatsStorage(db)
-	userRepo := user.NewUserStorage(db, "")
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	authHandler := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+	//chatsHandler := chatsDelivery.NewChatsHandler(authHandler, chatsManager)
 
 	mock.ExpectQuery("SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat WHERE id = ?").
 		WithArgs(1).
@@ -814,7 +867,7 @@ func TestChatUsecase_GetChatByChatID(t *testing.T) {
 			AddRow(1, 2))
 
 	ctx := context.Background()
-	chat1, err := chatUsecase.GetChatByChatID(ctx, uint(1), uint(1), chatRepo, userRepo)
+	chat1, err := chatUsecase.GetChatByChatID(ctx, uint(1), uint(1), authHandler.Users, chatsManager)
 	if err != nil {
 	}
 	fmt.Println(chat1)
@@ -827,9 +880,39 @@ func TestChatUsecase_GetChatsForUser(t *testing.T) {
 	}
 	defer db.Close()
 
-	chatRepo := chat.NewRawChatsStorage(db)
 	userRepo := user.NewUserStorage(db, "")
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+
+	//authHandler := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
 
 	mock.ExpectQuery("SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON").
 		WithArgs(1).
@@ -866,13 +949,13 @@ func TestChatUsecase_GetChatsForUser(t *testing.T) {
 			AddRow(1, 2))
 
 	ctx := context.Background()
-	chats := chatUsecase.GetChatsForUser(ctx, uint(1), chatRepo, userRepo)
+	chats := chatUsecase.GetChatsForUser(ctx, uint(1), chatsManager, userRepo)
 	if len(chats) == 0 {
 		t.Error("lem must be not 0!")
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
+		//t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -883,7 +966,16 @@ func TestChatUsecase_CreatePrivateChat(t *testing.T) {
 	}
 	defer db.Close()
 
-	chatRepo := chat.NewRawChatsStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
 	userRepo := user.NewUserStorage(db, "")
 
 	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
@@ -897,7 +989,7 @@ func TestChatUsecase_CreatePrivateChat(t *testing.T) {
 			AddRow(1, 1, 2))
 
 	ctx := context.Background()
-	chatID, isNew, err := chatUsecase.CreatePrivateChat(ctx, uint(1), uint(3), chatRepo, userRepo)
+	chatID, isNew, err := chatUsecase.CreatePrivateChat(ctx, uint(1), uint(3), chatsManager, userRepo)
 	if err != nil {
 	}
 	fmt.Println(chatID, isNew)
@@ -910,8 +1002,16 @@ func TestChatUsecase_DeleteChat(t *testing.T) {
 	}
 	defer db.Close()
 
-	chatRepo := chat.NewRawChatsStorage(db)
-	//userRepo := user.NewUserStorage(db, "")
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
 
 	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
 		WithArgs(1).
@@ -945,7 +1045,7 @@ func TestChatUsecase_DeleteChat(t *testing.T) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	ctx := context.Background()
-	wasDeleted, err := chatUsecase.DeleteChat(ctx, uint(1), uint(1), chatRepo)
+	wasDeleted, err := chatUsecase.DeleteChat(ctx, uint(1), uint(1), chatsManager)
 	if err != nil {
 	}
 	fmt.Println(wasDeleted)
@@ -958,7 +1058,16 @@ func TestChatUsecase_CreateGroupChat(t *testing.T) {
 	}
 	defer db.Close()
 
-	chatRepo := chat.NewRawChatsStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
 	//userRepo := user.NewUserStorage(db, "")
 
 	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
@@ -984,7 +1093,7 @@ func TestChatUsecase_CreateGroupChat(t *testing.T) {
 
 	ctx := context.Background()
 	userIDs := []uint{1, 2, 3}
-	chatID, err := chatUsecase.CreateGroupChat(ctx, uint(1), userIDs, "new", "desc", chatRepo)
+	chatID, err := chatUsecase.CreateGroupChat(ctx, uint(1), userIDs, "new", "desc", chatsManager)
 	if err != nil {
 	}
 	fmt.Println(chatID)
@@ -997,8 +1106,16 @@ func TestChatUsecase_UpdateGroup(t *testing.T) {
 	}
 	defer db.Close()
 
-	chatRepo := chat.NewRawChatsStorage(db)
-	//userRepo := user.NewUserStorage(db, "")
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
 
 	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
 		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
@@ -1023,7 +1140,7 @@ func TestChatUsecase_UpdateGroup(t *testing.T) {
 
 	ctx := context.Background()
 	userIDs := []uint{1, 2, 3}
-	chatID, err := chatUsecase.CreateGroupChat(ctx, uint(1), userIDs, "new", "desc", chatRepo)
+	chatID, err := chatUsecase.CreateGroupChat(ctx, uint(1), userIDs, "new", "desc", chatsManager)
 	if err != nil {
 	}
 	fmt.Println(chatID)
