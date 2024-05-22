@@ -2,30 +2,20 @@ package search
 
 import (
 	"context"
-	"database/sql"
+	"log"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
-	"ProjectMessenger/internal/chats/usecase"
+	chats "ProjectMessenger/internal/chats_service/proto"
 	database "ProjectMessenger/internal/search/repository/db"
-	tl "ProjectMessenger/internal/translate/usecase"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/grpc"
 
 	"github.com/gorilla/websocket"
 )
-
-type Search struct {
-	db          *sql.DB
-	Connections map[uint]*websocket.Conn
-	mu          sync.RWMutex
-	Chats       usecase.ChatStore
-	WebSocket   *MockWebsocket
-	Translate   tl.TranslateStore
-}
 
 func TestSearchChats(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -34,7 +24,17 @@ func TestSearchChats(t *testing.T) {
 	}
 	defer db.Close()
 
-	searchRepo := database.NewSearchStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	searchRepo := database.NewSearchStorage(db, chatsManager)
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 	mock.ExpectQuery("SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id\n    FROM chat.chat c\n    JOIN chat.chat_user cu ON").
@@ -60,7 +60,17 @@ func TestSearchMessages(t *testing.T) {
 	}
 	defer db.Close()
 
-	searchRepo := database.NewSearchStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	searchRepo := database.NewSearchStorage(db, chatsManager)
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 	mock.ExpectQuery("SELECT m.id, m.user_id, m.chat_id, m.message, m.edited, m.created_at, username FROM chat.message m JOIN auth.person ON m.user_id = person.id WHERE").
@@ -84,7 +94,17 @@ func TestSearchContacts(t *testing.T) {
 	}
 	defer db.Close()
 
-	searchRepo := database.NewSearchStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	searchRepo := database.NewSearchStorage(db, chatsManager)
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 	mock.ExpectQuery("SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path FROM chat.contacts cc JOIN auth.person ap ON").
@@ -109,7 +129,17 @@ func TestSendMatchedChatsSearchResponse(t *testing.T) {
 	}
 	defer db.Close()
 
-	searchRepo := database.NewSearchStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	searchRepo := database.NewSearchStorage(db, chatsManager)
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 	mock.ExpectQuery("SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path FROM chat.contacts cc JOIN auth.person ap ON").
@@ -160,7 +190,17 @@ func TestAddConnection(t *testing.T) {
 	defer mockConn.Close()
 
 	ctx := context.Background()
-	searchStore := database.NewSearchStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	searchStore := database.NewSearchStorage(db, chatsManager)
 	searchStore.AddConnection(ctx, mockConn, uint(1))
 	searchStore.DeleteConnection(1)
 }
@@ -208,7 +248,17 @@ func TestSearchPrivateChats(t *testing.T) {
 	}
 	defer db.Close()
 
-	searchRepo := database.NewSearchStorage(db)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	searchRepo := database.NewSearchStorage(db, chatsManager)
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
 	mock.ExpectQuery("SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id\n    FROM chat.chat c\n    JOIN chat.chat_user cu ON").

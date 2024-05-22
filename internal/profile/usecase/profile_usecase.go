@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	contacts "ProjectMessenger/internal/contacts_service/proto"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +8,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+
+	contacts "ProjectMessenger/internal/contacts_service/proto"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -106,6 +107,7 @@ func ChangePassword(ctx context.Context, oldPassword string, newPassword string,
 func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler *multipart.FileHeader, userID uint, userStorage authusecase.UserStore) (err error) {
 	buff := make([]byte, 512)
 	if _, err = multipartFile.Read(buff); err != nil {
+		fmt.Println(err)
 		return fmt.Errorf("internal error")
 	}
 	seek, err := multipartFile.Seek(0, io.SeekStart)
@@ -148,6 +150,7 @@ func ChangeAvatar(ctx context.Context, multipartFile multipart.File, fileHandler
 func GetContacts(ctx context.Context, userID uint, contactGRPC contacts.ContactsClient) []domain.Person {
 	contactsResp, err := contactGRPC.GetContacts(ctx, &contacts.UserIDContacts{UserID: uint64(userID)})
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 	res := make([]domain.Person, 0)

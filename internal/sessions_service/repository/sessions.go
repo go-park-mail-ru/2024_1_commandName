@@ -68,6 +68,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 	var sid string
 	err := s.db.QueryRowContext(ctx, "SELECT userid, sessionid FROM auth.session WHERE sessionid = $1", sessionID).Scan(&userIDInt, &sid)
 	userID = uint(userIDInt)
+	fmt.Println("in GetUserIDbySessionID")
 	logger.Debug("GetUserIDbySessionID", "userID", userID, "sessionID", sessionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

@@ -24,8 +24,10 @@ type UserStore interface {
 }
 
 func CheckAuthorized(ctx context.Context, sessionID string, storage session2.AuthCheckerClient) (authorized bool, userID uint) {
+	fmt.Println("in CheckAuthorized")
 	response, err := storage.CheckAuthorizedRPC(context.Background(), &session2.Session{ID: sessionID})
 	if err != nil {
+		fmt.Println(err)
 		return false, 0
 	}
 	userID = uint(response.User.ID)

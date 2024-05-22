@@ -1,10 +1,11 @@
 package delivery
 
 import (
-	contacts "ProjectMessenger/internal/contacts_service/proto"
 	"encoding/json"
 	"net/http"
 	"time"
+
+	contacts "ProjectMessenger/internal/contacts_service/proto"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
@@ -14,8 +15,8 @@ import (
 )
 
 type ProfileHandler struct {
-	AuthHandler *authdelivery.AuthHandler
-	ContactsGRPC contacts.ContactsClient
+	AuthHandler       *authdelivery.AuthHandler
+	ContactsGRPC      contacts.ContactsClient
 	prometheusMetrics *PrometheusMetrics
 }
 
@@ -72,7 +73,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 		[]string{"endpoint"},
 	)
 
-	prometheus.MustRegister(profile_hits, profile_errors, profile_methods, profile_requests_duartion)
+	//prometheus.MustRegister(profile_hits, profile_errors, profile_methods, profile_requests_duartion)
 
 	return &PrometheusMetrics{
 		Hits:            profile_hits,
@@ -85,7 +86,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 func NewProfileHandler(authHandler *authdelivery.AuthHandler, ContactsGRPC contacts.ContactsClient) *ProfileHandler {
 	return &ProfileHandler{
 		AuthHandler:       authHandler,
-		ContactsGRPC: ContactsGRPC,
+		ContactsGRPC:      ContactsGRPC,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }

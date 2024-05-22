@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -327,7 +328,9 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.Request) (authorized bool, userID uint) {
 	ctx := r.Context()
 	session, err := r.Cookie("session_id")
+	fmt.Println("get session = ", session.Value)
 	if err == nil && session != nil {
+		fmt.Println("go to usecase.CheckAuthorized")
 		authHandler.prometheusMetrics.Methods.WithLabelValues("CheckAuthorized").Inc()
 		authorized, userID = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)
 	}

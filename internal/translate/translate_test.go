@@ -2,6 +2,7 @@ package translate
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,9 +10,12 @@ import (
 
 	authDelivery "ProjectMessenger/internal/auth/delivery"
 	chatsDelivery "ProjectMessenger/internal/chats/delivery"
+	contactsProto "ProjectMessenger/internal/contacts_service/proto"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	delivery "ProjectMessenger/internal/translate/delivery"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
 )
 
 func TestTranslate(t *testing.T) {
@@ -33,7 +37,27 @@ func TestTranslate(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"language"}).AddRow("ru"))
 
-	auth := authDelivery.NewRawAuthHandler(db, "")
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	auth := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
 	chats := chatsDelivery.NewRawChatsHandler(auth, db)
 	ts := delivery.NewTranslateHandler(db, chats)
 	ts.TranslateMessage(w, req)
@@ -54,7 +78,28 @@ func TestTranslate_Error1(t *testing.T) {
 		WithArgs("yOQGFWqFFEkWwigIT29cP8N9HMtkGw").
 		WillReturnError(sql.ErrNoRows)
 
-	auth := authDelivery.NewRawAuthHandler(db, "")
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	auth := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+
 	chats := chatsDelivery.NewRawChatsHandler(auth, db)
 	ts := delivery.NewTranslateHandler(db, chats)
 	ts.TranslateMessage(w, req)
@@ -81,7 +126,28 @@ func TestTranslate_Error2(t *testing.T) {
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"language"}).AddRow("ru"))
 
-	auth := authDelivery.NewRawAuthHandler(db, "")
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	auth := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+
 	chats := chatsDelivery.NewRawChatsHandler(auth, db)
 	ts := delivery.NewTranslateHandler(db, chats)
 	ts.TranslateMessage(w, req)

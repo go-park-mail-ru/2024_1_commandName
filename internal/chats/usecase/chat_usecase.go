@@ -1,47 +1,54 @@
 package usecase
 
 import (
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/auth/usecase"
-	chats "ProjectMessenger/internal/chats_service/proto"
 	"context"
 	"fmt"
 	"log/slog"
 	"sort"
+
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/auth/usecase"
+	chats "ProjectMessenger/internal/chats_service/proto"
 
 	"google.golang.org/grpc/status"
 )
 
 func convertChat(chat *chats.Chat) domain.Chat {
 	messages := make([]*domain.Message, 0)
-	for i := range chat.Messages {
-		messages = append(messages, &domain.Message{
-			ID:             uint(chat.Messages[i].GetId()),
-			ChatID:         uint(chat.Messages[i].GetChatId()),
-			UserID:         uint(chat.Messages[i].GetUserId()),
-			Message:        chat.Messages[i].GetMessageText(),
-			Edited:         chat.Messages[i].GetEdited(),
-			EditedAt:       chat.Messages[i].EditedAt.AsTime(),
-			CreatedAt:      chat.Messages[i].SentAt.AsTime(),
-			SenderUsername: chat.Messages[i].Username,
-		})
-	}
 	users := make([]*domain.ChatUser, 0)
-	for i := range chat.Users {
-		users = append(users, &domain.ChatUser{
-			ChatID: int(chat.Users[i].ChatId),
-			UserID: uint(chat.Users[i].UserId),
-		})
+	if chat != nil {
+
+		for i := range chat.Messages {
+			messages = append(messages, &domain.Message{
+				ID:             uint(chat.Messages[i].GetId()),
+				ChatID:         uint(chat.Messages[i].GetChatId()),
+				UserID:         uint(chat.Messages[i].GetUserId()),
+				Message:        chat.Messages[i].GetMessageText(),
+				Edited:         chat.Messages[i].GetEdited(),
+				EditedAt:       chat.Messages[i].EditedAt.AsTime(),
+				CreatedAt:      chat.Messages[i].SentAt.AsTime(),
+				SenderUsername: chat.Messages[i].Username,
+			})
+		}
+		for i := range chat.Users {
+			users = append(users, &domain.ChatUser{
+				ChatID: int(chat.Users[i].ChatId),
+				UserID: uint(chat.Users[i].UserId),
+			})
+		}
 	}
-	lastMessage := domain.Message{
-		ID:             uint(chat.LastMessage.GetId()),
-		ChatID:         uint(chat.LastMessage.GetChatId()),
-		UserID:         uint(chat.LastMessage.GetUserId()),
-		Message:        chat.LastMessage.GetMessageText(),
-		Edited:         chat.LastMessage.GetEdited(),
-		EditedAt:       chat.LastMessage.EditedAt.AsTime(),
-		CreatedAt:      chat.LastMessage.SentAt.AsTime(),
-		SenderUsername: chat.LastMessage.Username,
+	lastMessage := domain.Message{}
+	if chat != nil {
+		lastMessage = domain.Message{
+			ID:             uint(chat.LastMessage.GetId()),
+			ChatID:         uint(chat.LastMessage.GetChatId()),
+			UserID:         uint(chat.LastMessage.GetUserId()),
+			Message:        chat.LastMessage.GetMessageText(),
+			Edited:         chat.LastMessage.GetEdited(),
+			EditedAt:       chat.LastMessage.EditedAt.AsTime(),
+			CreatedAt:      chat.LastMessage.SentAt.AsTime(),
+			SenderUsername: chat.LastMessage.Username,
+		}
 	}
 	return domain.Chat{
 		ID:                 uint(chat.GetId()),
@@ -71,6 +78,7 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, userStorage useca
 				return domain.Chat{}, fmt.Errorf(e.Message())
 			}
 		}
+		return domain.Chat{}, err
 	}
 	chat := convertChat(chatGRPC)
 

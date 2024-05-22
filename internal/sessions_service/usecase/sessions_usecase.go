@@ -1,8 +1,10 @@
 package usecase
 
 import (
-	session "ProjectMessenger/internal/sessions_service/proto"
 	"context"
+	"fmt"
+
+	session "ProjectMessenger/internal/sessions_service/proto"
 )
 
 type SessionStore interface {
@@ -21,6 +23,7 @@ func NewSessionManager(storage SessionStore) *SessionManager {
 }
 
 func (sm *SessionManager) CheckAuthorizedRPC(ctx context.Context, in *session.Session) (*session.UserFound, error) {
+	fmt.Println("in CheckAuthorizedRPC")
 	sessionID := in.GetID()
 	userID, authorized := sm.storage.GetUserIDbySessionID(ctx, sessionID)
 	res := &session.UserFound{
