@@ -5,16 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/textproto"
+	"os"
 	"regexp"
 	"testing"
 	"time"
 
 	"ProjectMessenger/domain"
+	authDelivery "ProjectMessenger/internal/auth/delivery"
 	chats "ProjectMessenger/internal/chats_service/proto"
+	contactsProto "ProjectMessenger/internal/contacts_service/proto"
 	database "ProjectMessenger/internal/messages/repository/db"
 	"ProjectMessenger/internal/messages/usecase"
+	session "ProjectMessenger/internal/sessions_service/proto"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -256,6 +262,55 @@ func TestEditMessage(t *testing.T) {
 	}
 }
 
+func TestEditMessage_Error1(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), created_at FROM chat.message WHERE id = $1")).WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "edited_at", "created_at"})).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "edited_at", "created_at"}).
+			AddRow(1, 1, uint(1), "message", false, fixedTime, fixedTime))
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE chat.message SET message = $1, edited = $2, edited_at = $3 WHERE id = $4")).
+		WithArgs("new msg", true, fixedTime, uint(1)).
+		WillReturnError(errors.New("some err"))
+
+	messRepo := database.NewMessageStorage(db)
+	err = usecase.EditMessage(ctx, uint(1), uint(1), "new text", messRepo)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func TestEditMessage_Error2(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), created_at FROM chat.message WHERE id = $1")).WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "edited_at", "created_at"})).
+		WithArgs(1).
+		WillReturnError(errors.New("some err"))
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE chat.message SET message = $1, edited = $2, edited_at = $3 WHERE id = $4")).
+		WithArgs("new msg", true, fixedTime, uint(1)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	messRepo := database.NewMessageStorage(db)
+	err = usecase.EditMessage(ctx, uint(1), uint(1), "new text", messRepo)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
 func TestSendMessageToOtherUsers(t *testing.T) {
 	db, _, err := sqlmock.New()
 	if err != nil {
@@ -281,4 +336,287 @@ func TestSendMessageToOtherUsers(t *testing.T) {
 	chatsManager := chats.NewChatServiceClient(grcpChats)
 
 	usecase.SendMessageToOtherUsers(ctx, message, uint(1), wsStorage, chatsManager)
+}
+
+func TestGetFile(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	//wsStorage := database.NewWsStorage(db)
+
+	mock.ExpectQuery("SELECT file_path FROM chat.file WHERE message_id =?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"file_path"}).AddRow("file_path"))
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	//chatsManager := chats.NewChatServiceClient(grcpChats)
+	messRepo := database.NewMessageStorage(db)
+	usecase.GetFile(ctx, messRepo, uint(1))
+}
+
+func TestGetFile_Error1(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	//wsStorage := database.NewWsStorage(db)
+
+	mock.ExpectQuery("SELECT file_path FROM chat.file WHERE message_id =?").
+		WithArgs(1).
+		WillReturnError(errors.New("some err"))
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	//chatsManager := chats.NewChatServiceClient(grcpChats)
+	messRepo := database.NewMessageStorage(db)
+	usecase.GetFile(ctx, messRepo, uint(1))
+}
+
+func TestSetFile(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	authHandler := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+	//wsStorage := database.NewWsStorage(db)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = $1")).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
+			AddRow(1, "TestUser", "test@mail.ru", "Test", "User", "Developer", "5baae85b9413d75de29d9e54b0550eae8ea8eaabb80b0cea8974bb5ee844b82fd9c45d188938bbc57716a495a3766b1728bdffb04f256a67ad545b62d9e69ac7", time.Now(), time.Now(), "", "gxYdyp8Z"))
+
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO chat.file (user_id, message_id, file_path) VALUES($1, $2, $3)")).
+		WithArgs(uint(1), uint(1), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"file_path"}).AddRow("file_path"))
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	//chatsManager := chats.NewChatServiceClient(grcpChats)
+	messRepo := database.NewMessageStorage(db)
+
+	tempFile, err := os.CreateTemp("", "testfile-*.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tempFile.Name()) // Удалить файл после теста
+
+	content := []byte("This is a test file content")
+	if _, err := tempFile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tempFile.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	file := tempFile
+
+	// Создаем фейковый multipart.FileHeader
+	fileHeader := &multipart.FileHeader{
+		Filename: tempFile.Name(),
+		Header:   textproto.MIMEHeader{"Content-Type": []string{"text/plain"}},
+		Size:     int64(len(content)),
+	}
+
+	usecase.SetFile(messRepo, ctx, file, uint(1), uint(1), authHandler.Users, fileHeader)
+}
+
+func TestSetFile_Error1(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	authHandler := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+	//wsStorage := database.NewWsStorage(db)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = $1")).
+		WithArgs(1).
+		WillReturnError(errors.New("some err"))
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	//chatsManager := chats.NewChatServiceClient(grcpChats)
+	messRepo := database.NewMessageStorage(db)
+
+	tempFile, err := os.CreateTemp("", "testfile-*.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tempFile.Name()) // Удалить файл после теста
+
+	content := []byte("This is a test file content")
+	if _, err := tempFile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tempFile.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	file := tempFile
+
+	// Создаем фейковый multipart.FileHeader
+	fileHeader := &multipart.FileHeader{
+		Filename: tempFile.Name(),
+		Header:   textproto.MIMEHeader{"Content-Type": []string{"text/plain"}},
+		Size:     int64(len(content)),
+	}
+
+	usecase.SetFile(messRepo, ctx, file, uint(1), uint(1), authHandler.Users, fileHeader)
+}
+
+func TestSetFile_Error2(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	authHandler := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+	//wsStorage := database.NewWsStorage(db)
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = $1")).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
+			AddRow(1, "TestUser", "test@mail.ru", "Test", "User", "Developer", "5baae85b9413d75de29d9e54b0550eae8ea8eaabb80b0cea8974bb5ee844b82fd9c45d188938bbc57716a495a3766b1728bdffb04f256a67ad545b62d9e69ac7", time.Now(), time.Now(), "", "gxYdyp8Z"))
+
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO chat.file (user_id, message_id, file_path) VALUES($1, $2, $3)")).
+		WithArgs(uint(1), uint(1), sqlmock.AnyArg()).
+		WillReturnError(errors.New("some err"))
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	//chatsManager := chats.NewChatServiceClient(grcpChats)
+	messRepo := database.NewMessageStorage(db)
+
+	tempFile, err := os.CreateTemp("", "testfile-*.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tempFile.Name()) // Удалить файл после теста
+
+	content := []byte("This is a test file content")
+	if _, err := tempFile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tempFile.Seek(0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	file := tempFile
+
+	// Создаем фейковый multipart.FileHeader
+	fileHeader := &multipart.FileHeader{
+		Filename: tempFile.Name(),
+		Header:   textproto.MIMEHeader{"Content-Type": []string{"text/plain"}},
+		Size:     int64(len(content)),
+	}
+
+	usecase.SetFile(messRepo, ctx, file, uint(1), uint(1), authHandler.Users, fileHeader)
 }

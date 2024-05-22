@@ -104,7 +104,7 @@ func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatar
 func NewRawAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatarPath string, ContactsGRPC contacts.ContactsClient) *AuthHandler {
 	handler := AuthHandler{
 		Sessions:          sessions,
-		Users:             db.NewUserStorage(dataBase, avatarPath),
+		Users:             db.NewRawUserStorage(dataBase, avatarPath),
 		ContactsGRPC:      ContactsGRPC,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}

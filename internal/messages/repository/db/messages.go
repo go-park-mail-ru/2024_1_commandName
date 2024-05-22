@@ -110,6 +110,7 @@ func (m *Messages) GetFilePathByMessageID(ctx context.Context, messageID uint) (
 			Segment: "SetFiles, messages.go",
 		}
 		fmt.Println(customErr.Error())
+		return nil
 	}
 
 	filePath = make([]string, 0)
