@@ -81,7 +81,14 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 
 func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
 	//chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
-	resp, _ := chatStorage.GetChatByChatID(ctx, &chats.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
+	resp, err := chatStorage.GetChatByChatID(ctx, &chats.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
+
+	if err != nil {
+		if resp == nil {
+			resp = &chats.Chat{}
+		}
+		fmt.Println(err)
+	}
 
 	chatUsers := make([]domain.ChatUser, 0)
 	for i := range resp.Users {

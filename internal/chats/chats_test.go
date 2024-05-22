@@ -806,6 +806,18 @@ func TestUserRepo_GetMessagesByChatID(t *testing.T) {
 	if len(messages) == 0 {
 		t.Error("len is 0!")
 	}
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	chatUsecase.GetMessagesByChatID(ctx, chatsManager, uint(1))
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
@@ -1144,4 +1156,34 @@ func TestChatUsecase_UpdateGroup(t *testing.T) {
 	if err != nil {
 	}
 	fmt.Println(chatID)
+}
+
+func TestGetPopularChannels(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+	mock.ExpectQuery("SELECT id, name, description, creator_id, avatar_path, count(id), max(CASE WHEN user_id = ? THEN 1 ELSE 0 END) as Aexists FROM chat.chat JOIN chat.chat_user cu on chat.id = cu.chat_id WHERE type_id = '3' GROUP BY id ORDER BY count(id) DESC LIMIT ?").
+		WithArgs(1, 10).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "description", "creator_id", "avatar_path", "count", "flag"}).
+			AddRow(1, "name", "desc", uint(1), "path", 5, 1))
+
+	ctx := context.Background()
+	channels, err := chatUsecase.GetPopularChannels(ctx, uint(1), chatsManager)
+	if err != nil {
+		//fmt.Println(err)
+	}
+	fmt.Println(channels)
 }

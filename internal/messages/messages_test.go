@@ -4,17 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 	"time"
 
 	"ProjectMessenger/domain"
+	chats "ProjectMessenger/internal/chats_service/proto"
 	database "ProjectMessenger/internal/messages/repository/db"
+	"ProjectMessenger/internal/messages/usecase"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/grpc"
 )
 
 func TestSetMessage(t *testing.T) {
@@ -79,7 +84,10 @@ func TestGetChatMessages(t *testing.T) {
 
 	userRepo := database.NewMessageStorage(db)
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
-	mock.ExpectQuery("^SELECT message.id, user_id, chat_id, message.message, created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = \\$1$").
+
+	// "SELECT message.id, user_id, chat_id, message.message, message.created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = $1"
+	// "^SELECT message.id, user_id, chat_id, message.message, created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = \\$1$"
+	mock.ExpectQuery("SELECT message.id, user_id, chat_id, message.message, message.created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = ?").
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "created_at", "edited_at", "username"}).AddRow(1, 1, 2, "message", fixedTime, fixedTime, "artem"))
 
@@ -103,7 +111,7 @@ func TestGetChatMessages_Error1(t *testing.T) {
 
 	userRepo := database.NewMessageStorage(db)
 
-	mock.ExpectQuery("^SELECT message.id, user_id, chat_id, message.message, created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = \\$1$").
+	mock.ExpectQuery("SELECT message.id, user_id, chat_id, message.message, message.created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = ?").
 		WithArgs(1).
 		WillReturnError(errors.New("some err"))
 
@@ -203,4 +211,74 @@ func TestDeleteConnection(t *testing.T) {
 	ctx := context.Background()
 	ws.AddConnection(ctx, mockConn, 1)
 	ws.DeleteConnection(1)
+}
+
+func TestDeleteMessage(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), created_at FROM chat.message WHERE id = $1")).WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "edited_at", "created_at"})).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "edited_at", "created_at"}).
+			AddRow(1, 1, uint(1), "message", false, fixedTime, fixedTime))
+
+	messRepo := database.NewMessageStorage(db)
+	usecase.DeleteMessage(ctx, uint(1), uint(1), messRepo)
+}
+
+func TestEditMessage(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), created_at FROM chat.message WHERE id = $1")).WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "edited_at", "created_at"})).
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "chat_id", "message", "edited", "edited_at", "created_at"}).
+			AddRow(1, 1, uint(1), "message", false, fixedTime, fixedTime))
+
+	mock.ExpectExec(regexp.QuoteMeta("UPDATE chat.message SET message = $1, edited = $2, edited_at = $3 WHERE id = $4")).
+		WithArgs("new msg", true, fixedTime, uint(1)).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	messRepo := database.NewMessageStorage(db)
+	err = usecase.EditMessage(ctx, uint(1), uint(1), "new text", messRepo)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func TestSendMessageToOtherUsers(t *testing.T) {
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	message := domain.Message{
+		Message: "Hello",
+		ChatID:  uint(1),
+	}
+	wsStorage := database.NewWsStorage(db)
+
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	usecase.SendMessageToOtherUsers(ctx, message, uint(1), wsStorage, chatsManager)
 }
