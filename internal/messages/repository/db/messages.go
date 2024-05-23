@@ -44,7 +44,7 @@ func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (mess
 	return message
 }
 
-func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error {
+func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, userID uint, request domain.File, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error {
 	_, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		customErr := domain.CustomError{
@@ -84,9 +84,9 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 			return fmt.Errorf("Файл не является изображением")
 		}*/
 	filePath, err := m.StoreFile(ctx, multipartFile, fileHandler)
-	query := "INSERT INTO chat.file (user_id, message_id, file_path) VALUES($1, $2, $3)"
-	row := m.db.QueryRowContext(ctx, query, userID, messageID, filePath)
-	fmt.Println("INSERTING", userID, messageID, filePath)
+	query := "INSERT INTO chat.file (user_id, message_id, file_path, type) VALUES($1, $2, $3, $4)"
+	row := m.db.QueryRowContext(ctx, query, userID, request.MessageID, filePath, request.AttachmentType)
+	fmt.Println("INSERTING", userID, request.MessageID, filePath)
 	if row.Err() != nil {
 		fmt.Println("ERR:")
 		customErr := domain.CustomError{
@@ -113,7 +113,6 @@ func (m *Messages) GetFilePathByMessageID(ctx context.Context, messageID uint) (
 	}
 
 	filePath = make([]string, 0)
-	i := 0
 	for rows.Next() {
 		path := ""
 		err = rows.Scan(&path)
@@ -126,12 +125,12 @@ func (m *Messages) GetFilePathByMessageID(ctx context.Context, messageID uint) (
 			}
 			fmt.Println(customErr.Error())
 		}
-		i++
 	}
 	return filePath
 }
 
 func (m *Messages) GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo) {
+	fmt.Println("Getting file path: ", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
 		customErr := domain.CustomError{
@@ -186,6 +185,46 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 	}
 	logger.Debug("StoreFile success", "path", filePath)
 	return filePath, nil
+}
+
+func (m *Messages) GetAllStickers(ctx context.Context) (pathToStickerArr []string) {
+	query := "SELECT file_path FROM chat.file WHERE type = 'sticker' ORDER BY id"
+	rows, err := m.db.QueryContext(ctx, query)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "method GetAllStickers, messages.go",
+		}
+		fmt.Println(customErr.Error())
+		return nil
+	}
+
+	pathToStickerArr = make([]string, 0)
+	for rows.Next() {
+		path := ""
+		err = rows.Scan(&path)
+		if err != nil {
+			customErr := &domain.CustomError{
+				Type:    "database",
+				Message: err.Error(),
+				Segment: "method GetAllStickers, messages.go",
+			}
+			fmt.Println(customErr.Error())
+			return nil
+		}
+		pathToStickerArr = append(pathToStickerArr, path)
+	}
+	return pathToStickerArr
+}
+
+func (m *Messages) FillStickersDataBase() {
+	/*
+		pathToStickers := "internal/messages/files/stickers"
+		for i := 0; i < 8; i++ {
+			m.db.Exec("INSERT INTO chat.sticker (description, type, file_path) ")
+		}
+	*/
 }
 
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {

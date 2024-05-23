@@ -12,13 +12,9 @@ import (
 	chats "ProjectMessenger/internal/chats_service/proto"
 	contacts "ProjectMessenger/internal/contacts_service/proto"
 	session "ProjectMessenger/internal/sessions_service/proto"
-
-	"ProjectMessenger/domain"
-	"github.com/gorilla/mux"
-	_ "github.com/swaggo/echo-swagger/example/docs"
-	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
 
+	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	chatsdelivery "ProjectMessenger/internal/chats/delivery"
 	messagedelivery "ProjectMessenger/internal/messages/delivery"
@@ -26,6 +22,9 @@ import (
 	profiledelivery "ProjectMessenger/internal/profile/delivery"
 	searchdelivery "ProjectMessenger/internal/search/delivery"
 	translatedelivery "ProjectMessenger/internal/translate/delivery"
+	"github.com/gorilla/mux"
+	_ "github.com/swaggo/echo-swagger/example/docs"
+	"google.golang.org/grpc"
 
 	database "ProjectMessenger/db"
 )

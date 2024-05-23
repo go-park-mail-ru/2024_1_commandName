@@ -32,9 +32,10 @@ type MessageStore interface {
 	GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error)
 	UpdateMessageText(ctx context.Context, message domain.Message) (err error)
 	DeleteMessage(ctx context.Context, messageID uint) error
-	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
+	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, request domain.File, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
 	GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo)
 	GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string)
+	GetAllStickers(ctx context.Context) (pathToStickerArr []string)
 }
 
 type FileWithInfo struct {
@@ -112,12 +113,20 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 	wg.Wait()
 }
 
-func SetFile(messageStorage MessageStore, ctx context.Context, file multipart.File, userID, messageID uint, userStorage authusecase.UserStore, fileHeader *multipart.FileHeader) {
-	messageStorage.SetFile(ctx, file, userID, messageID, userStorage, fileHeader)
+func SetFile(messageStorage MessageStore, ctx context.Context, file multipart.File, userID uint, request domain.File, userStorage authusecase.UserStore, fileHeader *multipart.FileHeader) {
+	messageStorage.SetFile(ctx, file, userID, request, userStorage, fileHeader)
+
 }
 
-func GetFile(ctx context.Context, messageStorage MessageStore, messageID uint) (files []domain.FileWithInfo) {
-	filePaths := messageStorage.GetFilePathByMessageID(ctx, messageID)
+func GetFile(ctx context.Context, messageStorage MessageStore, messageID uint, attachmentType string) (files []domain.FileWithInfo) {
+	filePaths := make([]string, 0)
+	if attachmentType == "file" {
+		filePaths = messageStorage.GetFilePathByMessageID(ctx, messageID)
+	} else if attachmentType == "sticker" {
+		filePaths = messageStorage.GetAllStickers(ctx)
+	} else {
+		return nil
+	}
 
 	files = make([]domain.FileWithInfo, 0)
 	for _, oneFilePath := range filePaths {

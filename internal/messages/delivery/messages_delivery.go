@@ -83,6 +83,17 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 	usecase.HandleWebSocket(ctx, connection, user, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats)
 }
 
+// SetFile sets array of files
+//
+// @Summary sets array of files
+// @ID SetFile
+// @Accept json
+// @Produce json
+// @Param sendFiles body  sendFilesStruct[domain.File]
+// @Success 200 {object}  domain.Response[int]
+// @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
+// @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
+// @Router /uploadFiles [post]
 func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
@@ -125,8 +136,9 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 		fmt.Fprintf(w, "File Size: %+v\n", fileHeader.Size)
 		fmt.Fprintf(w, "MIME Header: %+v\n", fileHeader.Header)
 
-		usecase.SetFile(messageHandler.Messages, ctx, file, userID, requestToSetFile.MessageID, messageHandler.ChatsHandler.AuthHandler.Users, fileHeader)
+		usecase.SetFile(messageHandler.Messages, ctx, file, userID, requestToSetFile, messageHandler.ChatsHandler.AuthHandler.Users, fileHeader)
 	}
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
 func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Request) {
@@ -155,9 +167,14 @@ func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Req
 		}
 		fmt.Println(customErr.Error())
 	}
-	files := usecase.GetFile(ctx, messageHandler.Messages, fileRequest.MessageID)
+	files := usecase.GetFile(ctx, messageHandler.Messages, fileRequest.MessageID, fileRequest.AttachmentType)
 	logStr := "find for userID = " + strconv.Itoa(int(userID)) + " and message id = " + strconv.Itoa(int(fileRequest.MessageID)) + " files: " + strconv.Itoa(len(files))
 	logger.Info(logStr)
+
+	if len(files) == 0 {
+		misc.WriteStatusJson(ctx, w, 401, "no files found")
+		return
+	}
 	buffer := new(bytes.Buffer)
 
 	zipWriter := zip.NewWriter(buffer)

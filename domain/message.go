@@ -18,8 +18,9 @@ type Message struct {
 }
 
 type File struct {
-	MessageID uint `json:"message_id"`
-	ChatID    uint `json:"chat_id"`
+	MessageID      uint   `json:"message_id"`
+	ChatID         uint   `json:"chat_id"`
+	AttachmentType string `json:"type"`
 }
 
 type FileWithInfo struct {
