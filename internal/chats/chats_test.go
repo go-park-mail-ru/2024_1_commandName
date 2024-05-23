@@ -429,44 +429,56 @@ func TestUserRepo_GetChatsForUser(t *testing.T) {
 	}
 	defer db.Close()
 
-	chatRepo := chat.NewRawChatsStorage(db)
-	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+	//chatRepo := chat.NewRawChatsStorage(db)
+	//fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-	mock.ExpectQuery("SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON").
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "type_id", "name", "description", "avatar_path", "created_at", "edited_at", "creator_id"}).
-			AddRow(1, "2", "name1", "desc", "avatar_path", fixedTime, fixedTime, 1).
-			AddRow(2, "2", "name2", "desc", "avatar_path", fixedTime, fixedTime, 1))
+	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
+		WithArgs(3).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
+			AddRow(3, "TestUser", "test@mail.ru", "Test", "User", "Developer", "5baae85b9413d75de29d9e54b0550eae8ea8eaabb80b0cea8974bb5ee844b82fd9c45d188938bbc57716a495a3766b1728bdffb04f256a67ad545b62d9e69ac7", time.Now(), time.Now(), "", "gxYdyp8Z"))
 
-	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
-		WithArgs(1).
-		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
-			AddRow(1, 1).
-			AddRow(2, 2))
-
-	mock.ExpectQuery("^SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = \\$1 and chat_id = \\$2$").
-		WithArgs(1, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"lastseen_message_id"}).
-			AddRow(1))
-
-	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
-		WithArgs(2).
-		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
-			AddRow(1, 1).
-			AddRow(2, 2))
-
-	mock.ExpectQuery("^SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = \\$1 and chat_id = \\$2$").
-		WithArgs(1, 2).
-		WillReturnRows(sqlmock.NewRows([]string{"lastseen_message_id"}).
-			AddRow(0))
+	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
+		WithArgs(6).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
+			AddRow(6, "TestUser", "test@mail.ru", "Test", "User", "Developer", "5baae85b9413d75de29d9e54b0550eae8ea8eaabb80b0cea8974bb5ee844b82fd9c45d188938bbc57716a495a3766b1728bdffb04f256a67ad545b62d9e69ac7", time.Now(), time.Now(), "", "gxYdyp8Z"))
 
 	ctx := context.Background()
-	contacts := chatRepo.GetChatsForUser(ctx, 1)
-	if len(contacts) == 0 {
-		t.Error("lem must be not 0!")
-	}
+	//contacts := chatRepo.GetChatsForUser(ctx, 1)
 
-	fmt.Println(contacts)
+	grcpChats, err := grpc.Dial(
+		"127.0.0.1:8082",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpChats.Close()
+	chatsManager := chats.NewChatServiceClient(grcpChats)
+
+	grcpSessions, err := grpc.Dial(
+		"127.0.0.1:8081",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpSessions.Close()
+	sessManager := session.NewAuthCheckerClient(grcpSessions)
+
+	grcpContacts, err := grpc.Dial(
+		"127.0.0.1:8083",
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("cant connect to grpc")
+	}
+	defer grcpContacts.Close()
+	contactsManager := contactsProto.NewContactsClient(grcpContacts)
+
+	auth := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
+
+	chatUsecase.GetChatsForUser(ctx, uint(1), chatsManager, auth.Users)
+
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}

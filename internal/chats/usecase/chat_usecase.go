@@ -78,6 +78,7 @@ func GetChatByChatID(ctx context.Context, userID, chatID uint, userStorage useca
 				return domain.Chat{}, fmt.Errorf(e.Message())
 			}
 		}
+		fmt.Println(err)
 		return domain.Chat{}, err
 	}
 	chat := convertChat(chatGRPC)
