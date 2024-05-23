@@ -79,9 +79,9 @@ func SendNotification(app *firebase.App, token string) {
 
 	// See documentation on defining a message payload.
 	message := &messaging.Message{
-		Data: map[string]string{
-			"score": "850",
-			"time":  "2:45",
+		Notification: &messaging.Notification{
+			Title: "New Message",
+			Body:  "Ahahahh lol",
 		},
 		Token: registrationToken,
 	}
