@@ -65,7 +65,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 	}
 }
 
-func SendNotification(app *firebase.App, token string) {
+func SendNotification(app *firebase.App, token string, messageText string, senderUsername string) {
 	// Obtain a messaging.Client from the App.
 	ctx := context.Background()
 	client, err := app.Messaging(ctx)
@@ -124,7 +124,7 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 				tokensForUser, _ := userStorage.GetTokensForUser(ctx, userID)
 				for j := range tokensForUser {
 					slog.Info("sending notificatoin")
-					SendNotification(firebase, tokensForUser[j])
+					SendNotification(firebase, tokensForUser[j], message.Message, message.SenderUsername)
 				}
 			}
 		}(chatUsers[i].UserID, i, userID, message)
