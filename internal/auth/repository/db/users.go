@@ -209,14 +209,9 @@ func (u *Users) GetAvatarStoragePath() string {
 }
 
 func (u *Users) SetFirebaseToken(ctx context.Context, userID uint, token string) (ok bool) {
-	logger := slog.With("requestID", ctx.Value("traceID"))
+	//logger := slog.With("requestID", ctx.Value("traceID"))
 	query := "INSERT INTO auth.notification (user_id, token) VALUES ($1, $2)"
-	var id int
-	err := u.db.QueryRowContext(ctx, query, userID, token).Scan(&id)
-	if err != nil {
-		logger.Error(err.Error())
-		return false
-	}
+	u.db.QueryRowContext(ctx, query, userID, token)
 	return true
 }
 
