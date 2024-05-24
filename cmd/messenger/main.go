@@ -73,7 +73,8 @@ func refreshIAM() {
 }
 
 func initializeNotifications() *firebase.App {
-	opt := option.WithCredentialsFile("./chatme-45ce9-firebase-adminsdk-eo0po-6987003c9b.json")
+	envPath := os.Getenv("GOCHATME_HOME")
+	opt := option.WithCredentialsFile(envPath + "chatme-45ce9-firebase-adminsdk-eo0po-6987003c9b.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		slog.Error("Error initializing firebase server app")

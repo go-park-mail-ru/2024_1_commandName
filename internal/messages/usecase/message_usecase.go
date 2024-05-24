@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"sync"
 	"time"
 
 	"ProjectMessenger/domain"
@@ -108,11 +107,8 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 		})
 	}
 
-	wg := &sync.WaitGroup{}
 	for i := range chatUsers {
-		wg.Add(1)
-		go func(userID uint, i int, senderID uint, message domain.Message) {
-			defer wg.Done()
+		func(userID uint, i int, senderID uint, message domain.Message) {
 			conn := wsStorage.GetConnection(chatUsers[i].UserID)
 			if conn != nil {
 				messageMarshalled, err := json.Marshal(message)
@@ -127,12 +123,12 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 			if userID != senderID {
 				tokensForUser, _ := userStorage.GetTokensForUser(ctx, userID)
 				for j := range tokensForUser {
+					slog.Info("sending notificatoin")
 					SendNotification(firebase, tokensForUser[j])
 				}
 			}
 		}(chatUsers[i].UserID, i, userID, message)
 	}
-	wg.Wait()
 }
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
