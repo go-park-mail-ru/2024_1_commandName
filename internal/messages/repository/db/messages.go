@@ -81,7 +81,7 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 
 	filePath, err := m.StoreFile(ctx, multipartFile, fileHandler)
 	query := "INSERT INTO chat.file (message_id, file_path, type, originalname) VALUES($1, $2, $3, $4)"
-	row := m.db.QueryRowContext(ctx, query, messageID, filePath, request.AttachmentType, "placeholder")
+	row := m.db.QueryRowContext(ctx, query, messageID, filePath, request.AttachmentType, fileHandler.Filename)
 	fmt.Println("INSERTING", userID, messageID, filePath)
 	if row.Err() != nil {
 		fmt.Println("ERR:")
@@ -225,7 +225,7 @@ func (m *Messages) FillStickersDataBase() {
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
 
-	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, message.created_at, message.edited_at, username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1", chatID)
+	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY message.created_at", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",

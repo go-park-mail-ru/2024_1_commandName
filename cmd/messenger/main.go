@@ -134,7 +134,6 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/register", authHandler.Register)
 
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
-	router.HandleFunc("/getMessages", chatsHandler.GetMessages)
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
 	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)
@@ -154,7 +153,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/addContact", profileHandler.AddContact)
 
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
-	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
+	router.HandleFunc("/getMessages", messageHandler.GetMessages)
 	router.HandleFunc("/editMessage", messageHandler.EditMessage)
 	router.HandleFunc("/deleteMessage", messageHandler.DeleteMessage)
 	router.HandleFunc("/uploadFiles", messageHandler.SetFile)
