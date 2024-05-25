@@ -449,55 +449,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/getChatMessages": {
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "GetChatMessages",
-                "operationId": "getChatMessages",
-                "parameters": [
-                    {
-                        "description": "ID of chat",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/delivery.requestChatIDBody"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Messages"
-                        }
-                    },
-                    "400": {
-                        "description": "wrong json structure",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    },
-                    "405": {
-                        "description": "use POST",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response-domain_Error"
-                        }
-                    }
-                }
-            }
-        },
         "/getChats": {
             "get": {
                 "produces": [
@@ -543,6 +494,55 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Описание ошибки",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/getMessages": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "GetMessages",
+                "operationId": "getChatMessages",
+                "parameters": [
+                    {
+                        "description": "ID of chat",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.requestChatIDBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Messages"
+                        }
+                    },
+                    "400": {
+                        "description": "wrong json structure",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "405": {
+                        "description": "use POST",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -991,6 +991,54 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/uploadFiles": {
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "sets array of files",
+                "operationId": "SetFile",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "file to upload",
+                        "name": "files",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "json with data (message_text,chat_id,type); type должен быть file",
+                        "name": "json",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1152,7 +1200,7 @@ const docTemplate = `{
         "delivery.requestChatIDBody": {
             "type": "object",
             "properties": {
-                "chatID": {
+                "chat_id": {
                     "type": "integer"
                 }
             }
@@ -1297,11 +1345,28 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.FileInMessage": {
+            "type": "object",
+            "properties": {
+                "original_name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Message": {
             "type": "object",
             "properties": {
                 "chat_id": {
                     "type": "integer"
+                },
+                "file": {
+                    "$ref": "#/definitions/domain.FileInMessage"
                 },
                 "message_text": {
                     "type": "string"

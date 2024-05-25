@@ -101,7 +101,7 @@ definitions:
     type: object
   delivery.requestChatIDBody:
     properties:
-      chatID:
+      chat_id:
         type: integer
     type: object
   delivery.updateChatJson:
@@ -195,10 +195,21 @@ definitions:
         example: error description
         type: string
     type: object
+  domain.FileInMessage:
+    properties:
+      original_name:
+        type: string
+      path:
+        type: string
+      type:
+        type: string
+    type: object
   domain.Message:
     properties:
       chat_id:
         type: integer
+      file:
+        $ref: '#/definitions/domain.FileInMessage'
       message_text:
         type: string
       username:
@@ -597,38 +608,6 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: gets one chat
-  /getChatMessages:
-    post:
-      consumes:
-      - application/json
-      operationId: getChatMessages
-      parameters:
-      - description: ID of chat
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/delivery.requestChatIDBody'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.Response-domain_Messages'
-        "400":
-          description: wrong json structure
-          schema:
-            $ref: '#/definitions/domain.Response-domain_Error'
-        "405":
-          description: use POST
-          schema:
-            $ref: '#/definitions/domain.Response-domain_Error'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/domain.Response-domain_Error'
-      summary: GetChatMessages
   /getChats:
     get:
       operationId: GetChats
@@ -667,6 +646,38 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: returns contacts of user
+  /getMessages:
+    post:
+      consumes:
+      - application/json
+      operationId: getChatMessages
+      parameters:
+      - description: ID of chat
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/delivery.requestChatIDBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Messages'
+        "400":
+          description: wrong json structure
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "405":
+          description: use POST
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: GetMessages
   /getPopularChannels:
     get:
       operationId: GetPopularChannels
@@ -954,6 +965,39 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: uploads or changes avatar
+  /uploadFiles:
+    post:
+      consumes:
+      - multipart/form-data
+      operationId: SetFile
+      parameters:
+      - description: file to upload
+        in: formData
+        name: files
+        required: true
+        type: file
+      - description: json with data (message_text,chat_id,type); type должен быть
+          file
+        in: formData
+        name: json
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: sets array of files
 schemes:
 - http
 swagger: "2.0"

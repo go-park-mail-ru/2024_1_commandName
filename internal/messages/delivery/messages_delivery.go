@@ -90,8 +90,8 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 // @ID SetFile
 // @Accept multipart/form-data
 // @Produce json
-// @Param file formData file true "file to upload"
-// @Param json formData uploadFileDocs true "meta"
+// @Param files formData file true "file to upload"
+// @Param json formData string true "json with data (message_text,chat_id,type); type должен быть file"
 // @Success 200 {object}  domain.Response[int]
 // @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
