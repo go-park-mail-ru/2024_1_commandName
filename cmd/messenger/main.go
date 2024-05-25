@@ -141,6 +141,8 @@ func Router(cfg domain.Config) {
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
 
+	router.HandleFunc("/metrics", authHandler.Metrics)
+
 	router.HandleFunc("/checkAuth", authHandler.CheckAuth)
 	router.HandleFunc("/login", authHandler.Login)
 	router.HandleFunc("/logout", authHandler.Logout)
