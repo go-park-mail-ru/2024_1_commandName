@@ -200,10 +200,32 @@ definitions:
         example: error description
         type: string
     type: object
+  domain.FileFromUser:
+    properties:
+      chat_id:
+        type: integer
+      message_id:
+        type: integer
+      message_text:
+        type: string
+      type:
+        type: string
+    type: object
+  domain.FileInMessage:
+    properties:
+      original_name:
+        type: string
+      path:
+        type: string
+      type:
+        type: string
+    type: object
   domain.Message:
     properties:
       chat_id:
         type: integer
+      file:
+        $ref: '#/definitions/domain.FileInMessage'
       message_text:
         type: string
       username:
@@ -983,6 +1005,33 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response-domain_Error'
       summary: uploads or changes avatar
+  /uploadFiles:
+    post:
+      consumes:
+      - multipart/form-data
+      operationId: SetFile
+      parameters:
+      - description: file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response-int'
+        "400":
+          description: Person not authorized
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/domain.Response-domain_Error'
+      summary: sets array of files
 schemes:
 - http
 swagger: "2.0"

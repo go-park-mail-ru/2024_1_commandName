@@ -1,8 +1,6 @@
 package delivery
 
 import (
-	contacts "ProjectMessenger/internal/contacts_service/proto"
-	session "ProjectMessenger/internal/sessions_service/proto"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -12,12 +10,11 @@ import (
 	"strings"
 	"time"
 
-	profileUsecase "ProjectMessenger/internal/profile/usecase"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	firebase "firebase.google.com/go"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
 	_ "github.com/swaggo/http-swagger"
 
 	"ProjectMessenger/domain"
@@ -27,15 +24,13 @@ import (
 	profileUsecase "ProjectMessenger/internal/profile/usecase"
 	contacts "ProjectMessenger/microservices/contacts_service/proto"
 	session "ProjectMessenger/microservices/sessions_service/proto"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type AuthHandler struct {
-	Sessions     session.AuthCheckerClient
-	Users        usecase.UserStore
-	ContactsGRPC contacts.ContactsClient
-	Firebase     *firebase.App
+	Sessions          session.AuthCheckerClient
+	Users             usecase.UserStore
+	ContactsGRPC      contacts.ContactsClient
+	Firebase          *firebase.App
 	prometheusMetrics *PrometheusMetrics
 }
 
@@ -102,7 +97,7 @@ func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatar
 		Users:             db.NewUserStorage(dataBase, avatarPath),
 		ContactsGRPC:      ContactsGRPC,
 		prometheusMetrics: NewPrometheusMetrics(),
-		Firebase:     app,
+		Firebase:          app,
 	}
 	return &handler
 }
