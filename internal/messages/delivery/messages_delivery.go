@@ -1,14 +1,16 @@
 package delivery
 
 import (
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/chats/delivery"
-	"ProjectMessenger/internal/misc"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/chats/delivery"
+	"ProjectMessenger/internal/misc"
+
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
 	repository "ProjectMessenger/internal/messages/repository/db"
 	"ProjectMessenger/internal/messages/usecase"

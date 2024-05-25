@@ -1,13 +1,14 @@
 package delivery
 
 import (
-	chats "ProjectMessenger/internal/chats_service/proto"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
+
+	chats "ProjectMessenger/internal/chats_service/proto"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
@@ -19,8 +20,8 @@ import (
 
 type ChatsHandler struct {
 	prometheusMetrics *PrometheusMetrics
-	AuthHandler *authdelivery.AuthHandler
-	Chats       chats.ChatServiceClient
+	AuthHandler       *authdelivery.AuthHandler
+	Chats             chats.ChatServiceClient
 }
 
 type chatIDIsNewJsonResponse struct {

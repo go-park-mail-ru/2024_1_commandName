@@ -77,13 +77,8 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 		return customErr
 	}
 	mimeType := http.DetectContentType(buff)
-	fmt.Println(mimeType)
+	fmt.Println(mimeType) // TODO CHECK TYPE AND SIZE
 
-	//TODO check type of file
-	/*
-		if mimeType != "image/png" && mimeType != "image/jpeg" && mimeType != "image/pjpeg" && mimeType != "image/webp" {
-			return fmt.Errorf("Файл не является изображением")
-		}*/
 	filePath, err := m.StoreFile(ctx, multipartFile, fileHandler)
 	query := "INSERT INTO chat.file (message_id, file_path, type, originalname) VALUES($1, $2, $3, $4)"
 	row := m.db.QueryRowContext(ctx, query, messageID, filePath, request.AttachmentType, "placeholder")
@@ -131,7 +126,6 @@ func (m *Messages) GetFilePathByMessageID(ctx context.Context, messageID uint) (
 }
 
 func (m *Messages) GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo) {
-	fmt.Println("Getting file path: ", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
 		customErr := domain.CustomError{
@@ -174,7 +168,7 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 			Segment: "method StoreFile, messages.go",
 		}
 		fmt.Println(customErr.Error())
-		logger.Error("StoreAvatar failed to open a file", "path", filePath)
+		logger.Error("StoreFile failed to open a file", "path", filePath)
 		return "", fmt.Errorf("internal error")
 	}
 	defer f.Close()
@@ -231,12 +225,12 @@ func (m *Messages) FillStickersDataBase() {
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
 
-	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, message.created_at, edited_at, username, originalname, file_path, type FROM chat.message JOIN auth.person ON message.user_id = person.id JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1", chatID)
+	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, message.created_at, message.edited_at, username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetMessagesByChatID, profile.go",
+			Segment: "method GetChatMessages, messages.go",
 		}
 		fmt.Println(customErr.Error())
 		return nil
@@ -254,6 +248,9 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 			}
 			fmt.Println(customErr.Error())
 			return nil
+		}
+		if mess.File.Path == "" {
+			mess.File = nil
 		}
 		chatMessagesArr = append(chatMessagesArr, mess)
 	}
