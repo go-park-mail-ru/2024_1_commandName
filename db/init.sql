@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS chat.file
     message_id INT REFERENCES chat.message (id),
     type       TEXT default 'file',
     file_path  TEXT DEFAULT '',
-    originalName TEXT
+    originalName TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS chat.sticker

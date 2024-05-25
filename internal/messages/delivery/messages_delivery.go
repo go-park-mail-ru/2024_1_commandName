@@ -143,6 +143,101 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
+func (messageHandler *MessageHandler) GetAllStickers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	_, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
+	if !found {
+		logger.Info("user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "user wasn't found"})
+		return
+	}
+
+	stickers := usecase.GetAllStickers(ctx, messageHandler.Messages)
+	misc.WriteStatusJson(ctx, w, 200, stickers)
+}
+
+/*
+func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	_, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
+	if !found {
+		logger.Info("user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "user not found"})
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var fileRequest sendFileRequest
+	err := decoder.Decode(&fileRequest)
+	if err != nil {
+		customErr := domain.CustomError{
+			Type:    "decoder.Decode",
+			Message: err.Error(),
+			Segment: "GetFile, messages_delivery.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	files := usecase.GetFile(ctx, messageHandler.Messages, fileRequest.MessageID, fileRequest.AttachmentType)
+	logStr := "find for userID = " + strconv.Itoa(int(userID)) + " and message id = " + strconv.Itoa(int(fileRequest.MessageID)) + " files: " + strconv.Itoa(len(files))
+	logger.Info(logStr)
+
+	if len(files) == 0 {
+		misc.WriteStatusJson(ctx, w, 401, "no files found")
+		return
+	}
+	buffer := new(bytes.Buffer)
+
+	zipWriter := zip.NewWriter(buffer)
+	for _, fileWithInfo := range files {
+		zipFile, err := zipWriter.Create("files/" + fileWithInfo.FileInfo.Name())
+		if err != nil {
+			http.Error(w, "Could not create zip file.", http.StatusInternalServerError)
+			return
+		}
+		_, err = io.Copy(zipFile, fileWithInfo.FileFromUser)
+		if err != nil {
+			http.Error(w, "Could not write to zip file.", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	err = zipWriter.Close()
+	if err != nil {
+		http.Error(w, "Could not close zip file.", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Disposition", "attachment; filename=files.zip")
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", buffer.Len()))
+
+	_, err = io.Copy(w, buffer)
+	if err != nil {
+		http.Error(w, "Could not send zip file.", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = io.Copy(w, buffer)
+	if err != nil {
+		http.Error(w, "Could not read file.", http.StatusInternalServerError)
+	}
+}
+
+*/
+
+// GetChatMessages returns messages of some chat
 // GetMessages returns messages of some chat
 //
 // @Summary GetMessages
