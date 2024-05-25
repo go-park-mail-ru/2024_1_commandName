@@ -10,12 +10,13 @@ import (
 	authdelivery "ProjectMessenger/internal/auth/delivery"
 	"ProjectMessenger/internal/misc"
 	"ProjectMessenger/internal/profile/usecase"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type ProfileHandler struct {
-	AuthHandler *authdelivery.AuthHandler
-	ContactsGRPC contacts.ContactsClient
+	AuthHandler       *authdelivery.AuthHandler
+	ContactsGRPC      contacts.ContactsClient
 	prometheusMetrics *PrometheusMetrics
 }
 
@@ -85,7 +86,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 func NewProfileHandler(authHandler *authdelivery.AuthHandler, ContactsGRPC contacts.ContactsClient) *ProfileHandler {
 	return &ProfileHandler{
 		AuthHandler:       authHandler,
-		ContactsGRPC: ContactsGRPC,
+		ContactsGRPC:      ContactsGRPC,
 		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }

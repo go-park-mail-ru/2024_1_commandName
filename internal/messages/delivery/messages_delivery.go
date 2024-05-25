@@ -1,19 +1,14 @@
 package delivery
 
 import (
-	"archive/zip"
-	"bytes"
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log/slog"
-	"net/http"
-	"strconv"
-
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/misc"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"net/http"
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
 	repository "ProjectMessenger/internal/messages/repository/db"
 	"ProjectMessenger/internal/messages/usecase"
@@ -32,17 +27,21 @@ type deleteMessageRequest struct {
 	MessageID uint `json:"message_id"`
 }
 
+type uploadFileDocs struct {
+	Info domain.FileFromUser `json:"jsonq"`
+}
+
 type MessageHandler struct {
 	ChatsHandler *delivery.ChatsHandler
 	Websocket    usecase.WebsocketStore
 	Messages     *repository.Messages
 }
 
-func NewMessagesHandler(chatsHandler *delivery.ChatsHandler, database *sql.DB) *MessageHandler {
+func NewMessagesHandler(chatsHandler *delivery.ChatsHandler, database *sql.DB, path string) *MessageHandler {
 	return &MessageHandler{
 		ChatsHandler: chatsHandler,
 		Websocket:    repository.NewWsStorage(database),
-		Messages:     repository.NewMessageStorage(database),
+		Messages:     repository.NewMessageStorage(database, path),
 	}
 }
 
@@ -87,9 +86,10 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 //
 // @Summary sets array of files
 // @ID SetFile
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param sendFiles body  sendFilesStruct[domain.File]
+// @Param file formData file true "file to upload"
+// @Param json formData uploadFileDocs true "meta"
 // @Success 200 {object}  domain.Response[int]
 // @Failure 400 {object}  domain.Response[domain.Error] "Person not authorized"
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
@@ -109,7 +109,7 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var requestToSetFile domain.File
+	var requestToSetFile domain.FileFromUser
 	err := r.ParseMultipartForm(10000)
 	if err != nil {
 		customErr := domain.CustomError{
@@ -127,20 +127,21 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 	for _, fileHeader := range files {
 		file, err := fileHeader.Open()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
 		defer file.Close()
 
-		fmt.Fprintf(w, "Uploaded File: %+v\n", fileHeader.Filename)
-		fmt.Fprintf(w, "File Size: %+v\n", fileHeader.Size)
+		fmt.Fprintf(w, "Uploaded FileFromUser: %+v\n", fileHeader.Filename)
+		fmt.Fprintf(w, "FileFromUser Size: %+v\n", fileHeader.Size)
 		fmt.Fprintf(w, "MIME Header: %+v\n", fileHeader.Header)
 
-		usecase.SetFile(messageHandler.Messages, ctx, file, userID, requestToSetFile, messageHandler.ChatsHandler.AuthHandler.Users, fileHeader)
+		usecase.SetFile(ctx, file, userID, fileHeader, requestToSetFile, messageHandler.Messages, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.Websocket, messageHandler.ChatsHandler.Chats)
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
+/*
 func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
@@ -157,7 +158,7 @@ func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Req
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var fileRequest domain.File
+	var fileRequest sendFileRequest
 	err := decoder.Decode(&fileRequest)
 	if err != nil {
 		customErr := domain.CustomError{
@@ -184,7 +185,7 @@ func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Req
 			http.Error(w, "Could not create zip file.", http.StatusInternalServerError)
 			return
 		}
-		_, err = io.Copy(zipFile, fileWithInfo.File)
+		_, err = io.Copy(zipFile, fileWithInfo.FileFromUser)
 		if err != nil {
 			http.Error(w, "Could not write to zip file.", http.StatusInternalServerError)
 			return
@@ -212,6 +213,8 @@ func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Req
 		http.Error(w, "Could not read file.", http.StatusInternalServerError)
 	}
 }
+
+*/
 
 // GetChatMessages returns messages of some chat
 //

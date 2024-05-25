@@ -18,11 +18,12 @@ import (
 )
 
 type Messages struct {
-	db *sql.DB
+	db                  *sql.DB
+	pathToStorageFolder string
 }
 
-func NewMessageStorage(db *sql.DB) *Messages {
-	return &Messages{db: db}
+func NewMessageStorage(db *sql.DB, path string) *Messages {
+	return &Messages{db: db, pathToStorageFolder: path}
 }
 
 func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (messageSaved domain.Message) {
@@ -44,7 +45,7 @@ func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (mess
 	return message
 }
 
-func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, userID uint, request domain.File, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error {
+func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, request domain.FileFromUser, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error {
 	_, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		customErr := domain.CustomError{
@@ -84,9 +85,9 @@ func (m *Messages) SetFile(ctx context.Context, multipartFile multipart.File, us
 			return fmt.Errorf("Файл не является изображением")
 		}*/
 	filePath, err := m.StoreFile(ctx, multipartFile, fileHandler)
-	query := "INSERT INTO chat.file (user_id, message_id, file_path, type) VALUES($1, $2, $3, $4)"
-	row := m.db.QueryRowContext(ctx, query, userID, request.MessageID, filePath, request.AttachmentType)
-	fmt.Println("INSERTING", userID, request.MessageID, filePath)
+	query := "INSERT INTO chat.file (message_id, file_path, type, originalname) VALUES($1, $2, $3, $4)"
+	row := m.db.QueryRowContext(ctx, query, messageID, filePath, request.AttachmentType, "placeholder")
+	fmt.Println("INSERTING", userID, messageID, filePath)
 	if row.Err() != nil {
 		fmt.Println("ERR:")
 		customErr := domain.CustomError{
@@ -163,7 +164,7 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 	extension := fileNameSlice[len(fileNameSlice)-1]
 
 	filename := misc.RandStringRunes(20)
-	filePath = "files/" + filename + "." + extension
+	filePath = m.pathToStorageFolder + "files/" + filename + "." + extension
 
 	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -230,7 +231,7 @@ func (m *Messages) FillStickersDataBase() {
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
 
-	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, message.created_at, edited_at, username FROM chat.message JOIN auth.person ON message.user_id = person.id WHERE chat_id = $1", chatID)
+	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, message.created_at, edited_at, username, originalname, file_path, type FROM chat.message JOIN auth.person ON message.user_id = person.id JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -244,7 +245,8 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 
 	for rows.Next() {
 		var mess domain.Message
-		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.EditedAt, &mess.SenderUsername); err != nil {
+		mess.File = &domain.FileInMessage{}
+		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.EditedAt, &mess.SenderUsername, &mess.File.OriginalName, &mess.File.Path, &mess.File.Type); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),

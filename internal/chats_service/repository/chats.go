@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ProjectMessenger/domain"
+
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -276,8 +277,8 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 		}
 		chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 		fmt.Println("chat.ID: ", chat.ID)
-		lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
-		chat.LastSeenMessageID = lastSeenMessageId
+		//lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
+		//chat.LastSeenMessageID = lastSeenMessageId
 		if chat.Users != nil {
 			chats = append(chats, chat)
 		}

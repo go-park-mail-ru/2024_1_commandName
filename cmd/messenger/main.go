@@ -12,6 +12,7 @@ import (
 	chats "ProjectMessenger/internal/chats_service/proto"
 	contacts "ProjectMessenger/internal/contacts_service/proto"
 	session "ProjectMessenger/internal/sessions_service/proto"
+
 	"gopkg.in/yaml.v3"
 
 	"ProjectMessenger/domain"
@@ -22,6 +23,7 @@ import (
 	profiledelivery "ProjectMessenger/internal/profile/delivery"
 	searchdelivery "ProjectMessenger/internal/search/delivery"
 	translatedelivery "ProjectMessenger/internal/translate/delivery"
+
 	"github.com/gorilla/mux"
 	_ "github.com/swaggo/echo-swagger/example/docs"
 	"google.golang.org/grpc"
@@ -119,7 +121,7 @@ func Router(cfg domain.Config) {
 	dataBase := database.СreateDatabase()
 	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath, contactsManager)
 	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, chatsManager)
-	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
+	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase, cfg.App.AvatarPath)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler, contactsManager)
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
@@ -156,7 +158,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/editMessage", messageHandler.EditMessage)
 	router.HandleFunc("/deleteMessage", messageHandler.DeleteMessage)
 	router.HandleFunc("/uploadFiles", messageHandler.SetFile)
-	router.HandleFunc("/getFiles", messageHandler.GetFile)
+	//router.HandleFunc("/getFiles", messageHandler.GetFile)
 
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)

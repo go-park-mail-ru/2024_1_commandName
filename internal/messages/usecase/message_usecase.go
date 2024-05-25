@@ -32,7 +32,7 @@ type MessageStore interface {
 	GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error)
 	UpdateMessageText(ctx context.Context, message domain.Message) (err error)
 	DeleteMessage(ctx context.Context, messageID uint) error
-	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, request domain.File, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
+	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, request domain.FileFromUser, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
 	GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo)
 	GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string)
 	GetAllStickers(ctx context.Context) (pathToStickerArr []string)
@@ -113,8 +113,27 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 	wg.Wait()
 }
 
-func SetFile(messageStorage MessageStore, ctx context.Context, file multipart.File, userID uint, request domain.File, userStorage authusecase.UserStore, fileHeader *multipart.FileHeader) {
-	messageStorage.SetFile(ctx, file, userID, request, userStorage, fileHeader)
+func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *multipart.FileHeader, request domain.FileFromUser, messageStorage MessageStore, userStorage authusecase.UserStore, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
+	user, found := userStorage.GetByUserID(ctx, userID)
+	if !found {
+		return
+	}
+
+	dummyMessage := domain.Message{
+		ID:             0,
+		ChatID:         request.ChatID,
+		UserID:         user.ID,
+		Message:        request.MessageText,
+		Edited:         false,
+		EditedAt:       time.Time{},
+		CreatedAt:      time.Now().UTC(),
+		SenderUsername: user.Username,
+		File:           nil,
+	}
+	messageSaved := messageStorage.SetMessage(ctx, dummyMessage)
+
+	messageStorage.SetFile(ctx, file, user.ID, messageSaved.ID, request, userStorage, fileHeader)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
 
 }
 
