@@ -182,8 +182,8 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 	return filePath, nil
 }
 
-func (m *Messages) GetAllStickers(ctx context.Context) (pathToStickerArr []string) {
-	query := "SELECT file_path FROM chat.file WHERE type = 'sticker' ORDER BY id"
+func (m *Messages) GetAllStickers(ctx context.Context) (stickers []domain.Sticker) {
+	query := "SELECT id, description, type, file_path FROM chat.sticker ORDER BY id"
 	rows, err := m.db.QueryContext(ctx, query)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -195,10 +195,10 @@ func (m *Messages) GetAllStickers(ctx context.Context) (pathToStickerArr []strin
 		return nil
 	}
 
-	pathToStickerArr = make([]string, 0)
+	stickers = make([]domain.Sticker, 0)
 	for rows.Next() {
-		path := ""
-		err = rows.Scan(&path)
+		sticker := domain.Sticker{}
+		err = rows.Scan(&sticker.StickerID, &sticker.StickerDesc, &sticker.StickerType, &sticker.StickerPath)
 		if err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
@@ -208,9 +208,9 @@ func (m *Messages) GetAllStickers(ctx context.Context) (pathToStickerArr []strin
 			fmt.Println(customErr.Error())
 			return nil
 		}
-		pathToStickerArr = append(pathToStickerArr, path)
+		stickers = append(stickers, sticker)
 	}
-	return pathToStickerArr
+	return stickers
 }
 
 func (m *Messages) FillStickersDataBase() {

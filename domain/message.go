@@ -34,3 +34,10 @@ type FileWithInfo struct {
 	FileInfo os.FileInfo
 	File     *os.File
 }
+
+type Sticker struct {
+	StickerID   int    `json:"sticker_id"`
+	StickerDesc string `json:"sticker_desc"`
+	StickerType string `json:"sticker_type"`
+	StickerPath string `json:"sticker_path"`
+}

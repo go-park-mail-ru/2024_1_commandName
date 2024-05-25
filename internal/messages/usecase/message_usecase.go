@@ -35,7 +35,7 @@ type MessageStore interface {
 	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, request domain.FileFromUser, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
 	GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo)
 	GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string)
-	GetAllStickers(ctx context.Context) (pathToStickerArr []string)
+	GetAllStickers(ctx context.Context) (stickers []domain.Sticker)
 }
 
 type FileWithInfo struct {
@@ -134,9 +134,14 @@ func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *
 
 	messageStorage.SetFile(ctx, file, user.ID, messageSaved.ID, request, userStorage, fileHeader)
 	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
-
 }
 
+func GetAllStickers(ctx context.Context, messageStorage MessageStore) (stickers []domain.Sticker) {
+	stickers = messageStorage.GetAllStickers(ctx)
+	return stickers
+}
+
+/*
 func GetFile(ctx context.Context, messageStorage MessageStore, messageID uint, attachmentType string) (files []domain.FileWithInfo) {
 	filePaths := make([]string, 0)
 	if attachmentType == "file" {
@@ -157,6 +162,7 @@ func GetFile(ctx context.Context, messageStorage MessageStore, messageID uint, a
 	}
 	return files
 }
+*/
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
 	messages := messageStorage.GetChatMessages(ctx, chatID, limit)

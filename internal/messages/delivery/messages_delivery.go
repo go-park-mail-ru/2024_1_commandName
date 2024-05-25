@@ -143,6 +143,25 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
+func (messageHandler *MessageHandler) GetAllStickers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	_, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
+	if !found {
+		logger.Info("user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "user wasn't found"})
+		return
+	}
+
+	stickers := usecase.GetAllStickers(ctx, messageHandler.Messages)
+	misc.WriteStatusJson(ctx, w, 200, stickers)
+}
+
 /*
 func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
