@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS chat.message
     edited      BOOLEAN     NOT NULL                 DEFAULT false,
     edited_at   TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL                 DEFAULT current_TIMESTAMP,
-    file_exists BOOLEAN                              DEFAULT false
+    sticker_path TEXT                              DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS chat.file
