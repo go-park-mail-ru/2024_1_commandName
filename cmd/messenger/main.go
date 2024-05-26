@@ -1,9 +1,6 @@
 package main
 
 import (
-	"ProjectMessenger/microservices/chats_service/proto"
-	contacts "ProjectMessenger/microservices/contacts_service/proto"
-	session "ProjectMessenger/microservices/sessions_service/proto"
 	"context"
 	"fmt"
 	"log"
@@ -12,6 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+
+	"ProjectMessenger/microservices/chats_service/proto"
+	contacts "ProjectMessenger/microservices/contacts_service/proto"
+	session "ProjectMessenger/microservices/sessions_service/proto"
 
 	"ProjectMessenger/domain"
 
@@ -62,7 +63,7 @@ func loadConfig() domain.Config {
 }
 
 func refreshIAM() {
-	cmd := exec.Command("/bin/bash", "translate_key_refresh.sh")
+	cmd := exec.Command("bash", "translate_key_refresh.sh")
 	err := cmd.Start()
 	if err != nil {
 		fmt.Println("Ошибка при выполнении скрипта:", err)
@@ -136,7 +137,7 @@ func Router(cfg domain.Config) {
 	dataBase := database.СreateDatabase()
 	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath, contactsManager, firebaseApp)
 	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, chatsManager)
-	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
+	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase, cfg.App.AvatarPath)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler, contactsManager)
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
@@ -149,7 +150,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/register", authHandler.Register)
 
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
-	router.HandleFunc("/getMessages", chatsHandler.GetMessages)
+	router.HandleFunc("/getAllMessages", chatsHandler.GetMessages)
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
 	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)
@@ -170,9 +171,12 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/setFirebaseToken", profileHandler.SetFirebaseToken)
 
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
-	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
+	router.HandleFunc("/getMessages", messageHandler.GetMessages)
 	router.HandleFunc("/editMessage", messageHandler.EditMessage)
 	router.HandleFunc("/deleteMessage", messageHandler.DeleteMessage)
+	router.HandleFunc("/uploadFiles", messageHandler.SetFile)
+	router.HandleFunc("/getAllStickers", messageHandler.GetAllStickers)
+	router.HandleFunc("/sendSticker", messageHandler.SendSticker)
 
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)

@@ -143,6 +143,7 @@ func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB)
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChats [get]
 func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request) {
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("GetChats").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
@@ -153,7 +154,7 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 	chats := usecase.GetChatsForUser(ctx, userID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
 	misc.WriteStatusJson(ctx, w, 200, domain.Chats{Chats: chats})
 	duration := time.Since(start)
-	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChats").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/getChats").Observe(duration.Seconds())
 	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
@@ -169,6 +170,7 @@ func (chatsHandler ChatsHandler) GetChats(w http.ResponseWriter, r *http.Request
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getChat [post]
 func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request) {
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("GetChat").Inc()
 	start := time.Now()
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
@@ -196,17 +198,19 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 	chat, err := usecase.GetChatByChatID(ctx, userID, chatIDStruct.ChatID, chatsHandler.AuthHandler.Users, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
 		logger.Error(err.Error())
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, chatJsonResponse{Chat: chat})
 	duration := time.Since(start)
-	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/GetChat").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/getChat").Observe(duration.Seconds())
 	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
@@ -222,9 +226,12 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /createPrivateChat [post]
 func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("CreatePrivateChat").Inc()
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
@@ -237,6 +244,7 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&userIDFromRequest)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -244,15 +252,20 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 	chatID, isNewChat, err := usecase.CreatePrivateChat(ctx, userID, userIDFromRequest.ID, chatsHandler.Chats, chatsHandler.AuthHandler.Users)
 	if err != nil {
 		if err.Error() == "internal error" {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
 		logger.Error(err.Error())
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, chatIDIsNewJsonResponse{ChatID: chatID, IsNewChat: isNewChat})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/createPrivateChat").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // DeleteChat deletes chat
@@ -267,9 +280,12 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /deleteChat [post]
 func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("DeleteChat").Inc()
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
@@ -282,6 +298,7 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&chatIDJson)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -289,14 +306,19 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 	success, err := usecase.DeleteChat(ctx, userID, chatIDJson.ChatID, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
 		logger.Error(err.Error())
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, deleteChatJsonResponse{success})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/createPrivateChat").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // CreateGroupChat creates group chat
@@ -311,9 +333,12 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /createGroupChat [post]
 func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("CreateGroupChat").Inc()
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
@@ -326,6 +351,7 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&groupRequest)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -333,15 +359,20 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 	chatID, err := usecase.CreateGroupChat(ctx, userID, groupRequest.Users, groupRequest.GroupName, groupRequest.Description, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
 		logger.Error(err.Error())
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/createGroupChat").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // UpdateGroupChat updates group chat
@@ -356,8 +387,11 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /updateGroupChat [post]
 func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("UpdateGroupChat").Inc()
 	ctx := r.Context()
 	if r.Method != http.MethodPost {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
@@ -369,16 +403,21 @@ func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&updatedChat)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
 
 	err = usecase.UpdateGroupChat(ctx, userID, updatedChat.ChatID, updatedChat.NewName, updatedChat.NewDescription, chatsHandler.Chats)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 		misc.WriteInternalErrorJson(ctx, w)
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/updateGroupChat").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // GetPopularChannels updates group chat
@@ -391,6 +430,8 @@ func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /getPopularChannels [get]
 func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("GetPopularChannels").Inc()
 	ctx := r.Context()
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
@@ -400,14 +441,19 @@ func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *ht
 	channels, err := usecase.GetPopularChannels(ctx, userID, chatsHandler.Chats)
 	if err != nil {
 		if err == fmt.Errorf("internal error") {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "Что-то пошло не так"})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, getPopularChannelsResponse{Channels: channels})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/updateGroupChat").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // JoinChannel joins channel
@@ -422,6 +468,8 @@ func (chatsHandler ChatsHandler) GetPopularChannels(w http.ResponseWriter, r *ht
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /joinChannel [post]
 func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("JoinChannel").Inc()
 	ctx := r.Context()
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
@@ -432,6 +480,7 @@ func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Requ
 	chatIDStruct := chatIDStruct{}
 	err := decoder.Decode(&chatIDStruct)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -439,14 +488,19 @@ func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Requ
 	err = usecase.JoinChannel(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
 	if err != nil {
 		if err == fmt.Errorf("internal error") {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, nil)
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/joinChannel").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // LeaveChannel exits from channel
@@ -461,6 +515,8 @@ func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Requ
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /leaveChannel [post]
 func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("LeaveChannel").Inc()
 	ctx := r.Context()
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
 	if !authorized {
@@ -471,6 +527,7 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 	chatIDStruct := chatIDStruct{}
 	err := decoder.Decode(&chatIDStruct)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -478,14 +535,19 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 	err = usecase.LeaveChat(ctx, userID, chatIDStruct.ChatID, chatsHandler.Chats)
 	if err != nil {
 		if err == fmt.Errorf("internal error") {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, nil)
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/leaveChannel").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 // CreateChannel creates channel
@@ -500,9 +562,12 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 // @Failure 500 {object}  domain.Response[domain.Error] "Internal server error"
 // @Router /createChannel [post]
 func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("CreateChannel").Inc()
 	ctx := r.Context()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	if r.Method != http.MethodPost {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("405").Inc()
 		misc.WriteStatusJson(ctx, w, 405, domain.Error{Error: "use POST"})
 		return
 	}
@@ -515,6 +580,7 @@ func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Re
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&channelRequest)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
@@ -522,18 +588,25 @@ func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Re
 	chatID, err := usecase.CreateChannel(ctx, userID, channelRequest.Name, channelRequest.Description, chatsHandler.Chats)
 	if err != nil {
 		if err.Error() == "internal error" {
+			chatsHandler.prometheusMetrics.Errors.WithLabelValues("500").Inc()
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
 		logger.Error(err.Error())
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		return
 	}
 
 	misc.WriteStatusJson(ctx, w, 200, chatIDStruct{ChatID: chatID})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/createChannel").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }
 
 func (chatsHandler ChatsHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	chatsHandler.prometheusMetrics.Methods.WithLabelValues("GetMessages").Inc()
 	ctx := r.Context()
 	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r) // нули ли проверять userID на то, что он состоит в запрашиваемом чате?
 	if !authorized {
@@ -545,9 +618,13 @@ func (chatsHandler ChatsHandler) GetMessages(w http.ResponseWriter, r *http.Requ
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&messageByChatIDRequest)
 	if err != nil {
+		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
 	messages := usecase.GetMessagesByChatID(ctx, chatsHandler.Chats, messageByChatIDRequest.ChatID)
 	misc.WriteStatusJson(ctx, w, 200, domain.Messages{Messages: messages})
+	duration := time.Since(start)
+	chatsHandler.prometheusMetrics.requestDuration.WithLabelValues("/getMessages").Observe(duration.Seconds())
+	chatsHandler.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
 }

@@ -1,7 +1,5 @@
 #!/bin/bash
-
 CONFIG_FILE="config.yml"
-
 update_trKey() {
     trKey=$(yc iam create-token)
     bearer_token="Bearer $trKey"

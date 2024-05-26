@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/grpc"
 )
@@ -31,6 +33,12 @@ func СreateDatabase() *sql.DB {
 }
 
 func main() {
+	go func() {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		fmt.Println("starting metrics server at :9092")
+		log.Fatal(http.ListenAndServe(":9092", mux))
+	}()
 	lis, err := net.Listen("tcp", ":8082")
 	if err != nil {
 		log.Fatalln("cant listen port", err)

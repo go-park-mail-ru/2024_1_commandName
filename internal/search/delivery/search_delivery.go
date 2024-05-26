@@ -2,7 +2,7 @@ package delivery
 
 import (
 	"database/sql"
-	"fmt"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -33,36 +33,32 @@ func (SearchHandler *SearchHandler) SearchObjects(w http.ResponseWriter, r *http
 		return
 	}
 
-	upgrader := repository.UpgradeConnection()
+	decoder := json.NewDecoder(r.Body)
 
-	connection, err := upgrader.Upgrade(w, r, nil)
+	searchRequestStruct := domain.SearchRequest{}
+	err := decoder.Decode(&searchRequestStruct)
 	if err != nil {
-		customErr := &domain.CustomError{
-			Type:    "websocket upgrade",
+		customErr := domain.CustomError{
+			Type:    "json decode",
 			Message: err.Error(),
-			Segment: "method SearchChats, search_delivery.go",
+			Segment: "SearchObjects, search_delivery.go",
 		}
-		fmt.Println(customErr.Error())
+		logger.Error(customErr.Message, "err", customErr)
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: customErr.Message})
+	}
 
-		logger.Error("SearchChats: upgrade failed", "err", err.Error())
-		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
-		return
-	}
-	user, found := SearchHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
-	if !found {
-		customErr := &domain.CustomError{
-			Type:    "GetByUserID",
-			Message: err.Error(),
-			Segment: "method SearchChats, search_delivery.go",
-		}
-		fmt.Println(customErr.Error())
-		logger.Error("could not upgrade connection :user wasn't found")
-		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "could not upgrade connection"})
-		return
-	}
-	err = usecase.HandleWebSocket(ctx, connection, SearchHandler.Search, user)
-	if err != nil {
-		fmt.Println(err)
-		logger.Error("could not parse json request")
+	switch searchRequestStruct.Type {
+	case "chat":
+		foundChat := usecase.SearchChats(ctx, SearchHandler.Search, searchRequestStruct.Word, userID)
+		misc.WriteStatusJson(ctx, w, 200, foundChat)
+	case "contact":
+		foundContact := usecase.SearchContacts(ctx, SearchHandler.Search, searchRequestStruct.Word, userID)
+		misc.WriteStatusJson(ctx, w, 200, foundContact)
+	case "channel":
+		foundChannels := usecase.SearchChannels(ctx, SearchHandler.Search, searchRequestStruct.Word, userID)
+		misc.WriteStatusJson(ctx, w, 200, foundChannels)
+	case "message":
+		foundMessages := usecase.SearchMessages(ctx, SearchHandler.Search, searchRequestStruct.Word, userID, searchRequestStruct.ChatID)
+		misc.WriteStatusJson(ctx, w, 200, foundMessages)
 	}
 }

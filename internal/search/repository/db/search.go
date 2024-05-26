@@ -82,6 +82,7 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 }
 
 func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse) {
+	fmt.Println("In search chats", word)
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)

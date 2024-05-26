@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
-	"os"
-
 	//"io"
 	"mime/multipart"
+	"net/http"
+	"os"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -45,6 +44,7 @@ func UpdateProfileInfo(ctx context.Context, updatedFields domain.Person, numOfUp
 	if !found {
 		return fmt.Errorf("user not found")
 	}
+	fmt.Println("User is found", userFromStorage)
 	numOfUpdatedAlready := 0
 	if updatedFields.Username != "" {
 		numOfUpdatedAlready++
@@ -160,7 +160,12 @@ func GetContacts(ctx context.Context, userID uint, contactGRPC chats.ContactsCli
 func AddContactByUsername(ctx context.Context, userAddingID uint, usernameToAdd string, userStorage authusecase.UserStore, contactGRPC chats.ContactsClient) (err error) {
 	userToAdd, found := userStorage.GetByUsername(ctx, usernameToAdd)
 	if !found {
-		return fmt.Errorf("Такого имени пользователя не существует")
+		customErr := &domain.CustomError{
+			Type:    "non type",
+			Message: "Такого имени пользователя не существует",
+			Segment: "method AddContactByUsername, profile_usecase.go",
+		}
+		return customErr
 	}
 
 	_, err = contactGRPC.AddContactByUsername(ctx, &chats.AddByUsernameReq{

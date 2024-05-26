@@ -5,20 +5,75 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
+	"os"
 	"sort"
 	"time"
 
 	"ProjectMessenger/domain"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Chats struct {
-	db *sql.DB
+	db                *sql.DB
+	prometheusMetrics *PrometheusMetrics
+}
+
+type PrometheusMetrics struct {
+	ActiveSessionsCount prometheus.Gauge
+	Hits                *prometheus.CounterVec
+	Errors              *prometheus.CounterVec
+	Methods             *prometheus.CounterVec
+	requestDuration     *prometheus.HistogramVec
+}
+
+func NewPrometheusMetrics() *PrometheusMetrics {
+	chats_hits := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_hits",
+			Help: "Total number of chats hits.",
+		}, []string{"status", "path"},
+	)
+
+	chats_errors := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_errors",
+			Help: "Number of errors some type.",
+		}, []string{"error_type"},
+	)
+
+	chats_methods := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "chats_called_methods",
+			Help: "Number of called methods.",
+		}, []string{"method"},
+	)
+
+	chats_requestDuration := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "chats_http_request_duration_seconds",
+			Help:    "Histogram of request durations.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"endpoint"},
+	)
+
+	prometheus.MustRegister(chats_hits, chats_errors, chats_methods, chats_requestDuration)
+	fmt.Println("registered")
+	return &PrometheusMetrics{
+		Hits:            chats_hits,
+		Errors:          chats_errors,
+		Methods:         chats_methods,
+		requestDuration: chats_requestDuration,
+	}
 }
 
 func NewChatsStorage(db *sql.DB) *Chats {
 	return &Chats{
-		db: fillTablesMessageAndChatWithFakeData(db),
+		db:                fillTablesMessageAndChatWithFakeData(db),
+		prometheusMetrics: NewPrometheusMetrics(),
 	}
 }
 
@@ -29,6 +84,8 @@ func NewRawChatsStorage(db *sql.DB) *Chats {
 }
 
 func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error) {
+	fmt.Println("GetChatByChatID")
+	c.prometheusMetrics.Methods.WithLabelValues("GetChatByChatID").Inc()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	chat := domain.Chat{}
 	err := c.db.QueryRowContext(ctx, "SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat WHERE id = $1", chatID).Scan(&chat.ID, &chat.Type, &chat.Name, &chat.Description, &chat.AvatarPath, &chat.CreatedAt, &chat.LastActionDateTime, &chat.CreatorID)
@@ -192,7 +249,9 @@ func (c *Chats) DeleteChat(ctx context.Context, chatID uint) (wasDeleted bool, e
 }
 
 func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat {
-	fmt.Println("here")
+
+	c.prometheusMetrics.Methods.WithLabelValues("GetChatsForUser").Inc()
+	fmt.Println("GetChatsForUser")
 	chats := make([]domain.Chat, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON cu.chat_id = c.id WHERE cu.user_id = $1", userID)
 	if err != nil {
@@ -218,14 +277,10 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 			fmt.Println(customErr.Error())
 			return nil
 		}
-		//chat.Messages = c.GetMessagesByChatID(ctx, chat.ID)
-		//if chat.Messages != nil {
 		chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
-		//}
-		//fmt.Println("chatMessages: ", chat.Messages)
 		fmt.Println("chat.ID: ", chat.ID)
-		lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
-		chat.LastSeenMessageID = lastSeenMessageId
+		//lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
+		//chat.LastSeenMessageID = lastSeenMessageId
 		if chat.Users != nil {
 			chats = append(chats, chat)
 		}
@@ -236,6 +291,7 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 func (c *Chats) GetLastSeenMessageId(ctx context.Context, chatID uint, userID uint) (lastSeenMessageID int) {
 	fmt.Println("Do for ", chatID, userID)
 	err := c.db.QueryRowContext(ctx, "SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = $1 and chat_id = $2", userID, chatID).Scan(&lastSeenMessageID)
+	c.prometheusMetrics.Methods.WithLabelValues("GetLastSeenMessageId").Inc()
 	fmt.Println("LSID:", lastSeenMessageID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -249,6 +305,7 @@ func (c *Chats) GetLastSeenMessageId(ctx context.Context, chatID uint, userID ui
 }
 
 func (c *Chats) GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMessageID int) {
+	c.prometheusMetrics.Methods.WithLabelValues("GetFirstChatMessageID").Inc()
 	fmt.Println("call func with chat_id = ", chatID)
 	err := c.db.QueryRowContext(ctx, "SELECT id FROM chat.message WHERE chat_id = $1 ORDER BY created_at LIMIT 1", chatID).Scan(&firstMessageID)
 	fmt.Println("FMI = ", firstMessageID)
@@ -267,6 +324,8 @@ func (c *Chats) GetFirstChatMessageID(ctx context.Context, chatID uint) (firstMe
 }
 
 func (c *Chats) GetChatUsersByChatID(ctx context.Context, chatID uint) []*domain.ChatUser {
+	fmt.Println("GetChatUsersByChatID")
+	c.prometheusMetrics.Methods.WithLabelValues("GetChatUsersByChatID").Inc()
 	chatUsers := make([]*domain.ChatUser, 0)
 	rows, err := c.db.QueryContext(ctx, "SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = $1", chatID)
 	if err != nil {
@@ -447,8 +506,8 @@ func (c *Chats) UpdateLastActionTime(ctx context.Context, chatID uint, time time
 func addFakeChatUsers(db *sql.DB) {
 	_, err := db.Exec("DELETE FROM chat.chat_user")
 	_, err = db.Exec("DELETE FROM chat.message")
-	//_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
-	//_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
+	_, err = db.Exec("ALTER SEQUENCE chat.chat_id_seq RESTART WITH 1")
+	_, err = db.Exec("ALTER SEQUENCE chat.message_id_seq RESTART WITH 1")
 
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -515,7 +574,12 @@ func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
 		addFakeMessage(2, 2, "Погнали в столовку? Там солянка сейчас", false, db)                  // Chernikov to TestUser
 		addFakeMessage(3, 3, "В Бауманке открывают новые общаги, а Измайлово под снос", false, db) // Zhuk to channel
 		addFakeMessage(1, 4, "Ты когда базу данных уже допилишь? Docker запустился??", false, db)  // Naumov to TestUser
-		addFakeMessage(4, 5, "Фронт уже готов, когда бек доделаете?", false, db)                   // Volohov to TestUser
+		addFakeMessage(4, 5, "Фронт уже готов, когда бек доделаете?", false, db)
+		// Volohov to TestUser
+	}
+	_ = db.QueryRow("SELECT count(id) FROM chat.sticker").Scan(&counterOfRows)
+	if counterOfRows == 0 {
+		addFakeStickers(db)
 	}
 	return db
 }
@@ -523,7 +587,12 @@ func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
 func fillTableChatType(db *sql.DB) {
 	_, err := db.Exec("INSERT INTO chat.chat_type (id, name) VALUES ('1', 'private'), ('2', 'group'), ('3', 'channel');")
 	if err != nil {
-		fmt.Println(err)
+		customErr := domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "fillTableChatType, chats.go",
+		}
+		fmt.Println(customErr.Error())
 	}
 }
 
@@ -537,6 +606,30 @@ func addFakeMessage(user_id, chat_id int, message string, edited bool, db *sql.D
 			Segment: "method addFakeMessage, chats.go",
 		}
 		fmt.Println(customErr.Error())
+	}
+}
+
+func addFakeStickers(db *sql.DB) {
+	query := "INSERT INTO chat.sticker (description, type, file_path) VALUES ($1, $2, $3)"
+
+	stickerPath := "../../../cmd/messenger/uploads/stickers"
+	dir, err := os.Open(stickerPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(-1)
+	for _, file := range files {
+		stickerPath := "./uploads/stickers/" + file.Name()
+		_, err = db.Exec(query, "animal_sticker", "sticker", stickerPath)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if !file.IsDir() {
+
+			fmt.Println(file.Name())
+		}
 	}
 }
 

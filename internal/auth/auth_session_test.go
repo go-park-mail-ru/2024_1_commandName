@@ -10,6 +10,8 @@ import (
 
 	"ProjectMessenger/domain"
 	database "ProjectMessenger/internal/auth/repository/db"
+	contacts "ProjectMessenger/internal/contacts_service/repository"
+	session "ProjectMessenger/internal/sessions_service/repository"
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
@@ -23,7 +25,7 @@ func TestSessionRepo_GetUserIDbySessionID(t *testing.T) {
 	}
 	defer db.Close()
 
-	sessionRepo := database.NewSessionStorage(db)
+	sessionRepo := session.NewSessionStorage(db)
 
 	ctx := context.Background()
 
@@ -50,7 +52,7 @@ func TestSessionRepo_GetUserIDbySessionID_ErrNoRows(t *testing.T) {
 	}
 	defer db.Close()
 
-	sessionRepo := database.NewSessionStorage(db)
+	sessionRepo := session.NewSessionStorage(db)
 
 	ctx := context.Background()
 
@@ -76,7 +78,7 @@ func TestSessionRepo_GetUserIDbySessionID_CustomErr(t *testing.T) {
 	}
 	defer db.Close()
 
-	sessionRepo := database.NewSessionStorage(db)
+	sessionRepo := session.NewSessionStorage(db)
 
 	ctx := context.Background()
 
@@ -102,7 +104,7 @@ func TestSessionRepo_CreateSession(t *testing.T) {
 	}
 	defer db.Close()
 
-	sessionRepo := database.NewSessionStorage(db)
+	sessionRepo := session.NewSessionStorage(db)
 	ctx := context.Background()
 
 	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
@@ -130,7 +132,7 @@ func TestSessionRepo_CreateSession_CustomError(t *testing.T) {
 	}
 	defer db.Close()
 
-	sessionRepo := database.NewSessionStorage(db)
+	sessionRepo := session.NewSessionStorage(db)
 	ctx := context.Background()
 
 	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
@@ -157,7 +159,7 @@ func TestSessionRepo_DeleteSession(t *testing.T) {
 	}
 	defer db.Close()
 
-	sessionRepo := database.NewSessionStorage(db)
+	sessionRepo := session.NewSessionStorage(db)
 	ctx := context.Background()
 
 	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
@@ -184,7 +186,7 @@ func TestSessionRepo_DeleteSession_CustomError(t *testing.T) {
 	}
 	defer db.Close()
 
-	sessionRepo := database.NewSessionStorage(db)
+	sessionRepo := session.NewSessionStorage(db)
 	ctx := context.Background()
 
 	//INSERT INTO chat\.contacts \(user1_id, user2_id, state_id\) VALUES (.+) RETURNING id`)
@@ -300,9 +302,8 @@ func TestUserRepo_GetContacts_Success(t *testing.T) {
 	defer db.Close()
 
 	// Создание userRepo с mock базы данных
-	userRepo := database.NewRawUserStorage(db, "")
 	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
-
+	contactRepo := contacts.NewContactsStorage(db)
 	// Утверждение ожидания запроса к базе данных и возвращение результата
 	mock.ExpectQuery("SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path FROM chat.contacts cc JOIN auth.person ap ON").
 		WithArgs(123, 3).
@@ -311,15 +312,15 @@ func TestUserRepo_GetContacts_Success(t *testing.T) {
 			AddRow(2, "username2", "email2", "name2", "surname2", "about2", fixedTime, "avatar2"))
 
 	ctx := context.Background()
-	contacts := userRepo.GetContacts(ctx, 123)
+	userContacts := contactRepo.GetContacts(ctx, 123)
 
 	// Проверка, что получены ожидаемые контакты
 	expectedContacts := []domain.Person{
 		{ID: 1, Username: "username1", Email: "email1", Name: "name1", Surname: "surname1", About: "about1", AvatarPath: "avatar1"},
 		{ID: 2, Username: "username2", Email: "email2", Name: "name2", Surname: "surname2", About: "about2", AvatarPath: "avatar2"},
 	}
-	if !reflect.DeepEqual(contacts, expectedContacts) {
-		t.Errorf("expected contacts to be %v, got %v", expectedContacts, contacts)
+	if !reflect.DeepEqual(userContacts, expectedContacts) {
+		t.Errorf("expected contacts to be %v, got %v", expectedContacts, userContacts)
 	}
 
 	// Проверка выполнения всех ожиданий
@@ -337,15 +338,14 @@ func TestUserRepo_GetContacts_ErrNoRows(t *testing.T) {
 	defer db.Close()
 
 	// Создание userRepo с mock базы данных
-	userRepo := database.NewRawUserStorage(db, "")
-
+	contactsRepo := contacts.NewContactsStorage(db)
 	// Утверждение ожидания запроса к базе данных и возвращение результата
 	mock.ExpectQuery("SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path FROM chat.contacts cc JOIN auth.person ap ON").
 		WithArgs(123, 3).
 		WillReturnError(sql.ErrNoRows)
 
 	ctx := context.Background()
-	contacts := userRepo.GetContacts(ctx, 123)
+	contacts := contactsRepo.GetContacts(ctx, 123)
 
 	// Проверка, что получены ожидаемые контакты
 	if len(contacts) != 0 {
@@ -367,7 +367,6 @@ func TestUserRepo_GetContacts_CustomError(t *testing.T) {
 	defer db.Close()
 
 	// Создание userRepo с mock базы данных
-	userRepo := database.NewRawUserStorage(db, "")
 
 	// Утверждение ожидания запроса к базе данных и возвращение результата
 	mock.ExpectQuery("SELECT ap.id, ap.username, ap.email, ap.name, ap.surname, ap.about, ap.lastseen_at, ap.avatar_path FROM chat.contacts cc JOIN auth.person ap ON").
@@ -375,10 +374,11 @@ func TestUserRepo_GetContacts_CustomError(t *testing.T) {
 		WillReturnError(errors.New("some database error"))
 
 	ctx := context.Background()
-	contacts := userRepo.GetContacts(ctx, 123)
+	contactsRepo := contacts.NewContactsStorage(db)
+	userContacts := contactsRepo.GetContacts(ctx, 123)
 
 	// Проверка, что получены ожидаемые контакты
-	if len(contacts) != 0 {
+	if len(userContacts) != 0 {
 		t.Errorf("expected len = 0")
 	}
 
