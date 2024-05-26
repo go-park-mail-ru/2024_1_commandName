@@ -612,7 +612,7 @@ func addFakeMessage(user_id, chat_id int, message string, edited bool, db *sql.D
 func addFakeStickers(db *sql.DB) {
 	query := "INSERT INTO chat.sticker (description, type, file_path) VALUES ($1, $2, $3)"
 
-	stickerPath := "../../../cmd/messenger/uploads/stickers"
+	stickerPath := "./uploads/stickers"
 	dir, err := os.Open(stickerPath)
 	if err != nil {
 		log.Fatal(err)
