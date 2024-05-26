@@ -224,19 +224,6 @@ func (m *Messages) GetStickerPathByID(ctx context.Context, stickerID uint) (file
 	return filePah
 }
 
-func (m *Messages) SendSticker(stickerID uint) {
-
-}
-
-func (m *Messages) FillStickersDataBase() {
-	/*
-		pathToStickers := "internal/messages/files/stickers"
-		for i := 0; i < 8; i++ {
-			m.db.Exec("INSERT INTO chat.sticker (description, type, file_path) ")
-		}
-	*/
-}
-
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
 	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type, COALESCE(sticker_path, '') AS sticker_path FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY chat.message.created_at", chatID)
