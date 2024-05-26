@@ -157,7 +157,7 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 		//fmt.Fprintf(w, "FileFromUser Size: %+v\n", fileHeader.Size)
 		//fmt.Fprintf(w, "MIME Header: %+v\n", fileHeader.Header)
 
-		usecase.SetFile(ctx, file, userID, fileHeader, requestToSetFile, messageHandler.Messages, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.Websocket, messageHandler.ChatsHandler.Chats)
+		usecase.SetFile(ctx, file, userID, fileHeader, requestToSetFile, messageHandler.Messages, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.Websocket, messageHandler.ChatsHandler.Chats, messageHandler.ChatsHandler.AuthHandler.Firebase)
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
@@ -187,7 +187,7 @@ func (messageHandler *MessageHandler) SendSticker(w http.ResponseWriter, r *http
 		}
 		fmt.Println(customErr.Error())
 	}
-	usecase.SendSticker(ctx, messageHandler.Messages, messageHandler.Websocket, messageHandler.ChatsHandler.Chats, fileRequest, user)
+	usecase.SendSticker(ctx, messageHandler.Messages, messageHandler.Websocket, messageHandler.ChatsHandler.Chats, fileRequest, user, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.ChatsHandler.AuthHandler.Firebase)
 }
 
 /*

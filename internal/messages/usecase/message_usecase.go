@@ -1,8 +1,6 @@
 package usecase
 
 import (
-	users "ProjectMessenger/internal/auth/usecase"
-	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,8 +8,10 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"os"
-	"sync"
 	"time"
+
+	users "ProjectMessenger/internal/auth/usecase"
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 
 	"ProjectMessenger/domain"
 
@@ -34,7 +34,7 @@ type MessageStore interface {
 	GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error)
 	UpdateMessageText(ctx context.Context, message domain.Message) (err error)
 	DeleteMessage(ctx context.Context, messageID uint) error
-	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, request domain.FileFromUser, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
+	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, request domain.FileFromUser, userStorage users.UserStore, fileHandler *multipart.FileHeader) error
 	GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo)
 	GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string)
 	GetAllStickers(ctx context.Context) (stickers []domain.Sticker)
@@ -150,7 +150,7 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 	}
 }
 
-func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *multipart.FileHeader, request domain.FileFromUser, messageStorage MessageStore, userStorage authusecase.UserStore, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
+func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *multipart.FileHeader, request domain.FileFromUser, messageStorage MessageStore, userStorage users.UserStore, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient, firebase *firebase.App) {
 	user, found := userStorage.GetByUserID(ctx, userID)
 	if !found {
 		return
@@ -171,7 +171,7 @@ func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *
 	messageSaved := messageStorage.SetMessage(ctx, dummyMessage)
 
 	messageStorage.SetFile(ctx, file, user.ID, messageSaved.ID, request, userStorage, fileHeader)
-	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
 }
 
 func GetAllStickers(ctx context.Context, messageStorage MessageStore) (stickers []domain.Sticker) {
@@ -179,7 +179,7 @@ func GetAllStickers(ctx context.Context, messageStorage MessageStore) (stickers 
 	return stickers
 }
 
-func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient, request domain.FileFromUser, user domain.Person) {
+func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient, request domain.FileFromUser, user domain.Person, userStorage users.UserStore, firebase *firebase.App) {
 	stickerPath := messageStore.GetStickerPathByID(ctx, request.FileID)
 	sticker := &domain.FileInMessage{Path: stickerPath, Type: "sticker"}
 	stickerMessage := domain.Message{
@@ -197,7 +197,7 @@ func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage Webso
 
 	fmt.Println("end of fun")
 	messageSaved := messageStore.SetMessage(ctx, stickerMessage)
-	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
 }
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
