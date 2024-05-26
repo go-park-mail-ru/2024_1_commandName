@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
+	"os"
 	"sort"
 	"time"
 
@@ -572,7 +574,12 @@ func fillTablesMessageAndChatWithFakeData(db *sql.DB) *sql.DB {
 		addFakeMessage(2, 2, "Погнали в столовку? Там солянка сейчас", false, db)                  // Chernikov to TestUser
 		addFakeMessage(3, 3, "В Бауманке открывают новые общаги, а Измайлово под снос", false, db) // Zhuk to channel
 		addFakeMessage(1, 4, "Ты когда базу данных уже допилишь? Docker запустился??", false, db)  // Naumov to TestUser
-		addFakeMessage(4, 5, "Фронт уже готов, когда бек доделаете?", false, db)                   // Volohov to TestUser
+		addFakeMessage(4, 5, "Фронт уже готов, когда бек доделаете?", false, db)
+		// Volohov to TestUser
+	}
+	_ = db.QueryRow("SELECT count(id) FROM chat.sticker").Scan(&counterOfRows)
+	if counterOfRows == 0 {
+		addFakeStickers(db)
 	}
 	return db
 }
@@ -599,6 +606,30 @@ func addFakeMessage(user_id, chat_id int, message string, edited bool, db *sql.D
 			Segment: "method addFakeMessage, chats.go",
 		}
 		fmt.Println(customErr.Error())
+	}
+}
+
+func addFakeStickers(db *sql.DB) {
+	query := "INSERT INTO chat.sticker (description, type, file_path) VALUES ($1, $2, $3)"
+
+	stickerPath := "../../../cmd/messenger/uploads/stickers"
+	dir, err := os.Open(stickerPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer dir.Close()
+
+	files, err := dir.Readdir(-1)
+	for _, file := range files {
+		stickerPath := "./uploads/stickers/" + file.Name()
+		_, err = db.Exec(query, "animal_sticker", "sticker", stickerPath)
+		if err != nil {
+			fmt.Println(err)
+		}
+		if !file.IsDir() {
+
+			fmt.Println(file.Name())
+		}
 	}
 }
 

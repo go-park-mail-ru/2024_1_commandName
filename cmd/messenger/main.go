@@ -1,9 +1,6 @@
 package main
 
 import (
-	"ProjectMessenger/microservices/chats_service/proto"
-	contacts "ProjectMessenger/microservices/contacts_service/proto"
-	session "ProjectMessenger/microservices/sessions_service/proto"
 	"context"
 	"fmt"
 	"log"
@@ -12,6 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+
+	"ProjectMessenger/microservices/chats_service/proto"
+	contacts "ProjectMessenger/microservices/contacts_service/proto"
+	session "ProjectMessenger/microservices/sessions_service/proto"
 
 	"ProjectMessenger/domain"
 
@@ -62,7 +63,7 @@ func loadConfig() domain.Config {
 }
 
 func refreshIAM() {
-	cmd := exec.Command("/bin/bash", "translate_key_refresh.sh")
+	cmd := exec.Command("bash", "translate_key_refresh.sh")
 	err := cmd.Start()
 	if err != nil {
 		fmt.Println("Ошибка при выполнении скрипта:", err)
