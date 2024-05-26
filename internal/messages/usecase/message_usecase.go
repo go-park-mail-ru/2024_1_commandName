@@ -85,17 +85,14 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 }
 
 func SendNotification(app *firebase.App, token string, messageText string, senderUsername string) {
-	// Obtain a messaging.Client from the App.
 	ctx := context.Background()
 	client, err := app.Messaging(ctx)
 	if err != nil {
 		log.Fatalf("error getting Messaging client: %v\n", err)
 	}
 
-	// This registration token comes from the client FCM SDKs.
 	registrationToken := token
 
-	// See documentation on defining a message payload.
 	message := &messaging.Message{
 		Notification: &messaging.Notification{
 			Title: senderUsername,
@@ -104,18 +101,15 @@ func SendNotification(app *firebase.App, token string, messageText string, sende
 		Token: registrationToken,
 	}
 
-	// Send a message to the device corresponding to the provided
-	// registration token.
 	response, err := client.Send(ctx, message)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	// Response is a message ID string.
+
 	fmt.Println("Successfully sent message:", response)
 }
 
 func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App) {
-	//chatUsers := chatStorage.GetChatUsersByChatID(ctx, message.ChatID)
 	resp, _ := chatStorage.GetChatByChatID(ctx, &chats2.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
 
 	chatUsers := make([]domain.ChatUser, 0)
