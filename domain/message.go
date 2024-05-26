@@ -28,6 +28,11 @@ type FileFromUser struct {
 	MessageID      uint
 	ChatID         uint   `json:"chat_id"`
 	AttachmentType string `json:"type"`
+	FileID         uint   `json:"file_id"`
+}
+
+type StickerFromUser struct {
+	StickerID uint `json:"sticker_id"`
 }
 
 type FileWithInfo struct {

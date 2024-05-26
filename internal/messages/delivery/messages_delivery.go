@@ -162,6 +162,34 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
+func (messageHandler *MessageHandler) SendSticker(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	authorized, userID := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	user, found := messageHandler.ChatsHandler.AuthHandler.Users.GetByUserID(ctx, userID)
+	if !found {
+		logger.Info("user wasn't found")
+		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "user wasn't found"})
+		return
+	}
+	decoder := json.NewDecoder(r.Body)
+	var fileRequest domain.FileFromUser
+	err := decoder.Decode(&fileRequest)
+	if err != nil {
+		customErr := domain.CustomError{
+			Type:    "decoder.Decode",
+			Message: err.Error(),
+			Segment: "SendSticker, messages_delivery.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	usecase.SendSticker(ctx, messageHandler.Messages, messageHandler.Websocket, messageHandler.ChatsHandler.Chats, fileRequest, user)
+}
+
 /*
 func (messageHandler *MessageHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

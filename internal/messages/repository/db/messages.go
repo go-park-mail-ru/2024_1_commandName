@@ -213,6 +213,17 @@ func (m *Messages) GetAllStickers(ctx context.Context) (stickers []domain.Sticke
 	return stickers
 }
 
+func (m *Messages) GetStickerPathByID(ctx context.Context, stickerID uint) (filePah string) {
+	query := "SELECT file_path FROM chat.sticker WHERE id = $1"
+	row := m.db.QueryRowContext(ctx, query, stickerID)
+	err := row.Scan(&filePah)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	return filePah
+}
+
 func (m *Messages) FillStickersDataBase() {
 	/*
 		pathToStickers := "internal/messages/files/stickers"
@@ -224,7 +235,6 @@ func (m *Messages) FillStickersDataBase() {
 
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
-
 	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY message.created_at", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
@@ -260,7 +270,7 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 func (m *Messages) GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error) {
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	message = domain.Message{}
-	err = m.db.QueryRowContext(ctx, "SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), created_at FROM chat.message WHERE id = $1", messageID).Scan(
+	err = m.db.QueryRowContext(ctx, "SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), message.created_at FROM chat.message WHERE id = $1", messageID).Scan(
 		&message.ID, &message.UserID, &message.ChatID, &message.Message, &message.Edited, &message.EditedAt, &message.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

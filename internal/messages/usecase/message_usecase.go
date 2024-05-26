@@ -36,6 +36,7 @@ type MessageStore interface {
 	GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo)
 	GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string)
 	GetAllStickers(ctx context.Context) (stickers []domain.Sticker)
+	GetStickerPathByID(ctx context.Context, stickerID uint) (filePah string)
 }
 
 type FileWithInfo struct {
@@ -141,30 +142,27 @@ func GetAllStickers(ctx context.Context, messageStorage MessageStore) (stickers 
 	return stickers
 }
 
-/*
-func GetFile(ctx context.Context, messageStorage MessageStore, messageID uint, attachmentType string) (files []domain.FileWithInfo) {
-	filePaths := make([]string, 0)
-	if attachmentType == "file" {
-		filePaths = messageStorage.GetFilePathByMessageID(ctx, messageID)
-	} else if attachmentType == "sticker" {
-		filePaths = messageStorage.GetAllStickers(ctx)
-	} else {
-		return nil
+func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient, request domain.FileFromUser, user domain.Person) {
+	stickerPath := messageStore.GetStickerPathByID(ctx, request.FileID)
+	sticker := &domain.FileInMessage{Path: stickerPath, Type: "sticker"}
+	stickerMessage := domain.Message{
+		ID:             0,
+		ChatID:         request.ChatID,
+		UserID:         user.ID,
+		Message:        "",
+		Edited:         false,
+		EditedAt:       time.Time{},
+		CreatedAt:      time.Now().UTC(),
+		SenderUsername: user.Username,
+		File:           sticker,
 	}
 
-	files = make([]domain.FileWithInfo, 0)
-	for _, oneFilePath := range filePaths {
-		fileWithInfo := domain.FileWithInfo{}
-		file, fileInfo := messageStorage.GetFileByPath(oneFilePath)
-		fileWithInfo.File = file
-		fileWithInfo.FileInfo = fileInfo
-		files = append(files, fileWithInfo)
-	}
-	return files
+	messageSaved := messageStore.SetMessage(ctx, stickerMessage)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
 }
-*/
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
+	fmt.Println("here")
 	messages := messageStorage.GetChatMessages(ctx, chatID, limit)
 	return messages
 }
