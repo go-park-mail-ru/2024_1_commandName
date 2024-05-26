@@ -208,6 +208,40 @@ func (u *Users) GetAvatarStoragePath() string {
 	return u.pathToAvatar
 }
 
+func (u *Users) SetFirebaseToken(ctx context.Context, userID uint, token string) (ok bool) {
+	//logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "INSERT INTO auth.notification (user_id, token) VALUES ($1, $2)"
+	u.db.QueryRowContext(ctx, query, userID, token)
+	return true
+}
+
+func (u *Users) GetTokensForUser(ctx context.Context, userID uint) ([]string, error) {
+	logger := slog.With("requestID", ctx.Value("traceID"))
+	query := "SELECT token FROM auth.notification WHERE user_id = $1"
+
+	rows, err := u.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			logger.Debug("GetTokensForUser: no tokens")
+			return nil, nil
+		} else {
+			logger.Error(err.Error())
+			return nil, err
+		}
+	}
+	tokens := make([]string, 0)
+	for rows.Next() {
+		var token string
+		err = rows.Scan(&token)
+		if err != nil {
+			logger.Error(err.Error())
+			return nil, err
+		}
+		tokens = append(tokens, token)
+	}
+	return tokens, nil
+}
+
 func CreateFakeUsers(countOfUsers int, db *sql.DB) *sql.DB {
 	counter := 0
 	_ = db.QueryRow("SELECT count(id) FROM auth.person").Scan(&counter)

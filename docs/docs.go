@@ -865,6 +865,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/setFirebaseToken": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "changes profile password",
+                "operationId": "SetFirebaseToken",
+                "parameters": [
+                    {
+                        "description": "token",
+                        "name": "Password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/delivery.firebaseToken"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
         "/updateGroupChat": {
             "post": {
                 "consumes": [
@@ -979,6 +1016,47 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Описание ошибки",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-domain_Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/uploadFiles": {
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "sets array of files",
+                "operationId": "SetFile",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "file to upload",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response-int"
+                        }
+                    },
+                    "400": {
+                        "description": "Person not authorized",
                         "schema": {
                             "$ref": "#/definitions/domain.Response-domain_Error"
                         }
@@ -1134,6 +1212,14 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "new_message_text": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.firebaseToken": {
+            "type": "object",
+            "properties": {
+                "token": {
                     "type": "string"
                 }
             }
@@ -1297,11 +1383,45 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.FileFromUser": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "message_id": {
+                    "type": "integer"
+                },
+                "message_text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.FileInMessage": {
+            "type": "object",
+            "properties": {
+                "original_name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Message": {
             "type": "object",
             "properties": {
                 "chat_id": {
                     "type": "integer"
+                },
+                "file": {
+                    "$ref": "#/definitions/domain.FileInMessage"
                 },
                 "message_text": {
                     "type": "string"
