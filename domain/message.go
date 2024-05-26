@@ -15,6 +15,7 @@ type Message struct {
 	CreatedAt      time.Time      `json:"sent_at" swaggerignore:"true"`
 	SenderUsername string         `json:"username"`
 	File           *FileInMessage `json:"file"`
+	StickerPath    string         `json:"sticker_path"`
 }
 
 type FileInMessage struct {

@@ -28,9 +28,9 @@ func NewMessageStorage(db *sql.DB, path string) *Messages {
 
 func (m *Messages) SetMessage(ctx context.Context, message domain.Message) (messageSaved domain.Message) {
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
-	query := "INSERT INTO chat.message (user_id, chat_id, message, edited_at, created_at) VALUES($1, $2, $3, $4, $5) RETURNING id"
+	query := "INSERT INTO chat.message (user_id, chat_id, message, edited_at, created_at, sticker_path) VALUES($1, $2, $3, $4, $5, $6) RETURNING id"
 	var messageID uint
-	err := m.db.QueryRowContext(ctx, query, message.UserID, message.ChatID, message.Message, message.EditedAt, message.CreatedAt).Scan(&messageID)
+	err := m.db.QueryRowContext(ctx, query, message.UserID, message.ChatID, message.Message, message.EditedAt, message.CreatedAt, message.StickerPath).Scan(&messageID)
 	if err != nil {
 		customErr := domain.CustomError{
 			Type:    "database",
@@ -224,6 +224,10 @@ func (m *Messages) GetStickerPathByID(ctx context.Context, stickerID uint) (file
 	return filePah
 }
 
+func (m *Messages) SendSticker(stickerID uint) {
+
+}
+
 func (m *Messages) FillStickersDataBase() {
 	/*
 		pathToStickers := "internal/messages/files/stickers"
@@ -235,7 +239,7 @@ func (m *Messages) FillStickersDataBase() {
 
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
-	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY message.created_at", chatID)
+	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type, COALESCE(sticker_path, '') AS sticker_path FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY message.created_at", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -250,7 +254,7 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 	for rows.Next() {
 		var mess domain.Message
 		mess.File = &domain.FileInMessage{}
-		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.EditedAt, &mess.SenderUsername, &mess.File.OriginalName, &mess.File.Path, &mess.File.Type); err != nil {
+		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.EditedAt, &mess.SenderUsername, &mess.File.OriginalName, &mess.File.Path, &mess.File.Type, &mess.StickerPath); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),

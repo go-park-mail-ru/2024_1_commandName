@@ -71,6 +71,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		userDecodedMessage.UserID = user.ID
 		userDecodedMessage.CreatedAt = time.Now().UTC()
 		userDecodedMessage.SenderUsername = user.Username
+		userDecodedMessage.StickerPath = ""
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
 		chatStorage.UpdateLastActionTime(ctx, &chats.LastAction{
 			ChatID: uint64(userDecodedMessage.ChatID),
@@ -130,6 +131,7 @@ func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *
 		CreatedAt:      time.Now().UTC(),
 		SenderUsername: user.Username,
 		File:           nil,
+		StickerPath:    "",
 	}
 	messageSaved := messageStorage.SetMessage(ctx, dummyMessage)
 
@@ -155,14 +157,15 @@ func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage Webso
 		CreatedAt:      time.Now().UTC(),
 		SenderUsername: user.Username,
 		File:           sticker,
+		StickerPath:    stickerPath,
 	}
 
+	fmt.Println("end of fun")
 	messageSaved := messageStore.SetMessage(ctx, stickerMessage)
 	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
 }
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
-	fmt.Println("here")
 	messages := messageStorage.GetChatMessages(ctx, chatID, limit)
 	return messages
 }
