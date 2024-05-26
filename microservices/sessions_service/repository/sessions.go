@@ -36,7 +36,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 
 	sessionMethods := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "session_called_methods_count",
+			Name: "auth_methods",
 			Help: "Number of called methods.",
 		}, []string{"method"},
 	)
@@ -61,6 +61,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 
 func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (userID uint, sessionExists bool) {
 	s.prometheusMetrics.Methods.WithLabelValues("GetUserIDbySessionID").Inc()
+	fmt.Println("GetUserIDbySessionID")
 	start := time.Now()
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	var userIDInt int
@@ -83,6 +84,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 		s.prometheusMetrics.Errors.WithLabelValues("database").Inc()
 		return 0, false
 	}
+	fmt.Println("found user by session userID", userID, "sessionID", sessionID)
 	logger.Debug("found user by session", "userID", userID, "sessionID", sessionID)
 	duration := time.Since(start)
 	s.prometheusMetrics.requestDuration.WithLabelValues("GetUserIDbySessionID").Observe(duration.Seconds())
@@ -90,6 +92,7 @@ func (s *Sessions) GetUserIDbySessionID(ctx context.Context, sessionID string) (
 }
 
 func (s *Sessions) CreateSession(ctx context.Context, userID uint) (sessionID string) {
+	fmt.Println("In sessions")
 	s.prometheusMetrics.Methods.WithLabelValues("CreateSession").Inc()
 	start := time.Now()
 	logger := slog.With("requestID", ctx.Value("traceID"))
@@ -114,6 +117,7 @@ func (s *Sessions) CreateSession(ctx context.Context, userID uint) (sessionID st
 }
 
 func (s *Sessions) DeleteSession(ctx context.Context, sessionID string) {
+	fmt.Println("DeleteSession")
 	s.prometheusMetrics.Methods.WithLabelValues("DeleteSession").Inc()
 	start := time.Now()
 	logger := slog.With("requestID", ctx.Value("traceID"))

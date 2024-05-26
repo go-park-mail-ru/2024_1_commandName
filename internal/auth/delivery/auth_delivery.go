@@ -105,7 +105,8 @@ func NewAuthHandler(dataBase *sql.DB, sessions session.AuthCheckerClient, avatar
 func NewRawAuthHandler(dataBase *sql.DB, avatarPath string) *AuthHandler {
 	handler := AuthHandler{
 		//Sessions: repository.NewSessionStorage(dataBase),
-		Users: db.NewRawUserStorage(dataBase, avatarPath),
+		Users:             db.NewRawUserStorage(dataBase, avatarPath),
+		prometheusMetrics: NewPrometheusMetrics(),
 	}
 	return &handler
 }
@@ -275,6 +276,7 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		return
 	}
+
 	authHandler.prometheusMetrics.Methods.WithLabelValues("AddToAllContacts").Inc()
 	ok := profileUsecase.AddToAllContacts(ctx, userID, authHandler.Users, authHandler.ContactsGRPC)
 	if !ok {

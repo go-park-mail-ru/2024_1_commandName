@@ -136,7 +136,7 @@ func Router(cfg domain.Config) {
 	dataBase := database.СreateDatabase()
 	authHandler = authdelivery.NewAuthHandler(dataBase, sessManager, cfg.App.AvatarPath, contactsManager, firebaseApp)
 	chatsHandler = chatsdelivery.NewChatsHandler(authHandler, chatsManager)
-	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase)
+	messageHandler = messagedelivery.NewMessagesHandler(chatsHandler, dataBase, cfg.App.AvatarPath)
 	profileHandler = profiledelivery.NewProfileHandler(authHandler, contactsManager)
 	searchHandler = searchdelivery.NewSearchHandler(chatsHandler, dataBase)
 	translateHandler = translatedelivery.NewTranslateHandler(dataBase, chatsHandler)
@@ -149,7 +149,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/register", authHandler.Register)
 
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
-	router.HandleFunc("/getMessages", chatsHandler.GetMessages)
+	router.HandleFunc("/getAllMessages", chatsHandler.GetMessages)
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
 	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)
@@ -170,9 +170,12 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/setFirebaseToken", profileHandler.SetFirebaseToken)
 
 	router.HandleFunc("/sendMessage", messageHandler.SendMessage)
-	router.HandleFunc("/getChatMessages", messageHandler.GetChatMessages)
+	router.HandleFunc("/getMessages", messageHandler.GetMessages)
 	router.HandleFunc("/editMessage", messageHandler.EditMessage)
 	router.HandleFunc("/deleteMessage", messageHandler.DeleteMessage)
+	router.HandleFunc("/uploadFiles", messageHandler.SetFile)
+	router.HandleFunc("/getAllStickers", messageHandler.GetAllStickers)
+	router.HandleFunc("/sendSticker", messageHandler.SendSticker)
 
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)

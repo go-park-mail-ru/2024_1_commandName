@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"ProjectMessenger/domain"
+	user "ProjectMessenger/internal/auth/repository/db"
 	chat "ProjectMessenger/internal/chats/repository/db"
+	chatUsecase "ProjectMessenger/internal/chats/usecase"
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
@@ -787,4 +789,242 @@ func TestUserRepo_GetMessagesByChatID(t *testing.T) {
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
+}
+
+func TestChatUsecase_GetChatByChatID(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	chatRepo := chat.NewRawChatsStorage(db)
+	userRepo := user.NewUserStorage(db, "")
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	mock.ExpectQuery("SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat WHERE id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "type_id", "name", "description", "avatar_path", "created_at", "edited_at", "creator_id"}).
+			AddRow(1, "1", "test@mail.ru", "Test", "User", fixedTime, fixedTime, 1))
+
+	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
+			AddRow(1, 1).
+			AddRow(1, 2))
+
+	ctx := context.Background()
+	chat1, err := chatUsecase.GetChatByChatID(ctx, uint(1), uint(1), chatRepo, userRepo)
+	if err != nil {
+	}
+	fmt.Println(chat1)
+}
+
+func TestChatUsecase_GetChatsForUser(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	chatRepo := chat.NewRawChatsStorage(db)
+	userRepo := user.NewUserStorage(db, "")
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	mock.ExpectQuery("SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat_user cu JOIN chat.chat c ON").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "type_id", "name", "description", "avatar_path", "created_at", "edited_at", "creator_id"}).
+			AddRow(1, "1", "name1", "desc", "avatar_path", fixedTime, fixedTime, 1).
+			AddRow(2, "2", "name2", "desc", "avatar_path", fixedTime, fixedTime, 1))
+
+	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
+			AddRow(1, 1).
+			AddRow(2, 2))
+
+	mock.ExpectQuery("^SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = \\$1 and chat_id = \\$2$").
+		WithArgs(1, 1).
+		WillReturnRows(sqlmock.NewRows([]string{"lastseen_message_id"}).
+			AddRow(1))
+
+	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(2).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
+			AddRow(1, 1).
+			AddRow(2, 2))
+
+	mock.ExpectQuery("^SELECT lastseen_message_id FROM chat.chat_user WHERE user_id = \\$1 and chat_id = \\$2$").
+		WithArgs(1, 2).
+		WillReturnRows(sqlmock.NewRows([]string{"lastseen_message_id"}).
+			AddRow(0))
+
+	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
+			AddRow(1, 1).
+			AddRow(1, 2))
+
+	ctx := context.Background()
+	chats := chatUsecase.GetChatsForUser(ctx, uint(1), chatRepo, userRepo)
+	if len(chats) == 0 {
+		t.Error("lem must be not 0!")
+	}
+
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestChatUsecase_CreatePrivateChat(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	chatRepo := chat.NewRawChatsStorage(db)
+	userRepo := user.NewUserStorage(db, "")
+
+	mock.ExpectQuery("SELECT id, username, email, name, surname, about, password_hash, created_at, lastseen_at, avatar_path, password_salt FROM auth.person WHERE id = ?").
+		WithArgs(3).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "name", "surname", "about", "password_hash", "created_at", "lastseen_at", "avatar_path", "password_salt"}).
+			AddRow(3, "TestUser", "test@mail.ru", "Test", "User", "Developer", "5baae85b9413d75de29d9e54b0550eae8ea8eaabb80b0cea8974bb5ee844b82fd9c45d188938bbc57716a495a3766b1728bdffb04f256a67ad545b62d9e69ac7", time.Now(), time.Now(), "", "gxYdyp8Z"))
+
+	mock.ExpectQuery("SELECT cu1.chat_id, cu1.user_id, cu2.user_id FROM chat.chat_user cu1 INNER JOIN chat.chat_user cu2 ON cu1.chat_id = cu2.chat_id WHERE").
+		WithArgs(1, 3).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id1", "user_id2"}).
+			AddRow(1, 1, 2))
+
+	ctx := context.Background()
+	chatID, isNew, err := chatUsecase.CreatePrivateChat(ctx, uint(1), uint(3), chatRepo, userRepo)
+	if err != nil {
+	}
+	fmt.Println(chatID, isNew)
+}
+
+func TestChatUsecase_DeleteChat(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	chatRepo := chat.NewRawChatsStorage(db)
+	//userRepo := user.NewUserStorage(db, "")
+
+	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
+			AddRow(1, 1).
+			AddRow(1, 2))
+
+	fixedTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	mock.ExpectQuery("SELECT id, type_id, name, description, avatar_path, created_at, edited_at,creator_id FROM chat.chat WHERE id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "type_id", "name", "description", "avatar_path", "created_at", "edited_at", "creator_id"}).
+			AddRow(1, "1", "test@mail.ru", "Test", "User", fixedTime, fixedTime, 1))
+
+	mock.ExpectQuery("SELECT chat_id, user_id FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnRows(sqlmock.NewRows([]string{"chat_id", "user_id"}).
+			AddRow(1, 1).
+			AddRow(1, 2))
+
+	mock.ExpectExec("DELETE FROM chat.chat_user WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("DELETE FROM chat.message WHERE chat_id = ?").
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	mock.ExpectExec("DELETE FROM chat.chat WHERE id = ?").
+		WithArgs(1).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+
+	ctx := context.Background()
+	wasDeleted, err := chatUsecase.DeleteChat(ctx, uint(1), uint(1), chatRepo)
+	if err != nil {
+	}
+	fmt.Println(wasDeleted)
+}
+
+func TestChatUsecase_CreateGroupChat(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	chatRepo := chat.NewRawChatsStorage(db)
+	//userRepo := user.NewUserStorage(db, "")
+
+	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	result := sqlmock.NewResult(1, 1)
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	ctx := context.Background()
+	userIDs := []uint{1, 2, 3}
+	chatID, err := chatUsecase.CreateGroupChat(ctx, uint(1), userIDs, "new", "desc", chatRepo)
+	if err != nil {
+	}
+	fmt.Println(chatID)
+}
+
+func TestChatUsecase_UpdateGroup(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("cant create mock: %s", err)
+	}
+	defer db.Close()
+
+	chatRepo := chat.NewRawChatsStorage(db)
+	//userRepo := user.NewUserStorage(db, "")
+
+	mock.ExpectQuery(`INSERT INTO chat\.chat \(type_id, name, description, avatar_path, created_at,edited_at, creator_id\) VALUES (.+) RETURNING id`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+
+	result := sqlmock.NewResult(1, 1)
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	mock.ExpectExec(`INSERT INTO chat\.chat_user \(chat_id, user_id, lastseen_message_id\) VALUES\(.+\)`).
+		WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WillReturnResult(result)
+
+	ctx := context.Background()
+	userIDs := []uint{1, 2, 3}
+	chatID, err := chatUsecase.CreateGroupChat(ctx, uint(1), userIDs, "new", "desc", chatRepo)
+	if err != nil {
+	}
+	fmt.Println(chatID)
 }

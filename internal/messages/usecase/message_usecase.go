@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"mime/multipart"
+	"os"
+	"sync"
 	"time"
 
 	"ProjectMessenger/domain"
@@ -31,6 +34,16 @@ type MessageStore interface {
 	GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error)
 	UpdateMessageText(ctx context.Context, message domain.Message) (err error)
 	DeleteMessage(ctx context.Context, messageID uint) error
+	SetFile(ctx context.Context, multipartFile multipart.File, userID uint, messageID uint, request domain.FileFromUser, userStorage authusecase.UserStore, fileHandler *multipart.FileHeader) error
+	GetFileByPath(filePath string) (file *os.File, fileInfo os.FileInfo)
+	GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string)
+	GetAllStickers(ctx context.Context) (stickers []domain.Sticker)
+	GetStickerPathByID(ctx context.Context, stickerID uint) (filePah string)
+}
+
+type FileWithInfo struct {
+	fileInfo os.FileInfo
+	file     *os.File
 }
 
 func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App) {
@@ -48,13 +61,19 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 		var userDecodedMessage domain.Message
 		err = json.Unmarshal(message, &userDecodedMessage)
 		if err != nil {
-			fmt.Println(err)
+			customErr := domain.CustomError{
+				Type:    "json.Unmarshal",
+				Message: err.Error(),
+				Segment: "HandleWebSocket, messages_usecase.go",
+			}
+			fmt.Println(customErr.Error())
 			continue
 		}
 		logger.Debug("got ws message", "msg", userDecodedMessage)
 		userDecodedMessage.UserID = user.ID
 		userDecodedMessage.CreatedAt = time.Now().UTC()
 		userDecodedMessage.SenderUsername = user.Username
+		userDecodedMessage.StickerPath = ""
 		messageSaved := messageStorage.SetMessage(ctx, userDecodedMessage)
 		chatStorage.UpdateLastActionTime(ctx, &chats2.LastAction{
 			ChatID: uint64(userDecodedMessage.ChatID),
@@ -129,6 +148,56 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 			}
 		}(chatUsers[i].UserID, i, userID, message)
 	}
+}
+
+func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *multipart.FileHeader, request domain.FileFromUser, messageStorage MessageStore, userStorage authusecase.UserStore, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient) {
+	user, found := userStorage.GetByUserID(ctx, userID)
+	if !found {
+		return
+	}
+
+	dummyMessage := domain.Message{
+		ID:             0,
+		ChatID:         request.ChatID,
+		UserID:         user.ID,
+		Message:        request.MessageText,
+		Edited:         false,
+		EditedAt:       time.Time{},
+		CreatedAt:      time.Now().UTC(),
+		SenderUsername: user.Username,
+		File:           nil,
+		StickerPath:    "",
+	}
+	messageSaved := messageStorage.SetMessage(ctx, dummyMessage)
+
+	messageStorage.SetFile(ctx, file, user.ID, messageSaved.ID, request, userStorage, fileHeader)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
+}
+
+func GetAllStickers(ctx context.Context, messageStorage MessageStore) (stickers []domain.Sticker) {
+	stickers = messageStorage.GetAllStickers(ctx)
+	return stickers
+}
+
+func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage WebsocketStore, chatStorage chats.ChatServiceClient, request domain.FileFromUser, user domain.Person) {
+	stickerPath := messageStore.GetStickerPathByID(ctx, request.FileID)
+	sticker := &domain.FileInMessage{Path: stickerPath, Type: "sticker"}
+	stickerMessage := domain.Message{
+		ID:             0,
+		ChatID:         request.ChatID,
+		UserID:         user.ID,
+		Message:        "",
+		Edited:         false,
+		EditedAt:       time.Time{},
+		CreatedAt:      time.Now().UTC(),
+		SenderUsername: user.Username,
+		File:           sticker,
+		StickerPath:    stickerPath,
+	}
+
+	fmt.Println("end of fun")
+	messageSaved := messageStore.SetMessage(ctx, stickerMessage)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage)
 }
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
