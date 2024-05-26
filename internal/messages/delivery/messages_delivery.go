@@ -188,9 +188,9 @@ func (messageHandler *MessageHandler) SendSticker(w http.ResponseWriter, r *http
 		fmt.Println(customErr.Error())
 	}
 	usecase.SendSticker(ctx, messageHandler.Messages, messageHandler.Websocket, messageHandler.ChatsHandler.Chats, fileRequest, user, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.ChatsHandler.AuthHandler.Firebase)
+	misc.WriteStatusJson(ctx, w, 200, nil)
 }
 
-// GetChatMessages returns messages of some chat
 // GetMessages returns messages of some chat
 //
 // @Summary GetMessages
