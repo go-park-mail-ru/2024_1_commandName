@@ -188,6 +188,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 }
 
 func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable string, userID uint, chatType string) (foundChatsStructure []domain.Chat) {
+	fmt.Println("In private search", requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, " ", userID)
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
 				    FROM chat.chat c
@@ -216,7 +217,11 @@ func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslat
 			return foundChatsStructure
 		}
 		chat, _ := usecase.GetChatByChatID(ctx, userID, mChat.ID, s.Users, s.Chats)
-		if strings.Contains(chat.Name, requestToSearchTranslator) || strings.Contains(chat.Name, requestToSearchOriginal) || strings.Contains(chat.Name, requestToSearchRune) || strings.Contains(chat.Name, requestToSearchSyllable) {
+		username, belongs := usecase.GetCompanionNameForPrivateChat(ctx, chat, userID, s.Users)
+		fmt.Println(username, belongs)
+		fmt.Println(username, requestToSearchTranslator)
+		if strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchTranslator)) || strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchOriginal)) || strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchRune)) || strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchSyllable)) {
+			fmt.Println("!!!")
 			/*mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
 			var messages []*domain.Message
 			for j := range mMessages {
