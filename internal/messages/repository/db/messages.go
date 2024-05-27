@@ -158,9 +158,9 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 	extension := fileNameSlice[len(fileNameSlice)-1]
 
 	filename := misc.RandStringRunes(20)
-	filePath = m.pathToStorageFolder + "files/" + filename + "." + extension
+	filePath = "files/" + filename + "." + extension
 
-	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile(m.pathToStorageFolder+filePath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "os open file",
@@ -168,17 +168,17 @@ func (m *Messages) StoreFile(ctx context.Context, multipartFile multipart.File, 
 			Segment: "method StoreFile, messages.go",
 		}
 		fmt.Println(customErr.Error())
-		logger.Error("StoreFile failed to open a file", "path", filePath)
+		logger.Error("StoreFile failed to open a file", "path", m.pathToStorageFolder+filePath)
 		return "", fmt.Errorf("internal error")
 	}
 	defer f.Close()
 
 	_, err = io.Copy(f, multipartFile)
 	if err != nil {
-		logger.Error("StoreFile failed to copy file", "path", filePath)
+		logger.Error("StoreFile failed to copy file", "path", m.pathToStorageFolder+filePath)
 		return "", fmt.Errorf("internal error")
 	}
-	logger.Debug("StoreFile success", "path", filePath)
+	logger.Debug("StoreFile success", "path", m.pathToStorageFolder+filePath)
 	return filePath, nil
 }
 
