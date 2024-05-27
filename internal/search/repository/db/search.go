@@ -1,8 +1,6 @@
 package db
 
 import (
-	"ProjectMessenger/internal/chats/usecase"
-	"ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -12,6 +10,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"ProjectMessenger/internal/chats/usecase"
+	"ProjectMessenger/microservices/chats_service/proto"
 
 	"ProjectMessenger/domain"
 	userRepo "ProjectMessenger/internal/auth/repository/db"
@@ -123,7 +124,7 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 			} else {
 				requestToSearchSyllable += wordsArr[i]
 			}
-
+			fmt.Println("searching for ")
 			//usecase.GetCompanionNameForPrivateChat()
 
 			rows, err := s.db.QueryContext(ctx,
