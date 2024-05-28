@@ -1,6 +1,7 @@
 package domain
 
 // Response[T]
+
 type Response[T any] struct {
 	Status int `json:"status" example:"200"`
 	Body   T   `json:"body,omitempty"`

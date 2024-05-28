@@ -205,6 +205,7 @@ func EditMessage(ctx context.Context, userID uint, messageID uint, newMessageTex
 		return err
 	}
 	if message.UserID != userID {
+
 		return fmt.Errorf("Пользователь не является отправителем")
 	}
 	message.Message = newMessageText

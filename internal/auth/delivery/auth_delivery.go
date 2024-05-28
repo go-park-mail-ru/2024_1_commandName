@@ -2,14 +2,15 @@ package delivery
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/mailru/easyjson"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	firebase "firebase.google.com/go"
@@ -155,9 +156,16 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	decoder := json.NewDecoder(r.Body)
+
 	var jsonUser domain.Person
-	err = decoder.Decode(&jsonUser)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+
+	err = easyjson.Unmarshal(body, &jsonUser)
+
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -168,6 +176,7 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
+		fmt.Println(err)
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		return
@@ -260,9 +269,14 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var jsonUser domain.Person
-	err := decoder.Decode(&jsonUser)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+
+	err = easyjson.Unmarshal(body, &jsonUser)
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})

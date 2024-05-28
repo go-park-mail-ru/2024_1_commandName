@@ -2,14 +2,15 @@ package delivery
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log/slog"
 	"net/http"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/misc"
+	"github.com/mailru/easyjson"
 
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
 	repository "ProjectMessenger/internal/messages/repository/db"
@@ -34,9 +35,9 @@ type uploadFileDocs struct {
 }
 
 type MessageHandler struct {
-	ChatsHandler *delivery.ChatsHandler
-	Websocket    usecase.WebsocketStore
-	Messages     *repository.Messages
+	ChatsHandler *delivery.ChatsHandler `json:"-"`
+	Websocket    usecase.WebsocketStore `json:"-"`
+	Messages     *repository.Messages   `json:"-"`
 }
 
 func NewMessagesHandler(chatsHandler *delivery.ChatsHandler, database *sql.DB, path string) *MessageHandler {
@@ -143,7 +144,9 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 
 	files := r.MultipartForm.File["files"]
 	jsonString := r.MultipartForm.Value["json"]
-	json.Unmarshal([]byte(jsonString[0]), &requestToSetFile)
+	//json.Unmarshal([]byte(jsonString[0]), &requestToSetFile)
+
+	err = easyjson.Unmarshal([]byte(jsonString[0]), &requestToSetFile)
 
 	for _, fileHeader := range files {
 		file, err := fileHeader.Open()
@@ -176,9 +179,15 @@ func (messageHandler *MessageHandler) SendSticker(w http.ResponseWriter, r *http
 		misc.WriteStatusJson(ctx, w, 500, domain.Error{Error: "user wasn't found"})
 		return
 	}
-	decoder := json.NewDecoder(r.Body)
+
 	var fileRequest domain.FileFromUser
-	err := decoder.Decode(&fileRequest)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &fileRequest)
+
 	if err != nil {
 		customErr := domain.CustomError{
 			Type:    "decoder.Decode",
@@ -210,9 +219,14 @@ func (messageHandler *MessageHandler) GetMessages(w http.ResponseWriter, r *http
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var RequestChatID requestChatIDBody
-	err := decoder.Decode(&RequestChatID)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &RequestChatID)
+
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
@@ -241,20 +255,34 @@ func (messageHandler *MessageHandler) EditMessage(w http.ResponseWriter, r *http
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var json editMessageRequest
-	err := decoder.Decode(&json)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &json)
+
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
+	fmt.Println("here")
+
 	err = usecase.EditMessage(ctx, userID, json.MessageID, json.NewMessageText, messageHandler.Messages)
 	if err != nil {
 		if err == fmt.Errorf("internal error") {
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+
+		_, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		} else {
+			misc.WriteStatusJson(ctx, w, 400, err.Error())
+		}
+
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
@@ -279,9 +307,14 @@ func (messageHandler *MessageHandler) DeleteMessage(w http.ResponseWriter, r *ht
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var json deleteMessageRequest
-	err := decoder.Decode(&json)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &json)
+
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return

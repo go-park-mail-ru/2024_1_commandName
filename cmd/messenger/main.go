@@ -63,7 +63,7 @@ func loadConfig() domain.Config {
 }
 
 func refreshIAM() {
-	cmd := exec.Command("bash", "translate_key_refresh.sh")
+	cmd := exec.Command("bash", "translate_key_refreshs.sh")
 	err := cmd.Start()
 	if err != nil {
 		fmt.Println("Ошибка при выполнении скрипта:", err)
@@ -150,7 +150,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/register", authHandler.Register)
 
 	router.HandleFunc("/getChats", chatsHandler.GetChats)
-	router.HandleFunc("/getAllMessages", chatsHandler.GetMessages)
+	router.HandleFunc("/getChatMessages", chatsHandler.GetMessages)
 	router.HandleFunc("/getChat", chatsHandler.GetChat)
 	router.HandleFunc("/createPrivateChat", chatsHandler.CreatePrivateChat)
 	router.HandleFunc("/createGroupChat", chatsHandler.CreateGroupChat)

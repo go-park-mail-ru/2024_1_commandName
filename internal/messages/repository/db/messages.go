@@ -264,6 +264,7 @@ func (m *Messages) GetMessage(ctx context.Context, messageID uint) (message doma
 	err = m.db.QueryRowContext(ctx, "SELECT id, user_id, chat_id, message.message, edited, COALESCE(edited_at, '2000-01-01 00:00:00'), message.created_at FROM chat.message WHERE id = $1", messageID).Scan(
 		&message.ID, &message.UserID, &message.ChatID, &message.Message, &message.Edited, &message.EditedAt, &message.CreatedAt)
 	if err != nil {
+
 		if errors.Is(err, sql.ErrNoRows) {
 			logger.Debug("EditMessage didn't found message", "messageID", messageID)
 			return message, fmt.Errorf("Такого сообщения не существует")
@@ -283,8 +284,13 @@ func (m *Messages) UpdateMessageText(ctx context.Context, message domain.Message
 	logger := slog.With("requestID", ctx.Value("traceID"))
 	_, err = m.db.ExecContext(ctx, "UPDATE chat.message SET message = $1, edited = $2, edited_at = $3 WHERE id = $4", message.Message, message.Edited, message.EditedAt, message.ID)
 	if err != nil {
+		customErr := domain.CustomError{
+			Type:    "database",
+			Message: err.Error(),
+			Segment: "UpdateMessageText, messages.go",
+		}
 		logger.Error("UpdateMessageText db error", "messageID", message.ID)
-		return fmt.Errorf("internal error")
+		return customErr
 	}
 	return nil
 }
