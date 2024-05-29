@@ -1,11 +1,14 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
@@ -15,6 +18,7 @@ import (
 	"ProjectMessenger/domain"
 	authusecase "ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
+	"gopkg.in/yaml.v3"
 )
 
 type Messages struct {
@@ -303,4 +307,113 @@ func (m *Messages) DeleteMessage(ctx context.Context, messageID uint) error {
 		return fmt.Errorf("internal error")
 	}
 	return nil
+}
+
+func (m *Messages) SummarizeMessage(message domain.SummarizeMessageRequest) domain.TranslateResponse {
+	stream := false
+	temperature := 0.6
+	maxTokens := "2000"
+
+	reqData := domain.APIRequest{
+		ModelURI: "gpt://b1gq4i9e5unl47m0kj5f/yandexgpt/latest",
+		CompletionOptions: domain.CompletionOptions{
+			Stream:      stream,
+			Temperature: temperature,
+			MaxTokens:   maxTokens,
+		},
+		Messages: []domain.SummarizeMessageRequest{
+			{
+				Role: "system",
+				Text: "Выдели очень кратко основные мысли из сообщения от" + message.Username,
+			},
+			{
+				Role: "user",
+				Text: message.Text,
+			},
+		},
+	}
+	jsonRequest, err := json.Marshal(reqData)
+
+	var YandexConfig domain.YandexConfig
+	cfg := LoadConfig()
+	YandexConfig.TranslateKey = cfg.Gpt.TrKey
+	YandexConfig.Url = cfg.Gpt.Url
+	YandexConfig.FolderID = cfg.Gpt.FolderID
+	YandexConfig.Header = cfg.Gpt.Header
+	YandexConfig.Method = cfg.Gpt.Method
+
+	client := &http.Client{}
+	req, err := http.NewRequest(YandexConfig.Method, YandexConfig.Url, bytes.NewBuffer(jsonRequest))
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "http new request",
+			Message: err.Error(),
+			Segment: "method Translate, translate.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	req.Header.Add("Content-Type", YandexConfig.Header)
+	req.Header.Add("Authorization", YandexConfig.TranslateKey)
+
+	fmt.Println(req.Method)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "http do request",
+			Message: err.Error(),
+			Segment: "method Translate, translate.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "read response",
+			Message: err.Error(),
+			Segment: "method Translate, translate.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	gptResponse := ParseSummarizeResponse(body)
+	var summarizeResp domain.TranslateResponse
+	gptToTranslations := domain.Translations{Text: gptResponse.Result.Alternatives[0].Message.Text}
+	summarizeResp.Translations = append(summarizeResp.Translations, gptToTranslations)
+	return summarizeResp
+}
+
+func LoadConfig() domain.Config {
+	envPath := os.Getenv("GOCHATME_HOME")
+	slog.Debug("env home =" + envPath)
+	f, err := os.Open(envPath + "config.yml")
+	slog.Debug("trying to open " + envPath + "config.yml")
+	if err != nil {
+		slog.Error("load config failed", "err", err)
+		panic(err)
+	}
+	defer f.Close()
+
+	var cfg domain.Config
+	decoder := yaml.NewDecoder(f)
+	err = decoder.Decode(&cfg)
+	if err != nil {
+		panic(err)
+	}
+	return cfg
+}
+
+func ParseSummarizeResponse(jsonResponse []byte) (response domain.SummarizeMessageResponse) {
+	err := json.Unmarshal(jsonResponse, &response)
+	if err != nil {
+		customErr := &domain.CustomError{
+			Type:    "json Unmarshal",
+			Message: err.Error(),
+			Segment: "method ParseSummarizeResponse, messages.go",
+		}
+		fmt.Println(customErr.Error())
+	}
+	fmt.Println(response.Result.Alternatives[0].Message.Text)
+	return response
 }

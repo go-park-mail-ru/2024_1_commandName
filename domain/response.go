@@ -26,3 +26,23 @@ type Contacts struct {
 type Messages struct {
 	Messages []Message `json:"messages"`
 }
+
+type Alternative struct {
+	Message SummarizeMessageRequest `json:"message"`
+	Status  string                  `json:"status"`
+}
+
+type Usage struct {
+	InputTextTokens  string `json:"inputTextTokens"`
+	CompletionTokens string `json:"completionTokens"`
+	TotalTokens      string `json:"totalTokens"`
+}
+
+type Result struct {
+	Alternatives []Alternative `json:"alternatives"`
+	Usage        Usage         `json:"usage"`
+	ModelVersion string        `json:"modelVersion"`
+}
+type SummarizeMessageResponse struct {
+	Result Result `json:"result"`
+}
