@@ -391,7 +391,7 @@ func LoadConfig() domain.Config {
 	slog.Debug("trying to open " + envPath + "config.yml")
 	if err != nil {
 		slog.Error("load config failed", "err", err)
-		panic(err)
+		fmt.Errorf("load config failed").Error()
 	}
 	defer f.Close()
 
