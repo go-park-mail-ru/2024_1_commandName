@@ -1,4 +1,4 @@
-#!/bin/bash
+#bash
 CONFIG_FILE="config.yml"
 update_trKey() {
     trKey=$(yc iam create-token)
