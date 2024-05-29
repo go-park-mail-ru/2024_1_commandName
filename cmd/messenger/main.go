@@ -177,6 +177,7 @@ func Router(cfg domain.Config) {
 	router.HandleFunc("/uploadFiles", messageHandler.SetFile)
 	router.HandleFunc("/getAllStickers", messageHandler.GetAllStickers)
 	router.HandleFunc("/sendSticker", messageHandler.SendSticker)
+	router.HandleFunc("/summarizeMessage", messageHandler.SummarizeMessage)
 
 	router.HandleFunc("/search", searchHandler.SearchObjects)
 	router.HandleFunc("/translate", translateHandler.TranslateMessage)

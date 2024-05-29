@@ -17,6 +17,13 @@ type Config struct {
 		Header       string `yaml:"header"`
 		Method       string `yaml:"method"`
 	} `yaml:"yandex"`
+	Gpt struct {
+		TrKey    string `yaml:"trKey"`
+		Url      string `yaml:"url"`
+		FolderID string `yaml:"folderId"`
+		Header   string `yaml:"header"`
+		Method   string `yaml:"method"`
+	}
 }
 
 type YandexConfig struct {

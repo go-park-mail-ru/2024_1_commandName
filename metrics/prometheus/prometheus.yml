@@ -5,19 +5,19 @@ global:
 scrape_configs:
   - job_name: 'golang'
     static_configs:
-      - targets: ['host.docker.internal:8080']
+      - targets: ['172.17.0.1:8080']
 
   - job_name: 'sessions'
     static_configs:
-      - targets: [ 'host.docker.internal:9091']
+      - targets: [ '172.17.0.1:9091']
 
   - job_name: 'chats'
     static_configs:
-      - targets: [ 'host.docker.internal:9092' ]
+      - targets: [ '172.17.0.1:9092' ]
 
   - job_name: 'system'
     static_configs:
-      - targets: ['host.docker.internal:9100']
+      - targets: ['172.17.0.1:9100']
 
   - job_name: 'node_exporter'
     static_configs:

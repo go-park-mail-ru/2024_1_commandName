@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log/slog"
@@ -321,4 +322,27 @@ func (messageHandler *MessageHandler) DeleteMessage(w http.ResponseWriter, r *ht
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
+}
+
+func (messageHandler *MessageHandler) SummarizeMessage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authorized, _ := messageHandler.ChatsHandler.AuthHandler.CheckAuthNonAPI(w, r)
+	if !authorized {
+		return
+	}
+
+	var summarizeRequest domain.SummarizeMessageRequest
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = json.Unmarshal(body, &summarizeRequest)
+	if err != nil {
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
+		return
+	}
+	////////////////
+	gptResp := usecase.SummarizeMessage(messageHandler.Messages, summarizeRequest)
+	misc.WriteStatusJson(ctx, w, 200, gptResp)
 }

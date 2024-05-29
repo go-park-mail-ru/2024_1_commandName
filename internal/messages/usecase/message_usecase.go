@@ -39,6 +39,7 @@ type MessageStore interface {
 	GetFilePathByMessageID(ctx context.Context, messageID uint) (filePath []string)
 	GetAllStickers(ctx context.Context) (stickers []domain.Sticker)
 	GetStickerPathByID(ctx context.Context, stickerID uint) (filePah string)
+	SummarizeMessage(message domain.SummarizeMessageRequest) domain.TranslateResponse
 }
 
 type FileWithInfo struct {
@@ -228,4 +229,9 @@ func DeleteMessage(ctx context.Context, userID uint, messageID uint, messageStor
 		return err
 	}
 	return nil
+}
+
+func SummarizeMessage(messageStorage MessageStore, message domain.SummarizeMessageRequest) domain.TranslateResponse {
+	resp := messageStorage.SummarizeMessage(message)
+	return resp
 }

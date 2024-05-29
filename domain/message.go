@@ -47,3 +47,21 @@ type Sticker struct {
 	StickerType string `json:"sticker_type"`
 	StickerPath string `json:"sticker_path"`
 }
+
+type SummarizeMessageRequest struct {
+	Role     string `json:"role,omitempty"`
+	Text     string `json:"text"`
+	Username string `json:"username,omitempty"`
+}
+
+type CompletionOptions struct {
+	Stream      bool    `json:"stream"`
+	Temperature float64 `json:"temperature"`
+	MaxTokens   string  `json:"maxTokens"`
+}
+
+type APIRequest struct {
+	ModelURI          string                    `json:"modelUri"`
+	CompletionOptions CompletionOptions         `json:"completionOptions"`
+	Messages          []SummarizeMessageRequest `json:"messages"`
+}
