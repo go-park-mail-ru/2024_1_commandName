@@ -63,7 +63,7 @@ func loadConfig() domain.Config {
 }
 
 func refreshIAM() {
-	cmd := exec.Command("bash", "translate_key_refreshs.sh")
+	cmd := exec.Command("bash", "translate_key_refresh.sh")
 	err := cmd.Start()
 	if err != nil {
 		fmt.Println("Ошибка при выполнении скрипта:", err)
