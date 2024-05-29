@@ -94,6 +94,7 @@ func GetChatsForUser(ctx context.Context, userID uint, chatsGRPC chats.ChatServi
 	//logger := slog.With("requestID", ctx.Value("traceID"))
 	chatsResp, err := chatsGRPC.GetChatsForUser(ctx, &chats.UserID{UserID: uint64(userID)})
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 	chatsRes := make([]domain.Chat, 0)
@@ -107,6 +108,7 @@ func GetChatsForUser(ctx context.Context, userID uint, chatsGRPC chats.ChatServi
 			}
 			current.Name = name
 		}
+		fmt.Println(current)
 		chatsRes = append(chatsRes, current)
 	}
 

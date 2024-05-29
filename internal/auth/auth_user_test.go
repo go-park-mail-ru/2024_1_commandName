@@ -77,7 +77,6 @@ func TestUserRepo_GetByUserID_ErrNoRows(t *testing.T) {
 }
 
 func TestUserRepo_GetByUserID_CustomError(t *testing.T) {
-	// Создание mock базы данных
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("cant create mock: %s", err)
@@ -102,7 +101,6 @@ func TestUserRepo_GetByUserID_CustomError(t *testing.T) {
 }
 
 func TestUserRepo_GetByUsername(t *testing.T) {
-	// Создание mock базы данных
 	db, mock, err := sqlmock.New()
 	if err != nil {
 		t.Fatalf("cant create mock: %s", err)

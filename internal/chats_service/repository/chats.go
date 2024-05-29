@@ -95,7 +95,7 @@ func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, 
 		customErr := &domain.CustomError{
 			Type:    "database",
 			Message: err.Error(),
-			Segment: "method GetChatsForUser, chats.go",
+			Segment: "method GetChatByChatID, chats.go",
 		}
 		logger.Error(err.Error(), "segment", customErr.Segment)
 		fmt.Println(customErr.Error())

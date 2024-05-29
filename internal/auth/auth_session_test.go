@@ -39,7 +39,6 @@ func TestSessionRepo_GetUserIDbySessionID(t *testing.T) {
 		t.Error("err: session not exist")
 	}
 
-	// Проверка выполнения всех ожиданий
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
@@ -65,7 +64,6 @@ func TestSessionRepo_GetUserIDbySessionID_ErrNoRows(t *testing.T) {
 		t.Error("expected false, got true")
 	}
 
-	// Проверка выполнения всех ожиданий
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
@@ -91,7 +89,6 @@ func TestSessionRepo_GetUserIDbySessionID_CustomErr(t *testing.T) {
 		t.Error("expected false, got true")
 	}
 
-	// Проверка выполнения всех ожиданий
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)
 	}

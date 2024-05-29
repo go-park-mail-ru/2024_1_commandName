@@ -65,13 +65,7 @@ func TestGetProfileInfo(t *testing.T) {
 
 	auth := authDelivery.NewRawAuthHandler(db, sessManager, "", contactsManager)
 	ctx := context.Background()
-	//profile := delivery.NewProfileHandler(auth, contactsManager)
 	usecase.GetProfileInfo(ctx, uint(1), auth.Users)
-
-	//assert.Equal(t, http.StatusOK, w.Code, "status code должен быть 200")
-	if err := mock.ExpectationsWereMet(); err != nil {
-		//	t.Errorf("there were unfulfilled expectations: %s", err)
-	}
 
 }
 
