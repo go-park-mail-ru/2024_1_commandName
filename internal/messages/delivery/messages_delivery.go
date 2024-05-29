@@ -85,7 +85,6 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 	if !authorized {
 		return
 	}
-	fmt.Println(userID)
 
 	upgrader := repository.UpgradeConnection()
 
@@ -144,7 +143,6 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 
 	files := r.MultipartForm.File["files"]
 	jsonString := r.MultipartForm.Value["json"]
-	//json.Unmarshal([]byte(jsonString[0]), &requestToSetFile)
 
 	err = easyjson.Unmarshal([]byte(jsonString[0]), &requestToSetFile)
 
@@ -155,11 +153,6 @@ func (messageHandler *MessageHandler) SetFile(w http.ResponseWriter, r *http.Req
 			return
 		}
 		defer file.Close()
-
-		//fmt.Fprintf(w, "Uploaded FileFromUser: %+v\n", fileHeader.Filename)
-		//fmt.Fprintf(w, "FileFromUser Size: %+v\n", fileHeader.Size)
-		//fmt.Fprintf(w, "MIME Header: %+v\n", fileHeader.Header)
-
 		usecase.SetFile(ctx, file, userID, fileHeader, requestToSetFile, messageHandler.Messages, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.Websocket, messageHandler.ChatsHandler.Chats, messageHandler.ChatsHandler.AuthHandler.Firebase)
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
@@ -267,7 +260,6 @@ func (messageHandler *MessageHandler) EditMessage(w http.ResponseWriter, r *http
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return
 	}
-	fmt.Println("here")
 
 	err = usecase.EditMessage(ctx, userID, json.MessageID, json.NewMessageText, messageHandler.Messages)
 	if err != nil {

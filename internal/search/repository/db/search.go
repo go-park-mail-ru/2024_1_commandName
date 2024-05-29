@@ -51,7 +51,6 @@ func (s *Search) AddConnection(ctx context.Context, connection *websocket.Conn, 
 	ctx = context.WithValue(ctx, "ws userID", userID)
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	logger.Debug("established ws")
-	fmt.Println("add conn for user", userID)
 	return ctx
 }
 

@@ -3,7 +3,6 @@ package delivery
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log/slog"
 	"net/http"
@@ -176,7 +175,6 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		fmt.Println(err)
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		return
@@ -341,7 +339,6 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.Request) (authorized bool, userID uint) {
 	ctx := r.Context()
 	session, err := r.Cookie("session_id")
-	fmt.Println(err)
 	if err == nil && session != nil {
 		authHandler.prometheusMetrics.Methods.WithLabelValues("CheckAuthorized").Inc()
 		authorized, userID = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)

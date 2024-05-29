@@ -190,7 +190,6 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		return 0, fmt.Errorf("internal error")
 	}
 
-	//firstMessageInChat := c.GetFirstChatMessageID(ctx, chatID)
 	firstMessageInChat := 0
 
 	query := `INSERT INTO chat.chat_user (chat_id, user_id, lastseen_message_id) VALUES($1, $2, $3)`
@@ -279,8 +278,6 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 		}
 		chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 		fmt.Println("chat.ID: ", chat.ID)
-		//lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
-		//chat.LastSeenMessageID = lastSeenMessageId
 		if chat.Users != nil {
 			chats = append(chats, chat)
 		}

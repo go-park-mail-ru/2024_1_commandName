@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"ProjectMessenger/microservices/contacts_service/proto"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +8,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+
+	"ProjectMessenger/microservices/contacts_service/proto"
 
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/misc"
@@ -44,7 +45,6 @@ func UpdateProfileInfo(ctx context.Context, updatedFields domain.Person, numOfUp
 	if !found {
 		return fmt.Errorf("user not found")
 	}
-	fmt.Println("User is found", userFromStorage)
 	numOfUpdatedAlready := 0
 	if updatedFields.Username != "" {
 		numOfUpdatedAlready++

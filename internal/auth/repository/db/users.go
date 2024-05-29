@@ -149,7 +149,6 @@ func (u *Users) UpdateUser(ctx context.Context, userUpdated domain.Person) (ok b
 	oldUser, found := u.GetByUserID(ctx, userUpdated.ID)
 	if !found {
 		logger.Debug("UpdateUser didn't found user(via GetByUserID)", "userID", userUpdated.ID)
-		fmt.Println("found:", found, userUpdated)
 		return false
 	}
 
@@ -182,8 +181,6 @@ func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, f
 		return "", fmt.Errorf("Файл не является изображением")
 	}
 
-	//fmt.Println(extension)
-
 	filename := misc.RandStringRunes(16)
 	filePath := u.pathToAvatar + "avatars/" + filename + "." + extension
 
@@ -194,7 +191,6 @@ func (u *Users) StoreAvatar(ctx context.Context, multipartFile multipart.File, f
 	}
 	defer f.Close()
 
-	// Copy the contents of the file to the new file
 	_, err = io.Copy(f, multipartFile)
 	if err != nil {
 		logger.Error("StoreAvatar failed to copy file", "path", filePath)
@@ -209,7 +205,6 @@ func (u *Users) GetAvatarStoragePath() string {
 }
 
 func (u *Users) SetFirebaseToken(ctx context.Context, userID uint, token string) (ok bool) {
-	//logger := slog.With("requestID", ctx.Value("traceID"))
 	query := "INSERT INTO auth.notification (user_id, token) VALUES ($1, $2)"
 	u.db.QueryRowContext(ctx, query, userID, token)
 	return true

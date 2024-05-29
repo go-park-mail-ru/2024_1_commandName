@@ -101,12 +101,10 @@ func SendNotification(app *firebase.App, token string, messageText string, sende
 		Token: registrationToken,
 	}
 
-	response, err := client.Send(ctx, message)
+	_, err = client.Send(ctx, message)
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	fmt.Println("Successfully sent message:", response)
 }
 
 func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App) {
@@ -189,7 +187,6 @@ func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage Webso
 		StickerPath:    stickerPath,
 	}
 
-	fmt.Println("end of fun")
 	messageSaved := messageStore.SetMessage(ctx, stickerMessage)
 	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
 }

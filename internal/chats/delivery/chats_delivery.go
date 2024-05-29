@@ -131,7 +131,6 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, chats chats.ChatServ
 func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		//Chats:       db.NewRawChatsStorage(dataBase),
 	}
 }
 
@@ -653,11 +652,10 @@ func (chatsHandler ChatsHandler) GetMessages(w http.ResponseWriter, r *http.Requ
 	start := time.Now()
 	chatsHandler.prometheusMetrics.Methods.WithLabelValues("GetMessages").Inc()
 	ctx := r.Context()
-	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r) // нули ли проверять userID на то, что он состоит в запрашиваемом чате?
+	authorized, _ := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r) // нули ли проверять userID на то, что он состоит в запрашиваемом чате?
 	if !authorized {
 		return
 	}
-	fmt.Println(userID)
 
 	messageByChatIDRequest := messagesByChatIDRequest{}
 	body, err := ioutil.ReadAll(r.Body)

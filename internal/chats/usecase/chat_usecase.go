@@ -1,13 +1,14 @@
 package usecase
 
 import (
-	"ProjectMessenger/domain"
-	"ProjectMessenger/internal/auth/usecase"
-	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"fmt"
 	"log/slog"
 	"sort"
+
+	"ProjectMessenger/domain"
+	"ProjectMessenger/internal/auth/usecase"
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 
 	"google.golang.org/grpc/status"
 )
@@ -93,7 +94,6 @@ func GetChatsForUser(ctx context.Context, userID uint, chatsGRPC chats2.ChatServ
 		if chatsResp.Chats[i].Type == "1" {
 			name, ok := GetCompanionNameForPrivateChat(ctx, current, userID, userStorage)
 			if !ok {
-				//logger.Debug("GetChatsForUser: getchatname failed", "userID", userID, "chatID", chats[i].ID)
 				continue
 			}
 			current.Name = name
@@ -153,8 +153,7 @@ func CreatePrivateChat(ctx context.Context, creatingUserID uint, companionID uin
 		return 0, false, fmt.Errorf("Диалог с самим собой пока не поддерживается")
 	}
 
-	companion, found := userStorage.GetByUserID(ctx, companionID)
-	fmt.Println("Comp: ", companion)
+	_, found := userStorage.GetByUserID(ctx, companionID)
 	if !found {
 		logger.Error("CreatePrivateChat: user wasn't found", "companionID", companionID)
 		return 0, false, fmt.Errorf("Пользователь, с которым вы хотите создать диалог, не найден")
@@ -202,7 +201,6 @@ func CreateGroupChat(ctx context.Context, creatingUserID uint, usersIDs []uint, 
 }
 
 func UpdateGroupChat(ctx context.Context, userID, chatID uint, name, desc *string, chatsGRPC chats2.ChatServiceClient) (err error) {
-	//logger := slog.With("requestID", ctx.Value("traceID"))
 	_, err = chatsGRPC.UpdateGroupChat(ctx, &chats2.UpdateGroupChatReq{
 		UserID:      uint64(userID),
 		ChatID:      uint64(chatID),

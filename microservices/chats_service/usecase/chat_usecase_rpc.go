@@ -1,12 +1,13 @@
 package usecase
 
 import (
-	"ProjectMessenger/domain"
-	chats2 "ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"fmt"
 	"sort"
 	"time"
+
+	"ProjectMessenger/domain"
+	chats2 "ProjectMessenger/microservices/chats_service/proto"
 
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -129,7 +130,6 @@ func (cm *ChatManager) GetChatByChatID(ctx context.Context, in *chats2.UserAndCh
 	}
 	belongs := cm.checkUserBelongsToChat(ctx, chatID, userID)
 	if !belongs {
-		//return &chats.Chat{}, status.Error(500, "")
 	}
 	return convertChat(chat), nil
 }
@@ -218,7 +218,6 @@ func (cm *ChatManager) CreateGroupChat(ctx context.Context, in *chats2.CreateGro
 	}
 
 	if len(usersIDs) < 3 {
-		//logger.Info("CreateGroupChat: len < 3", "users", usersIDs)
 	}
 	userMap := make(map[uint]bool)
 	if usersIDs[0] != creatingUserID {
@@ -226,7 +225,6 @@ func (cm *ChatManager) CreateGroupChat(ctx context.Context, in *chats2.CreateGro
 	}
 	for i := range usersIDs {
 		if userMap[usersIDs[i]] == true {
-			//logger.Info("user id is duplicated", "userID", usersIDs[i])
 			break
 		}
 		userMap[usersIDs[i]] = true
