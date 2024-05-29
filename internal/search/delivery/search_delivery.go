@@ -2,7 +2,7 @@ package delivery
 
 import (
 	"database/sql"
-	"encoding/json"
+	"io/ioutil"
 	"log/slog"
 	"net/http"
 
@@ -11,6 +11,7 @@ import (
 	"ProjectMessenger/internal/misc"
 	repository "ProjectMessenger/internal/search/repository/db"
 	"ProjectMessenger/internal/search/usecase"
+	"github.com/mailru/easyjson"
 )
 
 type SearchHandler struct {
@@ -33,10 +34,13 @@ func (SearchHandler *SearchHandler) SearchObjects(w http.ResponseWriter, r *http
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
-
 	searchRequestStruct := domain.SearchRequest{}
-	err := decoder.Decode(&searchRequestStruct)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &searchRequestStruct)
 	if err != nil {
 		customErr := domain.CustomError{
 			Type:    "json decode",

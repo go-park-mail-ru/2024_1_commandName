@@ -1,10 +1,13 @@
 package delivery
 
 import (
-	contacts "ProjectMessenger/microservices/contacts_service/proto"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"time"
+
+	contacts "ProjectMessenger/microservices/contacts_service/proto"
+	"github.com/mailru/easyjson"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
@@ -14,15 +17,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+//easyjson:skip
 type ProfileHandler struct {
 	AuthHandler       *authdelivery.AuthHandler
 	ContactsGRPC      contacts.ContactsClient
 	prometheusMetrics *PrometheusMetrics
 }
 
+//easyjson:skip
 type updateUserStruct[T any] struct {
-	User               T   `json:"user"`
-	NumOfUpdatedFields int `json:"numOfUpdatedFields"`
+	User               T   `json:"-"`
+	NumOfUpdatedFields int `json:"-"`
 }
 
 type changePasswordStruct struct {
@@ -38,6 +43,7 @@ type addContactStruct struct {
 	UsernameOfUserToAdd string `json:"username_of_user_to_add"`
 }
 
+//easyjson:skip
 type PrometheusMetrics struct {
 	ActiveSessionsCount prometheus.Gauge
 	Hits                *prometheus.CounterVec
@@ -173,6 +179,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 	decoder := json.NewDecoder(r.Body)
 	var jsonUser updateUserStruct[domain.Person]
 	err := decoder.Decode(&jsonUser)
+
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		p.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
@@ -226,9 +233,14 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var passwordsJson changePasswordStruct
-	err := decoder.Decode(&passwordsJson)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &passwordsJson)
+
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		p.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
@@ -363,9 +375,14 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var contact addContactStruct
-	err := decoder.Decode(&contact)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &contact)
+
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		p.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
@@ -412,9 +429,14 @@ func (p *ProfileHandler) SetFirebaseToken(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var jsonFromUser firebaseToken
-	err := decoder.Decode(&jsonFromUser)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &jsonFromUser)
+
 	if err != nil {
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
 		return

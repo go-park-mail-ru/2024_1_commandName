@@ -2,14 +2,14 @@ package delivery
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
+	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/mailru/easyjson"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	firebase "firebase.google.com/go"
@@ -155,9 +155,16 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	decoder := json.NewDecoder(r.Body)
+
 	var jsonUser domain.Person
-	err = decoder.Decode(&jsonUser)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+
+	err = easyjson.Unmarshal(body, &jsonUser)
+
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -260,9 +267,14 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	var jsonUser domain.Person
-	err := decoder.Decode(&jsonUser)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+
+	err = easyjson.Unmarshal(body, &jsonUser)
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -327,7 +339,6 @@ func (authHandler *AuthHandler) CheckAuth(w http.ResponseWriter, r *http.Request
 func (authHandler *AuthHandler) CheckAuthNonAPI(w http.ResponseWriter, r *http.Request) (authorized bool, userID uint) {
 	ctx := r.Context()
 	session, err := r.Cookie("session_id")
-	fmt.Println(err)
 	if err == nil && session != nil {
 		authHandler.prometheusMetrics.Methods.WithLabelValues("CheckAuthorized").Inc()
 		authorized, userID = usecase.CheckAuthorized(ctx, session.Value, authHandler.Sessions)

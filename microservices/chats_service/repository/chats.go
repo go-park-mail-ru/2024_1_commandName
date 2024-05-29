@@ -190,7 +190,6 @@ func (c *Chats) CreateChat(ctx context.Context, name, description string, userID
 		return 0, fmt.Errorf("internal error")
 	}
 
-	//firstMessageInChat := c.GetFirstChatMessageID(ctx, chatID)
 	firstMessageInChat := 0
 
 	query := `INSERT INTO chat.chat_user (chat_id, user_id, lastseen_message_id) VALUES($1, $2, $3)`
@@ -279,8 +278,6 @@ func (c *Chats) GetChatsForUser(ctx context.Context, userID uint) []domain.Chat 
 		}
 		chat.Users = c.GetChatUsersByChatID(ctx, chat.ID)
 		fmt.Println("chat.ID: ", chat.ID)
-		//lastSeenMessageId := c.GetLastSeenMessageId(ctx, chat.ID, userID)
-		//chat.LastSeenMessageID = lastSeenMessageId
 		if chat.Users != nil {
 			chats = append(chats, chat)
 		}
@@ -612,7 +609,7 @@ func addFakeMessage(user_id, chat_id int, message string, edited bool, db *sql.D
 func addFakeStickers(db *sql.DB) {
 	query := "INSERT INTO chat.sticker (description, type, file_path) VALUES ($1, $2, $3)"
 
-	stickerPath := "../../../cmd/messenger/uploads/stickers"
+	stickerPath := "./uploads/stickers"
 	dir, err := os.Open(stickerPath)
 	if err != nil {
 		log.Fatal(err)
@@ -621,7 +618,7 @@ func addFakeStickers(db *sql.DB) {
 
 	files, err := dir.Readdir(-1)
 	for _, file := range files {
-		stickerPath := "./uploads/stickers/" + file.Name()
+		stickerPath := "./uploads/stickers" + file.Name()
 		_, err = db.Exec(query, "animal_sticker", "sticker", stickerPath)
 		if err != nil {
 			fmt.Println(err)

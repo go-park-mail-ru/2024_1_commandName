@@ -1,8 +1,6 @@
 package db
 
 import (
-	"ProjectMessenger/internal/chats/usecase"
-	"ProjectMessenger/microservices/chats_service/proto"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -12,6 +10,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"ProjectMessenger/internal/chats/usecase"
+	"ProjectMessenger/microservices/chats_service/proto"
 
 	"ProjectMessenger/domain"
 	userRepo "ProjectMessenger/internal/auth/repository/db"
@@ -50,7 +51,6 @@ func (s *Search) AddConnection(ctx context.Context, connection *websocket.Conn, 
 	ctx = context.WithValue(ctx, "ws userID", userID)
 	logger := slog.With("requestID", ctx.Value("traceID")).With("ws userID", ctx.Value("ws userID"))
 	logger.Debug("established ws")
-	fmt.Println("add conn for user", userID)
 	return ctx
 }
 
@@ -82,7 +82,6 @@ func (s *Search) SendMessageToUser(userID uint, message []byte) error {
 }
 
 func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chatType string) (foundChatsStructure domain.ChatSearchResponse) {
-	fmt.Println("In search chats", word)
 	wordsArr := strings.Split(word, " ")
 	translatedWordsArr := s.TranslateWordWithTranslator(wordsArr)
 	translatedWordsWithRuneArr := s.TranslateWordWithRune(wordsArr)
@@ -124,8 +123,6 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 				requestToSearchSyllable += wordsArr[i]
 			}
 
-			//usecase.GetCompanionNameForPrivateChat()
-
 			rows, err := s.db.QueryContext(ctx,
 				`SELECT c.id, c.type_id, c.name, c.description, c.avatar_path, c.created_at, c.edited_at, c.creator_id
 				    FROM chat.chat c
@@ -157,12 +154,6 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 					fmt.Println(customErr.Error())
 					return foundChatsStructure
 				}
-				/*mMessages, _ := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
-				var messages []*domain.Message
-				for j := range mMessages {
-					messages = append(messages, &mMessages[j])
-				}*/
-				// mChat.Messages = messages
 				matchedChats = append(matchedChats, mChat)
 				foundChatsStructure.Chats = append(foundChatsStructure.Chats, mChat)
 			}
@@ -175,10 +166,8 @@ func (s *Search) SearchChats(ctx context.Context, word string, userID uint, chat
 				fmt.Println(customErr.Error())
 				return foundChatsStructure
 			}
-			fmt.Println("go to private chats")
 
 			privateChats := s.SearchPrivateChats(ctx, requestToSearchTranslator, requestToSearchOriginal, requestToSearchRune, requestToSearchSyllable, userID, chatType)
-			fmt.Println("found", privateChats)
 			foundChatsStructure.Chats = append(foundChatsStructure.Chats, privateChats...)
 		}
 	}
@@ -215,13 +204,9 @@ func (s *Search) SearchPrivateChats(ctx context.Context, requestToSearchTranslat
 			return foundChatsStructure
 		}
 		chat, _ := usecase.GetChatByChatID(ctx, userID, mChat.ID, s.Users, s.Chats)
-		if strings.Contains(chat.Name, requestToSearchTranslator) || strings.Contains(chat.Name, requestToSearchOriginal) || strings.Contains(chat.Name, requestToSearchRune) || strings.Contains(chat.Name, requestToSearchSyllable) {
-			/*mMessages := s.Chats.GetMessagesByChatID(ctx, mChat.ID)
-			var messages []*domain.Message
-			for j := range mMessages {
-				messages = append(messages, &mMessages[j])
-			}
-			mChat.Messages = messages*/
+		username, _ := usecase.GetCompanionNameForPrivateChat(ctx, chat, userID, s.Users)
+		if strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchTranslator)) || strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchOriginal)) || strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchRune)) || strings.Contains(strings.ToLower(username), strings.ToLower(requestToSearchSyllable)) {
+
 			mChat.Name = chat.Name
 			matchedChats = append(matchedChats, mChat)
 		}
@@ -453,7 +438,6 @@ func DeleteDuplicatesMessages(data []domain.Message) []domain.Message {
 			uniqueSlice = append(uniqueSlice, element)
 		}
 	}
-	fmt.Println(uniqueSlice)
 	return uniqueSlice
 }
 
@@ -518,7 +502,6 @@ func (s *Search) DeleteSearchIndexes(ctx context.Context) {
 }
 
 func (s *Search) SendMatchedChatsSearchResponse(response domain.ChatSearchResponse, userID uint) {
-	fmt.Println("call")
 	jsonResponse := map[string]interface{}{
 		"status": 200,
 		"body":   response,
@@ -647,7 +630,7 @@ func (s *Search) TranslateWordWithSyllable(words []string) (translatedWords []st
 		for _, char := range word {
 			counterOfLetters++
 			if char == magicNumber {
-				fmt.Println(char)
+
 			}
 		}
 

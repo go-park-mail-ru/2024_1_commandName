@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -15,6 +14,7 @@ import (
 	"ProjectMessenger/internal/misc"
 	repo "ProjectMessenger/internal/translate/repository/db"
 	"ProjectMessenger/internal/translate/usecase"
+	"github.com/mailru/easyjson"
 	"gopkg.in/yaml.v3"
 )
 
@@ -86,7 +86,7 @@ func (ts *TranslateHandler) TranslateMessage(w http.ResponseWriter, r *http.Requ
 		}
 		fmt.Println(customErr.Error())
 	}
-	err = json.Unmarshal(reqBody, &request)
+	err = easyjson.Unmarshal(reqBody, &request)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "json Unmarshal",

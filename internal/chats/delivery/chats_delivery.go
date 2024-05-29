@@ -1,13 +1,15 @@
 package delivery
 
 import (
-	"ProjectMessenger/microservices/chats_service/proto"
 	"database/sql"
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"ProjectMessenger/microservices/chats_service/proto"
+	"github.com/mailru/easyjson"
 
 	"ProjectMessenger/domain"
 	authdelivery "ProjectMessenger/internal/auth/delivery"
@@ -18,8 +20,8 @@ import (
 )
 
 type ChatsHandler struct {
-	AuthHandler       *authdelivery.AuthHandler
-	Chats             chats.ChatServiceClient
+	AuthHandler       *authdelivery.AuthHandler `json:"-"`
+	Chats             chats.ChatServiceClient   `json:"-"`
 	prometheusMetrics *PrometheusMetrics
 }
 
@@ -70,7 +72,7 @@ type getPopularChannelsResponse struct {
 }
 
 type PrometheusMetrics struct {
-	ActiveSessionsCount prometheus.Gauge
+	ActiveSessionsCount prometheus.Gauge `json:"-"`
 	Hits                *prometheus.CounterVec
 	Errors              *prometheus.CounterVec
 	Methods             *prometheus.CounterVec
@@ -129,7 +131,6 @@ func NewChatsHandler(authHandler *authdelivery.AuthHandler, chats chats.ChatServ
 func NewRawChatsHandler(authHandler *authdelivery.AuthHandler, dataBase *sql.DB) *ChatsHandler {
 	return &ChatsHandler{
 		AuthHandler: authHandler,
-		//Chats:       db.NewRawChatsStorage(dataBase),
 	}
 }
 
@@ -185,9 +186,15 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	chatIDStruct := chatIDStruct{}
-	err := decoder.Decode(&chatIDStruct)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+
+	err = easyjson.Unmarshal(body, &chatIDStruct)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		chatsHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
@@ -241,8 +248,14 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 	}
 
 	userIDFromRequest := userIDJson{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&userIDFromRequest)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+
+	err = easyjson.Unmarshal(body, &userIDFromRequest)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -295,8 +308,13 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 	}
 
 	chatIDJson := chatIDStruct{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&chatIDJson)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &chatIDJson)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -348,8 +366,13 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 	}
 
 	groupRequest := createGroupJson{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&groupRequest)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &groupRequest)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -399,9 +422,15 @@ func (chatsHandler ChatsHandler) UpdateGroupChat(w http.ResponseWriter, r *http.
 	if !authorized {
 		return
 	}
+
 	updatedChat := updateChatJson{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&updatedChat)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &updatedChat)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -476,9 +505,14 @@ func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	chatIDStruct := chatIDStruct{}
-	err := decoder.Decode(&chatIDStruct)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &chatIDStruct)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -523,9 +557,14 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	decoder := json.NewDecoder(r.Body)
 	chatIDStruct := chatIDStruct{}
-	err := decoder.Decode(&chatIDStruct)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &chatIDStruct)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -577,8 +616,13 @@ func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Re
 	}
 
 	channelRequest := createChannelJson{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&channelRequest)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &channelRequest)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
@@ -608,15 +652,19 @@ func (chatsHandler ChatsHandler) GetMessages(w http.ResponseWriter, r *http.Requ
 	start := time.Now()
 	chatsHandler.prometheusMetrics.Methods.WithLabelValues("GetMessages").Inc()
 	ctx := r.Context()
-	authorized, userID := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r) // нули ли проверять userID на то, что он состоит в запрашиваемом чате?
+	authorized, _ := chatsHandler.AuthHandler.CheckAuthNonAPI(w, r) // нули ли проверять userID на то, что он состоит в запрашиваемом чате?
 	if !authorized {
 		return
 	}
-	fmt.Println(userID)
 
 	messageByChatIDRequest := messagesByChatIDRequest{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&messageByChatIDRequest)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Ошибка при чтении тела запроса", http.StatusBadRequest)
+		return
+	}
+	err = easyjson.Unmarshal(body, &messageByChatIDRequest)
+
 	if err != nil {
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: "wrong json structure"})
