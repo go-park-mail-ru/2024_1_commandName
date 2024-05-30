@@ -103,7 +103,7 @@ func SendNotification(app *firebase.App, token string, messageText string, sende
 
 	_, err = client.Send(ctx, message)
 	if err != nil {
-		log.Fatalln(err)
+		slog.Error(err.Error())
 	}
 }
 
