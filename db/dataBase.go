@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ProjectMessenger/domain"
+
 	_ "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -29,26 +30,6 @@ func СreateDatabase() *sql.DB {
 		return nil
 	}
 
-	/*
-		driver, err := postgres.WithInstance(dataBase, &postgres.Config{})
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		m, err := migrate.NewWithDatabaseInstance(
-			"file://migrations",
-			"postgres", driver)
-		if err != nil {
-			log.Fatal(err)
-		}
-		//ProjectMessenger/db/migrations
-		//file://migrations
-
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatal(err)
-		}
-
-		fmt.Println("Migration successful")*/
 	numUsers := 1000
 	users := generateUsers(numUsers)
 	file, _ := os.Create("users.json")
