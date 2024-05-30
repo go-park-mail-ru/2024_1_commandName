@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"mime/multipart"
 	"os"
@@ -89,7 +88,7 @@ func SendNotification(app *firebase.App, token string, messageText string, sende
 	ctx := context.Background()
 	client, err := app.Messaging(ctx)
 	if err != nil {
-		log.Fatalf("error getting Messaging client: %v\n", err)
+		slog.Error("error getting Messaging client", "err", err)
 	}
 
 	registrationToken := token
@@ -104,7 +103,7 @@ func SendNotification(app *firebase.App, token string, messageText string, sende
 
 	_, err = client.Send(ctx, message)
 	if err != nil {
-		log.Fatalln(err)
+		slog.Error(err.Error())
 	}
 }
 
