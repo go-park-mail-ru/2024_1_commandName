@@ -1,3 +1,5 @@
+CREATE EXTENSION pg_stat_statements;
+
 CREATE SCHEMA IF NOT EXISTS auth;
 
 CREATE TABLE IF NOT EXISTS auth.person

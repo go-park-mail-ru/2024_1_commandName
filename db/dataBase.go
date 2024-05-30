@@ -30,6 +30,12 @@ func СreateDatabase() *sql.DB {
 		return nil
 	}
 
+	dataBase.SetMaxOpenConns(25)
+	dataBase.SetMaxIdleConns(25)
+	dataBase.SetConnMaxLifetime(5 * time.Minute)
+
+	dataBase.Exec("ALTER ROLE chatme_user SET statement_timeout = '60s'")
+
 	numUsers := 1000
 	users := generateUsers(numUsers)
 	file, _ := os.Create("users.json")
