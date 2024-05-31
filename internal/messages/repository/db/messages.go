@@ -3,7 +3,9 @@ package db
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +20,7 @@ import (
 	"ProjectMessenger/domain"
 	authusecase "ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
+	"github.com/gtank/cryptopasta"
 	"gopkg.in/yaml.v3"
 )
 
@@ -228,7 +231,7 @@ func (m *Messages) GetStickerPathByID(ctx context.Context, stickerID uint) (file
 	return filePah
 }
 
-func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
+func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int, key string) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
 	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type, COALESCE(sticker_path, '') AS sticker_path FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY chat.message.created_at", chatID)
 	if err != nil {
@@ -257,6 +260,14 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 		if mess.File.Path == "" {
 			mess.File = nil
 		}
+
+		encryptedMess := mess.Message
+		encryptedMess, err = m.EncryptMessage(mess.Message, key)
+		if err != nil {
+			encryptedMess = mess.Message
+		}
+		mess.Message = encryptedMess
+
 		chatMessagesArr = append(chatMessagesArr, mess)
 	}
 	return chatMessagesArr
@@ -416,4 +427,49 @@ func ParseSummarizeResponse(jsonResponse []byte) (response domain.SummarizeMessa
 	}
 	fmt.Println(response.Result.Alternatives[0].Message.Text)
 	return response
+}
+
+func (m *Messages) GenerateKey() *[32]byte {
+	key := new([32]byte)
+	_, err := rand.Read(key[:])
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+func stringTo32ByteArray(s string) (*[32]byte, error) {
+	data := []byte(s)
+	if len(data) != 32 {
+		fmt.Println(len(data))
+		return nil, fmt.Errorf("invalid key length: %d, expected 32 bytes", len(data))
+	}
+	var array [32]byte
+	copy(array[:], data)
+
+	return &array, nil
+}
+
+func (m *Messages) EncryptMessage(message string, key string) (string, error) {
+	fmt.Println("key = ", key)
+	byteKey, err := stringTo32ByteArray(key)
+	encrypted, err := cryptopasta.Encrypt([]byte(message), byteKey)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(encrypted), nil
+}
+
+func (m *Messages) DecryptMessage(encryptedMessage string, key string) (string, error) {
+	encrypted, err := base64.StdEncoding.DecodeString(encryptedMessage)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println("key = ", key)
+	byteKey, err := stringTo32ByteArray(key)
+	decrypted, err := cryptopasta.Decrypt(encrypted, byteKey)
+	if err != nil {
+		return "", err
+	}
+	return string(decrypted), nil
 }

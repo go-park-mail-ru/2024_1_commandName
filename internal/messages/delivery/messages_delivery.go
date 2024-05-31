@@ -226,7 +226,11 @@ func (messageHandler *MessageHandler) GetMessages(w http.ResponseWriter, r *http
 		return
 	}
 	limit := 100
-	messages := usecase.GetChatMessages(r.Context(), limit, RequestChatID.ChatID, messageHandler.Messages)
+
+	cookie, err := r.Cookie("secret_key")
+	key := cookie.Value
+
+	messages := usecase.GetChatMessages(r.Context(), limit, RequestChatID.ChatID, messageHandler.Messages, key)
 	misc.WriteStatusJson(ctx, w, 200, domain.Messages{Messages: messages})
 }
 

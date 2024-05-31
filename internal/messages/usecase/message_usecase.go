@@ -29,7 +29,7 @@ type WebsocketStore interface {
 
 type MessageStore interface {
 	SetMessage(ctx context.Context, message domain.Message) (messageSaved domain.Message)
-	GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message
+	GetChatMessages(ctx context.Context, chatID uint, limit int, key string) []domain.Message
 	GetMessage(ctx context.Context, messageID uint) (message domain.Message, err error)
 	UpdateMessageText(ctx context.Context, message domain.Message) (err error)
 	DeleteMessage(ctx context.Context, messageID uint) error
@@ -39,6 +39,8 @@ type MessageStore interface {
 	GetAllStickers(ctx context.Context) (stickers []domain.Sticker)
 	GetStickerPathByID(ctx context.Context, stickerID uint) (filePah string)
 	SummarizeMessage(message domain.SummarizeMessageRequest) domain.TranslateResponse
+	EncryptMessage(message string, key string) (string, error)
+	DecryptMessage(encryptedMessage string, key string) (string, error)
 }
 
 type FileWithInfo struct {
@@ -190,8 +192,8 @@ func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage Webso
 	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
 }
 
-func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
-	messages := messageStorage.GetChatMessages(ctx, chatID, limit)
+func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore, key string) []domain.Message {
+	messages := messageStorage.GetChatMessages(ctx, chatID, limit, key)
 	return messages
 }
 
