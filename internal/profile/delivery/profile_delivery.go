@@ -25,9 +25,9 @@ type ProfileHandler struct {
 }
 
 //easyjson:skip
-type UpdateUserStruct[T any] struct {
+type updateUserStruct[T any] struct {
 	User               T   `json:"user"`
-	NumOfUpdatedFields int `json:"-"`
+	NumOfUpdatedFields int `json:"numOfUpdatedFields"`
 }
 
 type changePasswordStruct struct {
@@ -177,7 +177,7 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var jsonUser UpdateUserStruct[domain.Person]
+	var jsonUser updateUserStruct[domain.Person]
 	err := decoder.Decode(&jsonUser)
 
 	if err != nil {
