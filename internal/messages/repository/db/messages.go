@@ -18,6 +18,7 @@ import (
 	"ProjectMessenger/domain"
 	authusecase "ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -230,7 +231,7 @@ func (m *Messages) GetStickerPathByID(ctx context.Context, stickerID uint) (file
 
 func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) []domain.Message {
 	chatMessagesArr := make([]domain.Message, 0)
-	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type, COALESCE(sticker_path, '') AS sticker_path FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY chat.message.created_at", chatID)
+	rows, err := m.db.QueryContext(ctx, "SELECT message.id, user_id, chat_id, message.message, COALESCE(message.created_at, '2000-01-01 00:00:00'), COALESCE(message.edited_at, '2000-01-01 00:00:00'), username, COALESCE(originalname, '') AS originalname, COALESCE(file_path, '') AS file_path, COALESCE(type, '') AS type, COALESCE(sticker_path, '') AS sticker_path, message.edited FROM chat.message JOIN auth.person ON message.user_id = person.id LEFT JOIN chat.file f on message.id = f.message_id WHERE chat_id = $1 ORDER BY chat.message.created_at", chatID)
 	if err != nil {
 		customErr := &domain.CustomError{
 			Type:    "database",
@@ -245,7 +246,7 @@ func (m *Messages) GetChatMessages(ctx context.Context, chatID uint, limit int) 
 	for rows.Next() {
 		var mess domain.Message
 		mess.File = &domain.FileInMessage{}
-		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.EditedAt, &mess.SenderUsername, &mess.File.OriginalName, &mess.File.Path, &mess.File.Type, &mess.StickerPath); err != nil {
+		if err = rows.Scan(&mess.ID, &mess.UserID, &mess.ChatID, &mess.Message, &mess.CreatedAt, &mess.EditedAt, &mess.SenderUsername, &mess.File.OriginalName, &mess.File.Path, &mess.File.Type, &mess.StickerPath, &mess.Edited); err != nil {
 			customErr := &domain.CustomError{
 				Type:    "database",
 				Message: err.Error(),

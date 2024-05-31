@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ProjectMessenger/microservices/chats_service/proto"
+
 	"github.com/mailru/easyjson"
 
 	"ProjectMessenger/domain"
@@ -211,7 +212,11 @@ func (chatsHandler ChatsHandler) GetChat(w http.ResponseWriter, r *http.Request)
 		}
 		logger.Error(err.Error())
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 
@@ -271,7 +276,11 @@ func (chatsHandler ChatsHandler) CreatePrivateChat(w http.ResponseWriter, r *htt
 		}
 		logger.Error(err.Error())
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 
@@ -330,7 +339,11 @@ func (chatsHandler ChatsHandler) DeleteChat(w http.ResponseWriter, r *http.Reque
 		}
 		logger.Error(err.Error())
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, deleteChatJsonResponse{success})
@@ -388,7 +401,11 @@ func (chatsHandler ChatsHandler) CreateGroupChat(w http.ResponseWriter, r *http.
 		}
 		logger.Error(err.Error())
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 
@@ -527,7 +544,11 @@ func (chatsHandler ChatsHandler) JoinChannel(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 
@@ -579,7 +600,11 @@ func (chatsHandler ChatsHandler) LeaveChannel(w http.ResponseWriter, r *http.Req
 			return
 		}
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 
@@ -638,7 +663,11 @@ func (chatsHandler ChatsHandler) CreateChannel(w http.ResponseWriter, r *http.Re
 		}
 		logger.Error(err.Error())
 		chatsHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 

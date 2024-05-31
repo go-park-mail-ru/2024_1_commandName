@@ -92,7 +92,6 @@ func SendNotification(app *firebase.App, token string, messageText string, sende
 	}
 
 	registrationToken := token
-
 	message := &messaging.Message{
 		Notification: &messaging.Notification{
 			Title: senderUsername,

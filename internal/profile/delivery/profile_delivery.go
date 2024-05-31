@@ -7,6 +7,7 @@ import (
 	"time"
 
 	contacts "ProjectMessenger/microservices/contacts_service/proto"
+
 	"github.com/mailru/easyjson"
 
 	"ProjectMessenger/domain"
@@ -26,8 +27,8 @@ type ProfileHandler struct {
 
 //easyjson:skip
 type updateUserStruct[T any] struct {
-	User               T   `json:"-"`
-	NumOfUpdatedFields int `json:"-"`
+	User               T   `json:"user"`
+	NumOfUpdatedFields int `json:"numOfUpdatedFields"`
 }
 
 type changePasswordStruct struct {
@@ -197,7 +198,11 @@ func (p *ProfileHandler) UpdateProfileInfo(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		p.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
@@ -258,7 +263,11 @@ func (p *ProfileHandler) ChangePassword(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 		p.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 	p.prometheusMetrics.Hits.WithLabelValues("200", r.URL.String()).Inc()
@@ -320,7 +329,11 @@ func (p *ProfileHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		} else {
 			p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 			p.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
-			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+			t, ok := err.(*domain.CustomError)
+			if ok {
+				misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+			}
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		}
 		return
 	}
@@ -398,7 +411,11 @@ func (p *ProfileHandler) AddContact(w http.ResponseWriter, r *http.Request) {
 		} else {
 			p.prometheusMetrics.Errors.WithLabelValues("400").Inc()
 			p.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
-			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+			t, ok := err.(*domain.CustomError)
+			if ok {
+				misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+			}
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 			return
 		}
 	}

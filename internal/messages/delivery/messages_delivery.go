@@ -11,6 +11,7 @@ import (
 	"ProjectMessenger/domain"
 	"ProjectMessenger/internal/chats/delivery"
 	"ProjectMessenger/internal/misc"
+
 	"github.com/mailru/easyjson"
 
 	//chatsInMemoryRepository "ProjectMessenger/internal/chats/repository/inMemory"
@@ -269,12 +270,11 @@ func (messageHandler *MessageHandler) EditMessage(w http.ResponseWriter, r *http
 			return
 		}
 
-		_, ok := err.(*domain.CustomError)
+		t, ok := err.(*domain.CustomError)
 		if ok {
-			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
-		} else {
-			misc.WriteStatusJson(ctx, w, 400, err.Error())
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
 		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 
 		return
 	}
@@ -318,7 +318,11 @@ func (messageHandler *MessageHandler) DeleteMessage(w http.ResponseWriter, r *ht
 			misc.WriteInternalErrorJson(ctx, w)
 			return
 		}
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		return
 	}
 	misc.WriteStatusJson(ctx, w, 200, nil)
