@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log/slog"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -18,6 +20,7 @@ import (
 	"ProjectMessenger/domain"
 	authusecase "ProjectMessenger/internal/auth/usecase"
 	"ProjectMessenger/internal/misc"
+	"github.com/gtank/cryptopasta"
 	"gopkg.in/yaml.v3"
 )
 
@@ -416,4 +419,49 @@ func ParseSummarizeResponse(jsonResponse []byte) (response domain.SummarizeMessa
 	}
 	fmt.Println(response.Result.Alternatives[0].Message.Text)
 	return response
+}
+
+func (m *Messages) GenerateKey() *[32]byte {
+	key := new([32]byte)
+	_, err := rand.Read(key[:])
+	if err != nil {
+		panic(err)
+	}
+	return key
+}
+
+func stringTo32ByteArray(s string) (*[32]byte, error) {
+	data := []byte(s)
+	if len(data) != 32 {
+		fmt.Println(len(data))
+		return nil, fmt.Errorf("invalid key length: %d, expected 32 bytes", len(data))
+	}
+	var array [32]byte
+	copy(array[:], data)
+
+	return &array, nil
+}
+
+func (m *Messages) EncryptMessage(message string, key string) (string, error) {
+	fmt.Println("key = ", key)
+	byteKey, err := stringTo32ByteArray(key)
+	encrypted, err := cryptopasta.Encrypt([]byte(message), byteKey)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(encrypted), nil
+}
+
+func (m *Messages) DecryptMessage(encryptedMessage string, key string) (string, error) {
+	encrypted, err := base64.StdEncoding.DecodeString(encryptedMessage)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println("key = ", key)
+	byteKey, err := stringTo32ByteArray(key)
+	decrypted, err := cryptopasta.Decrypt(encrypted, byteKey)
+	if err != nil {
+		return "", err
+	}
+	return string(decrypted), nil
 }

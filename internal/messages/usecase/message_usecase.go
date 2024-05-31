@@ -39,6 +39,9 @@ type MessageStore interface {
 	GetAllStickers(ctx context.Context) (stickers []domain.Sticker)
 	GetStickerPathByID(ctx context.Context, stickerID uint) (filePah string)
 	SummarizeMessage(message domain.SummarizeMessageRequest) domain.TranslateResponse
+	GenerateKey() *[32]byte
+	EncryptMessage(message string, key string) (string, error)
+	DecryptMessage(encryptedMessage string, key string) (string, error)
 }
 
 type FileWithInfo struct {
@@ -46,7 +49,7 @@ type FileWithInfo struct {
 	file     *os.File
 }
 
-func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App) {
+func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domain.Person, wsStorage WebsocketStore, messageStorage MessageStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App, secretKey string) {
 	ctx = wsStorage.AddConnection(ctx, connection, user.ID)
 	defer func() {
 		wsStorage.DeleteConnection(user.ID)
@@ -69,6 +72,14 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 			fmt.Println(customErr.Error())
 			continue
 		}
+
+		decryptedMessage, err := messageStorage.DecryptMessage(userDecodedMessage.Message, secretKey)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+		userDecodedMessage.Message = decryptedMessage
+
 		logger.Debug("got ws message", "msg", userDecodedMessage)
 		userDecodedMessage.UserID = user.ID
 		userDecodedMessage.CreatedAt = time.Now().UTC()
@@ -80,7 +91,7 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 			Time:   timestamppb.New(userDecodedMessage.CreatedAt),
 		})
 
-		SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
+		SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase, messageStorage, secretKey)
 	}
 }
 
@@ -106,7 +117,7 @@ func SendNotification(app *firebase.App, token string, messageText string, sende
 	}
 }
 
-func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App) {
+func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID uint, wsStorage WebsocketStore, chatStorage chats2.ChatServiceClient, userStorage users.UserStore, firebase *firebase.App, messageStorage MessageStore, secretKey string) {
 	resp, _ := chatStorage.GetChatByChatID(ctx, &chats2.UserAndChatID{UserID: uint64(userID), ChatID: uint64(message.ChatID)})
 
 	chatUsers := make([]domain.ChatUser, 0)
@@ -121,6 +132,14 @@ func SendMessageToOtherUsers(ctx context.Context, message domain.Message, userID
 		func(userID uint, i int, senderID uint, message domain.Message) {
 			conn := wsStorage.GetConnection(chatUsers[i].UserID)
 			if conn != nil {
+				if secretKey != "" {
+					encryptedMessage, err := messageStorage.EncryptMessage(message.Message, secretKey)
+					message.Message = encryptedMessage
+					if err != nil {
+						fmt.Println(err)
+					}
+				}
+
 				messageMarshalled, err := json.Marshal(message)
 				if err != nil {
 					return
@@ -162,7 +181,7 @@ func SetFile(ctx context.Context, file multipart.File, userID uint, fileHeader *
 	messageSaved := messageStorage.SetMessage(ctx, dummyMessage)
 
 	messageStorage.SetFile(ctx, file, user.ID, messageSaved.ID, request, userStorage, fileHeader)
-	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase, messageStorage, "")
 }
 
 func GetAllStickers(ctx context.Context, messageStorage MessageStore) (stickers []domain.Sticker) {
@@ -187,7 +206,7 @@ func SendSticker(ctx context.Context, messageStore MessageStore, wsStorage Webso
 	}
 
 	messageSaved := messageStore.SetMessage(ctx, stickerMessage)
-	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase)
+	SendMessageToOtherUsers(ctx, messageSaved, user.ID, wsStorage, chatStorage, userStorage, firebase, messageStore, "")
 }
 
 func GetChatMessages(ctx context.Context, limit int, chatID uint, messageStorage MessageStore) []domain.Message {
