@@ -26,7 +26,7 @@ type ProfileHandler struct {
 
 //easyjson:skip
 type UpdateUserStruct[T any] struct {
-	User               T   `json:"-"`
+	User               T   `json:"user"`
 	NumOfUpdatedFields int `json:"-"`
 }
 
