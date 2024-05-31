@@ -102,8 +102,11 @@ func (messageHandler *MessageHandler) SendMessage(w http.ResponseWriter, r *http
 		return
 	}
 
+	secretKey := ""
 	cookie, err := r.Cookie("secret_key")
-	secretKey := cookie.Value
+	if err == nil {
+		secretKey = cookie.Value
+	}
 
 	usecase.HandleWebSocket(ctx, connection, user, messageHandler.Websocket, messageHandler.Messages, messageHandler.ChatsHandler.Chats, messageHandler.ChatsHandler.AuthHandler.Users, messageHandler.ChatsHandler.AuthHandler.Firebase, secretKey)
 }

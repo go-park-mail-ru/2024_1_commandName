@@ -73,11 +73,15 @@ func HandleWebSocket(ctx context.Context, connection *websocket.Conn, user domai
 			continue
 		}
 
-		decryptedMessage, err := messageStorage.DecryptMessage(userDecodedMessage.Message, secretKey)
-		if err != nil {
-			fmt.Println(err)
-			break
+		decryptedMessage := userDecodedMessage.Message
+		if secretKey != "" {
+			decryptedMessage, err = messageStorage.DecryptMessage(userDecodedMessage.Message, secretKey)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
 		}
+
 		userDecodedMessage.Message = decryptedMessage
 
 		logger.Debug("got ws message", "msg", userDecodedMessage)
