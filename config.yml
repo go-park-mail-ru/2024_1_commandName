@@ -6,13 +6,13 @@ server:
   host: ""
   port: 8080
 yandex:
-  trKey: "Bearer t1.9euelZqWnZyanJKMkJaZksbHj8udkO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl9Pc4TRhN-e95BU743fT3eHsVTfnveQVO-M3n9euelZqWkpCenpfOzJWck5mai8aJne_8xeuelZqWkpCenpfOzJWck5mai8aJnQ.gji2b3HElKwamE2KAc-acRR3KeoUVgJqOKk5tB_x1sL9gzyaZgN85VkTHf4GpNE0DUFfylqSaTLoQ77yt2o1AA"
+  trKey: "Bearer t1.9euelZrOls-UncuQyceMiZmQx5iZku3rnpWanMyVzMzLyJuXnJSQzZSQzJnl9PcYQxhN-e86TWft3fT3WHEVTfnvOk1n7c3n9euelZqbyI3LnY2VkI7MlMnLzo_NkO_8xeuelZqbyI3LnY2VkI7MlMnLzo_NkA.ZIsz8rf7u_XQ68ekRGot4P_QqUS1lX9lc4ImOCWWTL69sfXLXXw4DakpugZg3wYlsrDVN_JSZNbTwAM6NqTRBA"
   url: "https://translate.api.cloud.yandex.net/translate/v2/translate"
   folderId: "b1gq4i9e5unl47m0kj5f"
   header: "application/json"
   method: "POST"
 gpt:
-  trKey: "Bearer t1.9euelZqWnZyanJKMkJaZksbHj8udkO3rnpWanMyVzMzLyJuXnJSQzZSQzJnl9Pc4TRhN-e95BU743fT3eHsVTfnveQVO-M3n9euelZqWkpCenpfOzJWck5mai8aJne_8xeuelZqWkpCenpfOzJWck5mai8aJnQ.gji2b3HElKwamE2KAc-acRR3KeoUVgJqOKk5tB_x1sL9gzyaZgN85VkTHf4GpNE0DUFfylqSaTLoQ77yt2o1AA"
+  trKey: "Bearer t1.9euelZrOls-UncuQyceMiZmQx5iZku3rnpWanMyVzMzLyJuXnJSQzZSQzJnl9PcYQxhN-e86TWft3fT3WHEVTfnvOk1n7c3n9euelZqbyI3LnY2VkI7MlMnLzo_NkO_8xeuelZqbyI3LnY2VkI7MlMnLzo_NkA.ZIsz8rf7u_XQ68ekRGot4P_QqUS1lX9lc4ImOCWWTL69sfXLXXw4DakpugZg3wYlsrDVN_JSZNbTwAM6NqTRBA"
   url: "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
   folderId: "b1gq4i9e5unl47m0kj5f"
   header: "application/json"
