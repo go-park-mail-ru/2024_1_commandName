@@ -175,7 +175,11 @@ func (authHandler *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		return
 	}
@@ -284,7 +288,11 @@ func (authHandler *AuthHandler) Register(w http.ResponseWriter, r *http.Request)
 	sessionID, userID, err := usecase.RegisterAndLoginUser(ctx, jsonUser, authHandler.Users, authHandler.Sessions)
 	if err != nil {
 		authHandler.prometheusMetrics.Errors.WithLabelValues("400").Inc()
-		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.(*domain.CustomError).Message})
+		t, ok := err.(*domain.CustomError)
+		if ok {
+			misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: t.Message})
+		}
+		misc.WriteStatusJson(ctx, w, 400, domain.Error{Error: err.Error()})
 		authHandler.prometheusMetrics.Hits.WithLabelValues("400", r.URL.String()).Inc()
 		return
 	}
