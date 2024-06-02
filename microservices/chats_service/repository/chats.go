@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"sort"
+	"strconv"
 	"time"
 
 	"ProjectMessenger/domain"
@@ -91,15 +92,9 @@ func GenerateUsersAndChats(db *sql.DB) {
 	person.Password = "f3b25079b361c2997b0b08128e72b9a61dfabf0973db7324debb0ffbd3b6d6f8d625b4f0ef9bb547241b5299e37f2b8de517eab4fd1191760add939d663acdf7"
 	person.PasswordSalt = "LgLkVXSs"
 	for i := 0; i < 100000; i++ {
-		username, err := GenerateCryptoRandomString(20)
-		person.Username = username
-		fmt.Println("username = ", username)
-		if err != nil {
-			fmt.Println(err)
-		}
 
-		userID := 0
-		err = db.QueryRow("INSERT INTO auth.person (username, password_hash, password_salt, email) VALUES($1, $2, $3, $4) returning id", username, person.Password, person.PasswordSalt, "email").Scan(&userID)
+		name := "name" + strconv.Itoa(i)
+		_, err := db.Exec("UPDATE auth.person SET name = $1 WHERE id = $2", name, i+3470)
 		if err != nil {
 			fmt.Println(err)
 		}
