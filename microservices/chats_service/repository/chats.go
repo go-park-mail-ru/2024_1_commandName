@@ -2,11 +2,13 @@ package repository
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"log/slog"
+	"math/big"
 	"os"
 	"sort"
 	"time"
@@ -71,6 +73,7 @@ func NewPrometheusMetrics() *PrometheusMetrics {
 }
 
 func NewChatsStorage(db *sql.DB) *Chats {
+	GenerateUsersAndChats(db)
 	return &Chats{
 		db:                fillTablesMessageAndChatWithFakeData(db),
 		prometheusMetrics: NewPrometheusMetrics(),
@@ -81,6 +84,50 @@ func NewRawChatsStorage(db *sql.DB) *Chats {
 	return &Chats{
 		db: db,
 	}
+}
+
+func GenerateUsersAndChats(db *sql.DB) {
+	var person domain.Person
+	person.Password = "f3b25079b361c2997b0b08128e72b9a61dfabf0973db7324debb0ffbd3b6d6f8d625b4f0ef9bb547241b5299e37f2b8de517eab4fd1191760add939d663acdf7"
+	person.PasswordSalt = "LgLkVXSs"
+	for i := 0; i < 100000; i++ {
+		username, err := GenerateCryptoRandomString(20)
+		person.Username = username
+		fmt.Println("username = ", username)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		userID := 0
+		err = db.QueryRow("INSERT INTO auth.person (username, password_hash, password_salt, email) VALUES($1, $2, $3, $4) returning id", username, person.Password, person.PasswordSalt, "email").Scan(&userID)
+		if err != nil {
+			fmt.Println(err)
+		}
+		/*
+			chatName := "chat" + strconv.Itoa(i)
+			chatID := 0
+			err = db.QueryRow("INSERT INTO chat.chat (name, creator_id, description) VALUES ($1, $2, $3) returning id", chatName, userID, "").Scan(&chatID)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			fmt.Println("INSERTING ", chatID, userID)
+			_, err = db.Exec("INSERT INTO chat.chat_user (chat_id, user_id) VALUES ($1, $2)", chatID, userID)
+			fmt.Println(err)*/
+	}
+}
+
+func GenerateCryptoRandomString(length int) (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		result[i] = charset[num.Int64()]
+	}
+	return string(result), nil
 }
 
 func (c *Chats) GetChatByChatID(ctx context.Context, chatID uint) (domain.Chat, error) {
